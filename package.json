@@ -1,0 +1,28 @@
+{
+  "name": "hardhat-project",
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.1",
+    "@nomiclabs/hardhat-waffle": "^2.0.1",
+    "chai": "^4.2.0",
+    "eslint": "^7.18.0",
+    "eslint-config-airbnb": "^18.2.1",
+    "eslint-config-airbnb-base": "^14.2.1",
+    "eslint-config-prettier": "^7.2.0",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-prettier": "^3.3.1",
+    "ethereum-waffle": "^3.2.1",
+    "ethers": "^5.0.24",
+    "hardhat": "^2.0.6",
+    "prettier": "^2.2.1",
+    "prettier-plugin-solidity": "^1.0.0-beta.3",
+    "solhint-plugin-prettier": "0.0.5"
+  },
+  "scripts": {
+    "lint": "solhint contracts/**/*.sol",
+    "prettier": "prettier --write contracts/**/*.sol",
+    "test": " hardhat test"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^3.3.0"
+  }
+}

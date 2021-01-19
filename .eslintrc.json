@@ -1,0 +1,10 @@
+{
+    "env": {
+        "mocha": true,
+        "node": true
+    },
+    "extends": ["airbnb", "plugin:prettier/recommended"],
+    "parserOptions": {
+        "ecmaVersion": 12
+    }
+}
