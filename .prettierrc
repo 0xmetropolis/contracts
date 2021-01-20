@@ -6,7 +6,7 @@
   "singleQuote": false,
   "tabWidth": 2,
   "trailingComma": "all",
-   "overrides": [
+  "overrides": [
     {
       "files": "*.sol",
       "options": {

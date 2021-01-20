@@ -1,5 +1,7 @@
 pragma solidity 0.7.4;
 
+/* solhint-disable indent */
+
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 
 // TODO: consider  order of contract  deployment. May not want to deploy all together

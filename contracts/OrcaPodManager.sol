@@ -1,14 +1,22 @@
 pragma solidity 0.7.4;
 
+/* solhint-disable indent */
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+// ----------------------------------------------------------------------------
+// OrcaPodManager
+// ----------------------------------------------------------------------------
 contract OrcaPodManager {
     address deployer;
 
-    struct rule {
+    struct Rule {
         address contractAddress;
         uint256 minBalance;
     }
 
-    mapping(uint256 => rule) public ruleByPod;
+    mapping(uint256 => Rule) public ruleByPod;
 
     constructor() public {
         deployer = msg.sender;
