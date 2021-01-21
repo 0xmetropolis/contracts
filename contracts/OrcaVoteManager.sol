@@ -1,5 +1,7 @@
 pragma solidity 0.7.4;
 
+/* solhint-disable indent */
+
 contract OrcaVoteManager {
     address deployer;
 

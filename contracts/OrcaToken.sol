@@ -1,5 +1,7 @@
 pragma solidity 0.7.4;
 
+/* solhint-disable indent */
+
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 // $ORCA TOKEN
