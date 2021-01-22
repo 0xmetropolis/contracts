@@ -17,10 +17,11 @@ contract OrcaMemberToken is ERC1155 {
     constructor() public ERC1155("ORCA TOKENS FOOL!") {}
 
     function mint(
+        address to,
         uint256 id,
         uint256 supplyTotal,
         bytes memory data
     ) public {
-        _mint(msg.sender, id, supplyTotal, data);
+        _mint(to, id, supplyTotal, data);
     }
 }
