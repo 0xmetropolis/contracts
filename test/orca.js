@@ -68,22 +68,40 @@ describe("Orca Tests", () => {
   });
 
   it("should create a proposal to raise membership min tokens", async () => {
-    await expect(() => orcaToken.connect(member).mint()).to.changeTokenBalance(orcaToken, member, 6);
-
-    await orcaPodManager.connect(member).claimMembership(1);
-
     await expect(orcaVoteManager.connect(member).createProposal(1, orcaToken.address, 10))
       .to.emit(orcaVoteManager, "CreateProposal")
-      .withArgs(1, orcaToken.address, 10, member.address);
+      .withArgs(1, 1, orcaToken.address, 10, member.address);
 
     const voteProposale = await orcaVoteManager.voteProposalByPod(1);
     // test vote propsale saved
     // propoalBlock, approveVotes, rejectVotes, pending, ruleAddress, ruleMinBalance;
     // await expect(voteProposale[0]).to.equal(blocknumber)
-    await expect(voteProposale[1]).to.equal(0);
+    await expect(voteProposale[0]).to.equal(1);
     await expect(voteProposale[2]).to.equal(0);
-    await expect(voteProposale[3]).to.equal(true);
-    await expect(voteProposale[4]).to.equal(orcaToken.address);
-    await expect(voteProposale[5]).to.equal(10);
+    await expect(voteProposale[3]).to.equal(0);
+    await expect(voteProposale[4]).to.equal(true);
+    await expect(voteProposale[5]).to.equal(orcaToken.address);
+    await expect(voteProposale[6]).to.equal(10);
+  });
+
+  it("should cast a vote on a proposal", async () => {
+    await expect(orcaVoteManager.connect(member).vote(1, true))
+      .to.emit(orcaVoteManager, "CastVote")
+      .withArgs(1, 1, member.address, true);
+
+    const voteProposale = await orcaVoteManager.voteProposalByPod(1);
+    // test vote propsale saved
+    // propoalBlock, approveVotes, rejectVotes, pending, ruleAddress, ruleMinBalance;
+    // await expect(voteProposale[0]).to.equal(blocknumber)
+    await expect(voteProposale[0]).to.equal(1);
+    await expect(voteProposale[2]).to.equal(1); //this changes based on the vote
+    await expect(voteProposale[3]).to.equal(0);
+    await expect(voteProposale[4]).to.equal(true);
+    await expect(voteProposale[5]).to.equal(orcaToken.address);
+    await expect(voteProposale[6]).to.equal(10);
+  });
+
+  it("should cast a duplicate vote and revert", async () => {
+    await expect(orcaVoteManager.connect(member).vote(1, true)).to.be.revertedWith("This member has already voted");
   });
 });
