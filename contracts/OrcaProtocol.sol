@@ -37,7 +37,7 @@ contract OrcaProtocol {
         orcaPodManager = new OrcaPodManager(orcaMemberToken);
         emit PodManagerAddress(address(orcaPodManager));
 
-        orcaVoteManager = new OrcaVoteManager();
+        orcaVoteManager = new OrcaVoteManager(orcaPodManager);
         emit VoteManagerAddress(address(orcaVoteManager));
 
         console.log(address(orcaPodManager));

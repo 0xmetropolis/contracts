@@ -71,5 +71,13 @@ describe("Orca Tests", () => {
     await expect(() => orcaToken.connect(member).mint()).to.changeTokenBalance(orcaToken, member, 6);
 
     await orcaPodManager.connect(member).claimMembership(1);
+
+    await expect(orcaVoteManager.connect(member).createProposal(1, orcaToken.address, 10))
+      .to.emit(orcaVoteManager, "CreateProposal")
+      .withArgs(1, orcaToken.address, 10, member.address);
+
+    console.log(await orcaVoteManager.voteProposalByPod(1));
+
+    expect().to.include(0, 0, true, orcaToken.address, 10);
   });
 });
