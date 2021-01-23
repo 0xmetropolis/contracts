@@ -76,8 +76,14 @@ describe("Orca Tests", () => {
       .to.emit(orcaVoteManager, "CreateProposal")
       .withArgs(1, orcaToken.address, 10, member.address);
 
-    console.log(await orcaVoteManager.voteProposalByPod(1));
-
-    expect().to.include(0, 0, true, orcaToken.address, 10);
+    const voteProposale = await orcaVoteManager.voteProposalByPod(1);
+    // test vote propsale saved
+    // propoalBlock, approveVotes, rejectVotes, pending, ruleAddress, ruleMinBalance;
+    // await expect(voteProposale[0]).to.equal(blocknumber)
+    await expect(voteProposale[1]).to.equal(0);
+    await expect(voteProposale[2]).to.equal(0);
+    await expect(voteProposale[3]).to.equal(true);
+    await expect(voteProposale[4]).to.equal(orcaToken.address);
+    await expect(voteProposale[5]).to.equal(10);
   });
 });
