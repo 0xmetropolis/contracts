@@ -19,8 +19,8 @@ import "hardhat/console.sol";
 // only allow for one token per user
 
 contract OrcaProtocol {
-    event ManagerAddress(address contractAddress);
-    event VotingAddress(address contractAddress);
+    event PodManagerAddress(address contractAddress);
+    event VoteManagerAddress(address contractAddress);
     event CreatePod(uint256 podId);
 
     OrcaPodManager orcaPodManager;
@@ -31,14 +31,14 @@ contract OrcaProtocol {
         public
     // address OrcaPodManagerAddress,
     // address OrcaVotingManagerAddress,
-    {   
+    {
         orcaMemberToken = OrcaMemberToken(orcaMemberTokenAddress);
 
         orcaPodManager = new OrcaPodManager(orcaMemberToken);
-        emit ManagerAddress(address(orcaPodManager));
+        emit PodManagerAddress(address(orcaPodManager));
 
         orcaVoteManager = new OrcaVoteManager();
-        emit VotingAddress(address(orcaVoteManager));
+        emit VoteManagerAddress(address(orcaVoteManager));
 
         console.log(address(orcaPodManager));
     }
@@ -51,9 +51,14 @@ contract OrcaProtocol {
         uint256 votingPeriod,
         uint256 minQuorum
     ) public {
-        orcaMemberToken.mint(address(orcaPodManager), podId, totalSupply, bytes("bytes test"));
+        orcaMemberToken.mint(
+            address(orcaPodManager),
+            podId,
+            totalSupply,
+            bytes("bytes test")
+        );
         orcaPodManager.createPodRule(podId, erc20Address, minimumBalance);
-        orcaVoteManager.createVotingRule(podId, votingPeriod, minQuorum);
+        orcaVoteManager.createVotingStrategy(podId, votingPeriod, minQuorum);
         emit CreatePod(podId);
     }
 }

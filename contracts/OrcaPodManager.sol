@@ -23,9 +23,12 @@ contract OrcaPodManager is ERC1155Receiver {
 
     mapping(uint256 => Rule) public rulesByPod;
 
-    event CreateRule(uint256 podId, address contractAddress, uint256 minBalance);
+    event CreateRule(
+        uint256 podId,
+        address contractAddress,
+        uint256 minBalance
+    );
 
-    
     // Memberships
     mapping(uint256 => uint256) public membershipsByPod;
 
@@ -48,12 +51,22 @@ contract OrcaPodManager is ERC1155Receiver {
 
     function claimMembership(uint256 podId) public {
         require(membershipsByPod[podId] >= 1, "No Memberships Availible");
-        
-        Rule memory currentRule = rulesByPod[podId];
-        
-        require(IERC20(currentRule.contractAddress).balanceOf(msg.sender) >= currentRule.minBalance, "Not Enough Tokens");
 
-        memberToken.safeTransferFrom(address(this), msg.sender, podId, 1, bytes(""));
+        Rule memory currentRule = rulesByPod[podId];
+
+        require(
+            IERC20(currentRule.contractAddress).balanceOf(msg.sender) >=
+                currentRule.minBalance,
+            "Not Enough Tokens"
+        );
+
+        memberToken.safeTransferFrom(
+            address(this),
+            msg.sender,
+            podId,
+            1,
+            bytes("")
+        );
     }
 
     // // add modifier for only OrcaProtocol
@@ -91,10 +104,9 @@ contract OrcaPodManager is ERC1155Receiver {
     ) public virtual override returns (bytes4) {
         // add modifier for only OrcaMemberTokens
 
-        for (uint i = 0; i < _id.length; i++) {
+        for (uint256 i = 0; i < _id.length; i++) {
             membershipsByPod[_id[i]] += _value[i];
         }
         return this.onERC1155BatchReceived.selector;
     }
-
 }
