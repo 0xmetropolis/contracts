@@ -33,6 +33,12 @@ contract OrcaPodManager is ERC1155Receiver {
         uint256 minBalance
     );
 
+    event UpdateRule(
+        uint256 podId,
+        address contractAddress,
+        uint256 minBalance
+    );
+
 
     constructor(OrcaMemberToken _memberToken) public {
         memberToken = _memberToken;
@@ -94,10 +100,9 @@ contract OrcaPodManager is ERC1155Receiver {
         emit CreateRule(podId, contractAddress, minBalance);
     }
 
-    function setPodRule(uint256 podId, address contract, uint256 balance) public onlyVotingManager {
-        rulesByPod[podId] = Rule(contractAddress, minBalance);
-        emit UpdateRule(podId, contractAddress, minBalance);
-
+    function setPodRule(uint256 _podId, address _contractAddress, uint256 _minBalance) public onlyVotingManager {
+        rulesByPod[_podId] = Rule(_contractAddress, _minBalance);
+        emit UpdateRule(_podId, _contractAddress, _minBalance);
     }
 
     function onERC1155Received(

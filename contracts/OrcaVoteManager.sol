@@ -2,6 +2,7 @@ pragma solidity 0.7.4;
 
 /* solhint-disable indent */
 import './OrcaPodManager.sol';
+import "hardhat/console.sol";
 
 contract OrcaVoteManager {
     // Vote Strategys
@@ -13,7 +14,7 @@ contract OrcaVoteManager {
     // Vote Proposals
     struct PodVoteProposal {
         uint256 proposalId;
-        uint256 propoalBlock; // block number of proposal
+        uint256 proposalBlock; // block number of proposal
 
         uint256 approveVotes; // number of votes for proposal
         uint256 rejectVotes; // number of votes against proposal
@@ -52,6 +53,13 @@ contract OrcaVoteManager {
         uint256 indexed proposalId,
         address indexed member,
         bool yesOrNo
+    );
+
+    event FinalizeProposal(
+        uint256 indexed podId,
+        uint256 indexed proposalId,
+        address member,
+        bool indexed yesOrNo
     );
 
     constructor(OrcaPodManager _podManager) public {
@@ -107,11 +115,22 @@ contract OrcaVoteManager {
     function finalizeVote (uint256 _podId) public {
         PodVoteProposal storage proposal = voteProposalByPod[_podId];
         require(proposal.pending, "There is no current proposal");
-        require(proposal.propoalBlock > block.number);
+        require(block.number > proposal.proposalBlock, "The voting period has not ended");
 
-        // make sure enough people have voted
-        if(proposal.approveVotes + proposal.rejectVotes > proposal.minQuorum) {
-          // check if enough people vo
+        if(proposal.approveVotes + proposal.rejectVotes >= voteStrategiesByPod[_podId].minQuorum) {
+          // check if enough people voted yes
+          // TODO: add necessary approve votes for rule
+          if(proposal.approveVotes > 0) {
+            proposal.pending = false;
+            podManager.setPodRule(_podId, proposal.ruleAddress, proposal.ruleMinBalance);
+
+            emit FinalizeProposal(_podId, proposal.proposalId, msg.sender, true);
+            // reward sender
+          } else {
+            proposal.pending = false;
+
+            emit FinalizeProposal(_podId, proposal.proposalId, msg.sender, false);
+          }
         }
 
     }
