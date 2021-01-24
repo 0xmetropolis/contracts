@@ -29,6 +29,7 @@ contract OrcaVoteManager {
     uint256 private proposalId = 0;
     mapping(uint256 => PodVoteStrategy) public voteStrategiesByPod;
     mapping(uint256 => PodVoteProposal) public voteProposalByPod;
+
     // proposalId => address => hasVoted
     mapping(uint256 => mapping(address => bool)) public userHasVotedByProposal;
 
@@ -101,5 +102,17 @@ contract OrcaVoteManager {
         }
 
         emit CastVote(_podId, proposal.proposalId, msg.sender, _yesOrNo);
+    }
+
+    function finalizeVote (uint256 _podId) public {
+        PodVoteProposal storage proposal = voteProposalByPod[_podId];
+        require(proposal.pending, "There is no current proposal");
+        require(proposal.propoalBlock > block.number);
+
+        // make sure enough people have voted
+        if(proposal.approveVotes + proposal.rejectVotes > proposal.minQuorum) {
+          // check if enough people vo
+        }
+
     }
 }

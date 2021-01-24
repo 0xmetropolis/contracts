@@ -12,8 +12,6 @@ import "./OrcaMemberToken.sol";
 // it is responsible for distributing and retracting memberships
 
 contract OrcaPodManager is ERC1155Receiver {
-    OrcaMemberToken memberToken;
-    address deployer;
 
     // Rules
     struct Rule {
@@ -21,7 +19,13 @@ contract OrcaPodManager is ERC1155Receiver {
         uint256 minBalance;
     }
 
+    OrcaMemberToken memberToken;
+    address public deployer;
+    address public votingManager;
     mapping(uint256 => Rule) public rulesByPod;
+    mapping(uint256 => uint256) public membershipsByPod;
+
+    event MembershipChange(uint256 podId, address from, address to);
 
     event CreateRule(
         uint256 podId,
@@ -29,10 +33,6 @@ contract OrcaPodManager is ERC1155Receiver {
         uint256 minBalance
     );
 
-    // Memberships
-    mapping(uint256 => uint256) public membershipsByPod;
-
-    event MembershipChange(uint256 podId, address from, address to);
 
     constructor(OrcaMemberToken _memberToken) public {
         memberToken = _memberToken;
@@ -47,6 +47,19 @@ contract OrcaPodManager is ERC1155Receiver {
             "Only OrcaProtocol can call this function."
         );
         _;
+    }
+
+    modifier onlyVotingManager {
+        require(
+            msg.sender == votingManager,
+            "Only VotingManager can call this function."
+        );
+        _;
+    }
+
+
+    function setVoteManager(address _votingManager) public onlyProtocol {
+        votingManager = _votingManager;
     }
 
     function claimMembership(uint256 podId) public {
@@ -72,14 +85,19 @@ contract OrcaPodManager is ERC1155Receiver {
     // // add modifier for only OrcaProtocol
     // function retractMembership(){}
 
-    // add modifier for only OrcaProtocol
     function createPodRule(
         uint256 podId,
         address contractAddress,
         uint256 minBalance
-    ) public {
+    ) public onlyProtocol {
         rulesByPod[podId] = Rule(contractAddress, minBalance);
         emit CreateRule(podId, contractAddress, minBalance);
+    }
+
+    function setPodRule(uint256 podId, address contract, uint256 balance) public onlyVotingManager {
+        rulesByPod[podId] = Rule(contractAddress, minBalance);
+        emit UpdateRule(podId, contractAddress, minBalance);
+
     }
 
     function onERC1155Received(
