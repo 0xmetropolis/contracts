@@ -12,7 +12,6 @@ import "./OrcaMemberToken.sol";
 // it is responsible for distributing and retracting memberships
 
 contract OrcaPodManager is ERC1155Receiver {
-
     // Rules
     struct Rule {
         address contractAddress;
@@ -39,7 +38,6 @@ contract OrcaPodManager is ERC1155Receiver {
         uint256 minBalance
     );
 
-
     constructor(OrcaMemberToken _memberToken) public {
         memberToken = _memberToken;
         deployer = msg.sender;
@@ -62,7 +60,6 @@ contract OrcaPodManager is ERC1155Receiver {
         );
         _;
     }
-
 
     function setVoteManager(address _votingManager) public onlyProtocol {
         votingManager = _votingManager;
@@ -97,12 +94,24 @@ contract OrcaPodManager is ERC1155Receiver {
         uint256 _minBalance
     ) public onlyProtocol {
         rulesByPod[_podId] = Rule(_contractAddress, _minBalance);
-        emit CreateRule(_podId, rulesByPod[_podId].contractAddress, rulesByPod[_podId].minBalance);
+        emit CreateRule(
+            _podId,
+            rulesByPod[_podId].contractAddress,
+            rulesByPod[_podId].minBalance
+        );
     }
 
-    function setPodRule(uint256 _podId, address _contractAddress, uint256 _minBalance) public onlyVotingManager {
+    function setPodRule(
+        uint256 _podId,
+        address _contractAddress,
+        uint256 _minBalance
+    ) public onlyVotingManager {
         rulesByPod[_podId] = Rule(_contractAddress, _minBalance);
-        emit UpdateRule(_podId, rulesByPod[_podId].contractAddress, rulesByPod[_podId].minBalance);
+        emit UpdateRule(
+            _podId,
+            rulesByPod[_podId].contractAddress,
+            rulesByPod[_podId].minBalance
+        );
     }
 
     function onERC1155Received(
