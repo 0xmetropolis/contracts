@@ -1,5 +1,7 @@
 pragma solidity 0.7.4;
 
+/* solhint-disable indent */
+
 import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155Receiver.sol";
 
@@ -12,7 +14,6 @@ import "./OrcaMemberToken.sol";
 // it is responsible for distributing and retracting memberships
 
 contract OrcaPodManager is ERC1155Receiver {
-
     // Rules
     struct Rule {
         address contractAddress;
@@ -39,9 +40,8 @@ contract OrcaPodManager is ERC1155Receiver {
         uint256 minBalance
     );
 
-
-    constructor(OrcaMemberToken _memberToken) public {
-        memberToken = _memberToken;
+    constructor(address _memberToken) public {
+        memberToken = OrcaMemberToken(_memberToken);
         deployer = msg.sender;
     }
 
@@ -62,7 +62,6 @@ contract OrcaPodManager is ERC1155Receiver {
         );
         _;
     }
-
 
     function setVoteManager(address _votingManager) public onlyProtocol {
         votingManager = _votingManager;
@@ -88,21 +87,57 @@ contract OrcaPodManager is ERC1155Receiver {
         );
     }
 
-    // // add modifier for only OrcaProtocol
-    // function retractMembership(){}
+    // Creates a pod and its rule.
+    function createPod(
+        uint256 _podId,
+        uint256 _totalSupply,
+        address _erc20Address,
+        uint256 _minimumBalance
+    ) public onlyProtocol {
+        memberToken.createPod(
+            address(this),
+            _podId,
+            _totalSupply,
+            bytes("bytes test")
+        );
 
-    function createPodRule(
+        rulesByPod[_podId] = Rule(_erc20Address, _minimumBalance);
+
+        emit CreateRule(
+            _podId,
+            rulesByPod[_podId].contractAddress,
+            rulesByPod[_podId].minBalance
+        );
+    }
+
+    /** 
+        Checks to see if _user is in compliance with the rules set by _podId.
+        If _user is not compliant, this function takes back their token.
+     */
+    function retractMembership(uint256 _podId, address _user) public {
+        Rule memory currentRule = rulesByPod;
+
+        require(
+            IERC20(currentRule.contractAddress).balanceOf(_user) <
+                currentRule.minBalance,
+            "User was not below the minimum balance"
+        );
+
+        // Need a function that allows a token type creator
+        memberToken.safeTransferFrom(_user, address(this), _podId, 1, "butts");
+    }
+
+    function setPodRule(
         uint256 _podId,
         address _contractAddress,
         uint256 _minBalance
-    ) public onlyProtocol {
+    ) public onlyVotingManager {
         rulesByPod[_podId] = Rule(_contractAddress, _minBalance);
-        emit CreateRule(_podId, rulesByPod[_podId].contractAddress, rulesByPod[_podId].minBalance);
-    }
-
-    function setPodRule(uint256 _podId, address _contractAddress, uint256 _minBalance) public onlyVotingManager {
-        rulesByPod[_podId] = Rule(_contractAddress, _minBalance);
-        emit UpdateRule(_podId, rulesByPod[_podId].contractAddress, rulesByPod[_podId].minBalance);
+        emit UpdateRule(
+            _podId,
+            rulesByPod[_podId].contractAddress,
+            rulesByPod[_podId].minBalance
+        );
     }
 
     function onERC1155Received(

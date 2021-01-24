@@ -11,6 +11,8 @@ const { deployContract, provider, solidity } = waffle;
 
 use(solidity);
 
+// These tests test the end-to-end user flow.
+
 describe("Orca Tests", () => {
   const [admin, host, member, other] = provider.getWallets();
 

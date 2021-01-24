@@ -25,16 +25,13 @@ contract OrcaProtocol {
 
     OrcaPodManager orcaPodManager;
     OrcaVoteManager orcaVoteManager;
-    OrcaMemberToken orcaMemberToken;
 
     constructor(address _orcaMemberTokenAddress)
         public
     // address OrcaPodManagerAddress,
     // address OrcaVotingManagerAddress,
     {
-        orcaMemberToken = OrcaMemberToken(_orcaMemberTokenAddress);
-
-        orcaPodManager = new OrcaPodManager(orcaMemberToken);
+        orcaPodManager = new OrcaPodManager(_orcaMemberTokenAddress);
         emit PodManagerAddress(address(orcaPodManager));
 
         orcaVoteManager = new OrcaVoteManager(orcaPodManager);
@@ -54,13 +51,13 @@ contract OrcaProtocol {
         uint256 _minQuorum
     ) public {
         // add a require to confirm minting was successful otherwise revert
-        orcaMemberToken.mint(
-            address(orcaPodManager),
+        orcaPodManager.createPod(
             _podId,
             _totalSupply,
-            bytes("bytes test")
+            _erc20Address,
+            _minimumBalance
         );
-        orcaPodManager.createPodRule(_podId, _erc20Address, _minimumBalance);
+
         orcaVoteManager.createVotingStrategy(_podId, _votingPeriod, _minQuorum);
         emit CreatePod(_podId);
     }
