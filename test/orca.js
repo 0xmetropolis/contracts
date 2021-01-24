@@ -73,33 +73,28 @@ describe("Orca Tests", () => {
       .to.emit(orcaVoteManager, "CreateProposal")
       .withArgs(1, 1, orcaToken.address, 10, member.address);
 
-    const voteProposale = await orcaVoteManager.voteProposalByPod(1);
-    // test vote propsale saved
-    // propoalBlock, approveVotes, rejectVotes, pending, ruleAddress, ruleMinBalance;
-    // await expect(voteProposale[0]).to.equal(blocknumber)
-    await expect(voteProposale[0]).to.equal(1);
-    await expect(voteProposale[2]).to.equal(0);
-    await expect(voteProposale[3]).to.equal(0);
-    await expect(voteProposale[4]).to.equal(true);
-    await expect(voteProposale[5]).to.equal(orcaToken.address);
-    await expect(voteProposale[6]).to.equal(10);
+    const voteProposal = await orcaVoteManager.voteProposalByPod(1);
+
+    await expect(voteProposal.proposalId).to.equal(1);
+    await expect(voteProposal.approveVotes).to.equal(0);
+    await expect(voteProposal.rejectVotes).to.equal(0);
+    await expect(voteProposal.pending).to.equal(true);
+    await expect(voteProposal.ruleAddress).to.equal(orcaToken.address);
+    await expect(voteProposal.ruleMinBalance).to.equal(10);
   });
 
   it("should cast a vote on a proposal", async () => {
+    let voteProposal = await orcaVoteManager.voteProposalByPod(1);
+    await expect(voteProposal.approveVotes).to.equal(0);
+    await expect(voteProposal.rejectVotes).to.equal(0);
+
     await expect(orcaVoteManager.connect(member).vote(1, true))
       .to.emit(orcaVoteManager, "CastVote")
       .withArgs(1, 1, member.address, true);
 
-    const voteProposale = await orcaVoteManager.voteProposalByPod(1);
-    // test vote propsale saved
-    // propoalBlock, approveVotes, rejectVotes, pending, ruleAddress, ruleMinBalance;
-    // await expect(voteProposale[0]).to.equal(blocknumber)
-    await expect(voteProposale[0]).to.equal(1);
-    await expect(voteProposale[2]).to.equal(1); //this changes based on the vote
-    await expect(voteProposale[3]).to.equal(0);
-    await expect(voteProposale[4]).to.equal(true);
-    await expect(voteProposale[5]).to.equal(orcaToken.address);
-    await expect(voteProposale[6]).to.equal(10);
+    voteProposal = await orcaVoteManager.voteProposalByPod(1);
+    await expect(voteProposal.approveVotes).to.equal(1);
+    await expect(voteProposal.rejectVotes).to.equal(0);
   });
 
   it("should cast a duplicate vote and revert", async () => {
@@ -107,8 +102,9 @@ describe("Orca Tests", () => {
   });
 
   it("should fail to finalize vote due to voting period", async () => {
-    await expect(orcaVoteManager.connect(member).finalizeVote(1, { gasLimit: "9500000" }))
-      .to.be.revertedWith("The voting period has not ended");
+    await expect(orcaVoteManager.connect(member).finalizeVote(1, { gasLimit: "9500000" })).to.be.revertedWith(
+      "The voting period has not ended",
+    );
   });
 
   it("should finalize vote", async () => {
@@ -120,18 +116,15 @@ describe("Orca Tests", () => {
       .withArgs(1, orcaToken.address, 10);
 
     // confirm proposal no longer pending
-    const voteProposale = await orcaVoteManager.voteProposalByPod(1);
-    await expect(voteProposale[0]).to.equal(1);
-    await expect(voteProposale[2]).to.equal(1);
-    await expect(voteProposale[3]).to.equal(0);
-    await expect(voteProposale[4]).to.equal(false);
-    await expect(voteProposale[5]).to.equal(orcaToken.address);
-    await expect(voteProposale[6]).to.equal(10);
+    const voteProposal = await orcaVoteManager.voteProposalByPod(1);
+    await expect(voteProposal.pending).to.equal(false);
 
     // confirm rule updated
+    // confirm proposal no longer pending
     const podRule = await orcaPodManager.rulesByPod(1);
-    await expect(podRule[0]).to.equal(orcaToken.address);
-    await expect(podRule[1]).to.equal(10);
+
+    await expect(podRule.contractAddress).to.equal(orcaToken.address);
+    await expect(podRule.minBalance).to.equal(10);
 
     // add reward
   });
