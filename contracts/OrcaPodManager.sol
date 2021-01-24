@@ -68,10 +68,10 @@ contract OrcaPodManager is ERC1155Receiver {
         votingManager = _votingManager;
     }
 
-    function claimMembership(uint256 podId) public {
-        require(membershipsByPod[podId] >= 1, "No Memberships Availible");
+    function claimMembership(uint256 _podId) public {
+        require(membershipsByPod[_podId] >= 1, "No Memberships Availible");
 
-        Rule memory currentRule = rulesByPod[podId];
+        Rule memory currentRule = rulesByPod[_podId];
 
         require(
             IERC20(currentRule.contractAddress).balanceOf(msg.sender) >=
@@ -82,7 +82,7 @@ contract OrcaPodManager is ERC1155Receiver {
         memberToken.safeTransferFrom(
             address(this),
             msg.sender,
-            podId,
+            _podId,
             1,
             bytes("")
         );
@@ -92,17 +92,17 @@ contract OrcaPodManager is ERC1155Receiver {
     // function retractMembership(){}
 
     function createPodRule(
-        uint256 podId,
-        address contractAddress,
-        uint256 minBalance
+        uint256 _podId,
+        address _contractAddress,
+        uint256 _minBalance
     ) public onlyProtocol {
-        rulesByPod[podId] = Rule(contractAddress, minBalance);
-        emit CreateRule(podId, contractAddress, minBalance);
+        rulesByPod[_podId] = Rule(_contractAddress, _minBalance);
+        emit CreateRule(_podId, rulesByPod[_podId].contractAddress, rulesByPod[_podId].minBalance);
     }
 
     function setPodRule(uint256 _podId, address _contractAddress, uint256 _minBalance) public onlyVotingManager {
         rulesByPod[_podId] = Rule(_contractAddress, _minBalance);
-        emit UpdateRule(_podId, _contractAddress, _minBalance);
+        emit UpdateRule(_podId, rulesByPod[_podId].contractAddress, rulesByPod[_podId].minBalance);
     }
 
     function onERC1155Received(

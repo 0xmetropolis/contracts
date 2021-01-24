@@ -134,4 +134,5 @@ describe("Orca Tests", () => {
     await expect(podRule[1]).to.equal(10);
 
     // add reward
+  });
 });
