@@ -81,18 +81,24 @@ contract OrcaVoteManager {
           _ruleAddress,
           _ruleMinBalance
         );
-        CreateProposal(proposalId, _podId, _ruleAddress, _ruleMinBalance, msg.sender);
+        emit CreateProposal(
+          voteProposalByPod[_podId].proposalId,
+          _podId,
+          voteProposalByPod[_podId].ruleAddress,
+          voteProposalByPod[_podId].ruleMinBalance,
+          msg.sender
+        );
     }
 
     function createVotingStrategy(
-        uint256 podId,
-        uint256 votingPeriod,
-        uint256 minQuorum
+        uint256 _podId,
+        uint256 _votingPeriod,
+        uint256 _minQuorum
     ) public {
         // TODO: add auth protection
         // Only gets call on pod create
-        voteStrategiesByPod[podId] = PodVoteStrategy(votingPeriod, minQuorum);
-        emit CreateVoteStrategy(podId, votingPeriod, minQuorum);
+        voteStrategiesByPod[_podId] = PodVoteStrategy(_votingPeriod, _minQuorum);
+        emit CreateVoteStrategy(_podId, voteStrategiesByPod[_podId].votingPeriod, voteStrategiesByPod[_podId].minQuorum);
     }
 
     function vote (uint256 _podId, bool _yesOrNo) public {
