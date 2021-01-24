@@ -12,8 +12,6 @@ import "./OrcaMemberToken.sol";
 // it is responsible for distributing and retracting memberships
 
 contract OrcaPodManager is ERC1155Receiver {
-    OrcaMemberToken memberToken;
-    address deployer;
 
     // Rules
     struct Rule {
@@ -21,15 +19,26 @@ contract OrcaPodManager is ERC1155Receiver {
         uint256 minBalance;
     }
 
+    OrcaMemberToken memberToken;
+    address public deployer;
+    address public votingManager;
     mapping(uint256 => Rule) public rulesByPod;
-
-    event CreateRule(uint256 podId, address contractAddress, uint256 minBalance);
-
-    
-    // Memberships
     mapping(uint256 => uint256) public membershipsByPod;
 
     event MembershipChange(uint256 podId, address from, address to);
+
+    event CreateRule(
+        uint256 podId,
+        address contractAddress,
+        uint256 minBalance
+    );
+
+    event UpdateRule(
+        uint256 podId,
+        address contractAddress,
+        uint256 minBalance
+    );
+
 
     constructor(OrcaMemberToken _memberToken) public {
         memberToken = _memberToken;
@@ -46,27 +55,54 @@ contract OrcaPodManager is ERC1155Receiver {
         _;
     }
 
+    modifier onlyVotingManager {
+        require(
+            msg.sender == votingManager,
+            "Only VotingManager can call this function."
+        );
+        _;
+    }
+
+
+    function setVoteManager(address _votingManager) public onlyProtocol {
+        votingManager = _votingManager;
+    }
+
     function claimMembership(uint256 podId) public {
         require(membershipsByPod[podId] >= 1, "No Memberships Availible");
-        
-        Rule memory currentRule = rulesByPod[podId];
-        
-        require(IERC20(currentRule.contractAddress).balanceOf(msg.sender) >= currentRule.minBalance, "Not Enough Tokens");
 
-        memberToken.safeTransferFrom(address(this), msg.sender, podId, 1, bytes(""));
+        Rule memory currentRule = rulesByPod[podId];
+
+        require(
+            IERC20(currentRule.contractAddress).balanceOf(msg.sender) >=
+                currentRule.minBalance,
+            "Not Enough Tokens"
+        );
+
+        memberToken.safeTransferFrom(
+            address(this),
+            msg.sender,
+            podId,
+            1,
+            bytes("")
+        );
     }
 
     // // add modifier for only OrcaProtocol
     // function retractMembership(){}
 
-    // add modifier for only OrcaProtocol
     function createPodRule(
         uint256 podId,
         address contractAddress,
         uint256 minBalance
-    ) public {
+    ) public onlyProtocol {
         rulesByPod[podId] = Rule(contractAddress, minBalance);
         emit CreateRule(podId, contractAddress, minBalance);
+    }
+
+    function setPodRule(uint256 _podId, address _contractAddress, uint256 _minBalance) public onlyVotingManager {
+        rulesByPod[_podId] = Rule(_contractAddress, _minBalance);
+        emit UpdateRule(_podId, _contractAddress, _minBalance);
     }
 
     function onERC1155Received(
@@ -91,10 +127,9 @@ contract OrcaPodManager is ERC1155Receiver {
     ) public virtual override returns (bytes4) {
         // add modifier for only OrcaMemberTokens
 
-        for (uint i = 0; i < _id.length; i++) {
+        for (uint256 i = 0; i < _id.length; i++) {
             membershipsByPod[_id[i]] += _value[i];
         }
         return this.onERC1155BatchReceived.selector;
     }
-
 }
