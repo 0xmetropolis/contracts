@@ -41,15 +41,16 @@ contract OrcaProtocol {
         emit VoteManagerAddress(address(orcaVoteManager));
 
         orcaPodManager.setVoteManager(address(orcaVoteManager));
-
-        console.log(address(orcaPodManager));
     }
 
     function createPod(
         uint256 _podId,
         uint256 _totalSupply,
-        address _erc20Address,
-        uint256 _minimumBalance,
+        address _contractAddress,
+        bytes4 _functionSignature,
+        bytes32[5] calldata _functionParams,
+        uint256 _comparisonLogic,
+        uint256 _comparisonValue,
         uint256 _votingPeriod,
         uint256 _minQuorum
     ) public {
@@ -60,7 +61,17 @@ contract OrcaProtocol {
             _totalSupply,
             bytes("bytes test")
         );
-        orcaPodManager.createPodRule(_podId, _erc20Address, _minimumBalance);
+
+        // create rule
+        orcaPodManager.createPodRule(
+          _podId,
+          _contractAddress,
+          _functionSignature,
+          _functionParams,
+          _comparisonLogic,
+          _comparisonValue
+        );
+
         orcaVoteManager.createVotingStrategy(_podId, _votingPeriod, _minQuorum);
         emit CreatePod(_podId);
     }

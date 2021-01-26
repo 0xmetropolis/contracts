@@ -21,8 +21,11 @@ contract OrcaVoteManager {
 
         bool pending; // has the final vote been tallied
 
-        address ruleAddress;
-        uint256 ruleMinBalance;
+        address contractAddress;
+        bytes4 functionSignature;
+        bytes32[5] functionParams;
+        uint256 comparisonLogic;
+        uint256 comparisonValue;
     }
 
     address private deployer;
@@ -43,8 +46,11 @@ contract OrcaVoteManager {
     event CreateProposal(
         uint256 proposalId,
         uint256 podId,
-        address ruleAddress,
-        uint256 ruleMinBalance,
+        address contractAddress,
+        bytes4 functionSignature,
+        bytes32[5] functionParams,
+        uint256 comparisonLogic,
+        uint256 comparisonValue,
         address proposer
     );
 
@@ -68,7 +74,14 @@ contract OrcaVoteManager {
         podManager = _podManager;
     }
 
-    function createProposal (uint256 _podId, address _ruleAddress, uint256 _ruleMinBalance) public {
+    function createProposal (
+      uint256 _podId,
+      address _contractAddress,
+      bytes4 _functionSignature,
+      bytes32[5] memory _functionParams,
+      uint256 _comparisonLogic,
+      uint256 _comparisonValue
+    ) public {
         // Check for Pod membership
         require(!voteProposalByPod[_podId].pending, "There is currently a proposal pending");
         proposalId = proposalId + 1;
@@ -78,14 +91,20 @@ contract OrcaVoteManager {
           0,
           0,
           true,
-          _ruleAddress,
-          _ruleMinBalance
+          _contractAddress,
+          _functionSignature,
+          _functionParams,
+          _comparisonLogic,
+          _comparisonValue
         );
         emit CreateProposal(
           voteProposalByPod[_podId].proposalId,
           _podId,
-          voteProposalByPod[_podId].ruleAddress,
-          voteProposalByPod[_podId].ruleMinBalance,
+          voteProposalByPod[_podId].contractAddress,
+          voteProposalByPod[_podId].functionSignature,
+          voteProposalByPod[_podId].functionParams,
+          voteProposalByPod[_podId].comparisonLogic,
+          voteProposalByPod[_podId].comparisonValue,
           msg.sender
         );
     }
@@ -128,7 +147,14 @@ contract OrcaVoteManager {
           // TODO: add necessary approve votes for rule
           if(proposal.approveVotes > 0) {
             proposal.pending = false;
-            podManager.setPodRule(_podId, proposal.ruleAddress, proposal.ruleMinBalance);
+            podManager.setPodRule(
+              _podId,
+              voteProposalByPod[_podId].contractAddress,
+              voteProposalByPod[_podId].functionSignature,
+              voteProposalByPod[_podId].functionParams,
+              voteProposalByPod[_podId].comparisonLogic,
+              voteProposalByPod[_podId].comparisonValue
+            );
 
             emit FinalizeProposal(_podId, proposal.proposalId, msg.sender, true);
             // reward sender
@@ -138,6 +164,5 @@ contract OrcaVoteManager {
             emit FinalizeProposal(_podId, proposal.proposalId, msg.sender, false);
           }
         }
-
     }
 }

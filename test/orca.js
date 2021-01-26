@@ -20,6 +20,24 @@ describe("Orca Tests", () => {
   let orcaPodManager;
   let orcaVoteManager;
 
+  // create pod args
+  const podId = 1;
+  const totalSupply = 10;
+  const functionHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("balanceOf(address)"));
+  const functionSignature = ethers.utils.hexDataSlice(functionHash, 0, 4);
+  const param1 = ethers.utils.formatBytes32String("msg.sender");
+  const param2 = ethers.utils.formatBytes32String("");
+  const param3 = ethers.utils.formatBytes32String("");
+  const param4 = ethers.utils.formatBytes32String("");
+  const param5 = ethers.utils.formatBytes32String("");
+  const params = [param1, param2, param3, param4, param5];
+  // 0 is equal to, 1 is greaterThan, 2 is less than
+  // ruleResult (comparison logic) (comparison value)
+  const comparisonLogic = 1;
+  const comparisonValue = 5;
+  const votingPeriod = 2;
+  const minQuorum = 1;
+
   it("should deploy contracts", async () => {
     orcaToken = await deployContract(admin, OrcaToken);
     orcaMemberToken = await deployContract(admin, OrcaMemberToken);
@@ -35,28 +53,42 @@ describe("Orca Tests", () => {
   });
 
   it("should create a pod", async () => {
-    /*
-    OrcaProtocol- createPod
-
-    uint256 podId,
-    uint256 totalSupply,
-    address erc20Address,
-    uint256 minimumBalance,
-    uint256 votingPeriod,
-    uint256 minQuorum
+    /* OrcaProtocol- createPod
+          uint256 _podId,
+          uint256 _totalSupply,
+          address _contractAddress;
+          bytes4 _functionSignature;
+          bytes32[5] _functionParams;
+          uint256 _comparisonLogic;
+          uint256 _comparisonValue;
+          uint256 _votingPeriod,
+          uint256 _minQuorum
     */
-
-    await expect(orcaProtocol.connect(host).createPod(1, 10, orcaToken.address, 5, 2, 1))
+    await expect(
+      orcaProtocol
+        .connect(host)
+        .createPod(
+          podId,
+          totalSupply,
+          orcaToken.address,
+          functionSignature,
+          params,
+          comparisonLogic,
+          comparisonValue,
+          votingPeriod,
+          minQuorum,
+        ),
+    )
       .to.emit(orcaProtocol, "CreatePod")
       .withArgs(1)
       .to.emit(orcaPodManager, "CreateRule")
-      .withArgs(1, orcaToken.address, 5)
+      .withArgs(1, orcaToken.address, functionSignature, params, comparisonLogic, comparisonValue)
       .to.emit(orcaVoteManager, "CreateVoteStrategy")
       .withArgs(1, 2, 1);
   });
 
   it("should not claim membership without min tokens", async () => {
-    await expect(orcaPodManager.connect(host).claimMembership(1)).to.be.revertedWith("Not Enough Tokens");
+    await expect(orcaPodManager.connect(host).claimMembership(1)).to.be.revertedWith("Claim Rule Failed");
   });
 
   it("should claim membership with min tokens", async () => {
@@ -69,9 +101,13 @@ describe("Orca Tests", () => {
   });
 
   it("should create a proposal to raise membership min tokens", async () => {
-    await expect(orcaVoteManager.connect(member).createProposal(1, orcaToken.address, 10))
+    await expect(
+      orcaVoteManager
+        .connect(member)
+        .createProposal(1, orcaToken.address, functionSignature, params, comparisonLogic, 10),
+    )
       .to.emit(orcaVoteManager, "CreateProposal")
-      .withArgs(1, 1, orcaToken.address, 10, member.address);
+      .withArgs(1, 1, orcaToken.address, functionSignature, params, comparisonLogic, 10, member.address);
 
     const voteProposal = await orcaVoteManager.voteProposalByPod(1);
 
@@ -79,8 +115,6 @@ describe("Orca Tests", () => {
     await expect(voteProposal.approveVotes).to.equal(0);
     await expect(voteProposal.rejectVotes).to.equal(0);
     await expect(voteProposal.pending).to.equal(true);
-    await expect(voteProposal.ruleAddress).to.equal(orcaToken.address);
-    await expect(voteProposal.ruleMinBalance).to.equal(10);
   });
 
   it("should cast a vote on a proposal", async () => {
@@ -113,7 +147,7 @@ describe("Orca Tests", () => {
       .to.emit(orcaVoteManager, "FinalizeProposal")
       .withArgs(1, 1, member.address, true)
       .to.emit(orcaPodManager, "UpdateRule")
-      .withArgs(1, orcaToken.address, 10);
+      .withArgs(1, orcaToken.address, functionSignature, params, comparisonLogic, 10);
 
     // confirm proposal no longer pending
     const voteProposal = await orcaVoteManager.voteProposalByPod(1);
@@ -122,9 +156,8 @@ describe("Orca Tests", () => {
     // confirm rule updated
     // confirm proposal no longer pending
     const podRule = await orcaPodManager.rulesByPod(1);
-
     await expect(podRule.contractAddress).to.equal(orcaToken.address);
-    await expect(podRule.minBalance).to.equal(10);
+    await expect(podRule.comparisonValue).to.equal(10);
 
     // add reward
   });
