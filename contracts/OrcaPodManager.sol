@@ -12,7 +12,6 @@ import "./OrcaMemberToken.sol";
 // it is responsible for distributing and retracting memberships
 
 contract OrcaPodManager is ERC1155Receiver {
-
     // Rules
     struct Rule {
         address contractAddress;
@@ -48,7 +47,6 @@ contract OrcaPodManager is ERC1155Receiver {
         uint256 comparisonValue
     );
 
-
     constructor(OrcaMemberToken _memberToken) public {
         memberToken = _memberToken;
         deployer = msg.sender;
@@ -71,7 +69,6 @@ contract OrcaPodManager is ERC1155Receiver {
         );
         _;
     }
-
 
     function setVoteManager(address _votingManager) public onlyProtocol {
         votingManager = _votingManager;

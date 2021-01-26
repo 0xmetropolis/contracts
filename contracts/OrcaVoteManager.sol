@@ -1,7 +1,7 @@
 pragma solidity 0.7.4;
 
 /* solhint-disable indent */
-import './OrcaPodManager.sol';
+import "./OrcaPodManager.sol";
 import "hardhat/console.sol";
 
 contract OrcaVoteManager {
@@ -15,10 +15,8 @@ contract OrcaVoteManager {
     struct PodVoteProposal {
         uint256 proposalId;
         uint256 proposalBlock; // block number of proposal
-
         uint256 approveVotes; // number of votes for proposal
         uint256 rejectVotes; // number of votes against proposal
-
         bool pending; // has the final vote been tallied
 
         address contractAddress;
@@ -83,7 +81,10 @@ contract OrcaVoteManager {
       uint256 _comparisonValue
     ) public {
         // Check for Pod membership
-        require(!voteProposalByPod[_podId].pending, "There is currently a proposal pending");
+        require(
+            !voteProposalByPod[_podId].pending,
+            "There is currently a proposal pending"
+        );
         proposalId = proposalId + 1;
         voteProposalByPod[_podId] = PodVoteProposal(
           proposalId,
@@ -116,28 +117,38 @@ contract OrcaVoteManager {
     ) public {
         // TODO: add auth protection
         // Only gets call on pod create
-        voteStrategiesByPod[_podId] = PodVoteStrategy(_votingPeriod, _minQuorum);
-        emit CreateVoteStrategy(_podId, voteStrategiesByPod[_podId].votingPeriod, voteStrategiesByPod[_podId].minQuorum);
+        voteStrategiesByPod[_podId] = PodVoteStrategy(
+            _votingPeriod,
+            _minQuorum
+        );
+        emit CreateVoteStrategy(
+            _podId,
+            voteStrategiesByPod[_podId].votingPeriod,
+            voteStrategiesByPod[_podId].minQuorum
+        );
     }
 
-    function vote (uint256 _podId, bool _yesOrNo) public {
+    function vote(uint256 _podId, bool _yesOrNo) public {
         // TODO: add auth (requred msg.sender is in group)
         // TODO: repeat vote protection (if membership transferred)
         PodVoteProposal storage proposal = voteProposalByPod[_podId];
         require(proposal.pending, "There is no current proposal");
-        require(!userHasVotedByProposal[proposal.proposalId][msg.sender], "This member has already voted");
+        require(
+            !userHasVotedByProposal[proposal.proposalId][msg.sender],
+            "This member has already voted"
+        );
 
         userHasVotedByProposal[proposal.proposalId][msg.sender] = true;
         if (_yesOrNo) {
-          proposal.approveVotes = voteProposalByPod[_podId].approveVotes + 1;
+            proposal.approveVotes = voteProposalByPod[_podId].approveVotes + 1;
         } else {
-          proposal.rejectVotes = voteProposalByPod[_podId].rejectVotes + 1;
+            proposal.rejectVotes = voteProposalByPod[_podId].rejectVotes + 1;
         }
 
         emit CastVote(_podId, proposal.proposalId, msg.sender, _yesOrNo);
     }
 
-    function finalizeVote (uint256 _podId) public {
+    function finalizeVote(uint256 _podId) public {
         PodVoteProposal storage proposal = voteProposalByPod[_podId];
         require(proposal.pending, "There is no current proposal");
         require(block.number > proposal.proposalBlock, "The voting period has not ended");
