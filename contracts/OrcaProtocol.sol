@@ -19,8 +19,8 @@ import "hardhat/console.sol";
 // only allow for one token per user
 
 contract OrcaProtocol {
-event PodManagerAddress(address contractAddress);
-event VoteManagerAddress(address contractAddress);
+    event PodManagerAddress(address contractAddress);
+    event VoteManagerAddress(address contractAddress);
     event CreatePod(uint256 podId);
 
     OrcaPodManager orcaPodManager;
@@ -55,7 +55,7 @@ event VoteManagerAddress(address contractAddress);
         uint256 _minQuorum
     ) public {
         // add a require to confirm minting was successful otherwise revert
-        orcaMemberToken.mint(
+        orcaMemberToken.createPod(
             address(orcaPodManager),
             _podId,
             _totalSupply,
@@ -63,13 +63,21 @@ event VoteManagerAddress(address contractAddress);
         );
 
         // create rule
-        orcaPodManager.createPodRule(
-          _podId,
-          _contractAddress,
-          _functionSignature,
-          _functionParams,
-          _comparisonLogic,
-          _comparisonValue
+        orcaPodManager.setPodRule(
+            _podId,
+            _contractAddress,
+            _functionSignature,
+            _functionParams,
+            _comparisonLogic,
+            _comparisonValue
+        );
+        (
+            _podId,
+            _contractAddress,
+            _functionSignature,
+            _functionParams,
+            _comparisonLogic,
+            _comparisonValue
         );
 
         orcaVoteManager.createVotingStrategy(_podId, _votingPeriod, _minQuorum);

@@ -18,7 +18,6 @@ contract OrcaVoteManager {
         uint256 approveVotes; // number of votes for proposal
         uint256 rejectVotes; // number of votes against proposal
         bool pending; // has the final vote been tallied
-
         address contractAddress;
         bytes4 functionSignature;
         bytes32[5] functionParams;
@@ -72,13 +71,13 @@ contract OrcaVoteManager {
         podManager = _podManager;
     }
 
-    function createProposal (
-      uint256 _podId,
-      address _contractAddress,
-      bytes4 _functionSignature,
-      bytes32[5] memory _functionParams,
-      uint256 _comparisonLogic,
-      uint256 _comparisonValue
+    function createProposal(
+        uint256 _podId,
+        address _contractAddress,
+        bytes4 _functionSignature,
+        bytes32[5] memory _functionParams,
+        uint256 _comparisonLogic,
+        uint256 _comparisonValue
     ) public {
         // Check for Pod membership
         require(
@@ -87,26 +86,26 @@ contract OrcaVoteManager {
         );
         proposalId = proposalId + 1;
         voteProposalByPod[_podId] = PodVoteProposal(
-          proposalId,
-          block.number + voteStrategiesByPod[_podId].votingPeriod,
-          0,
-          0,
-          true,
-          _contractAddress,
-          _functionSignature,
-          _functionParams,
-          _comparisonLogic,
-          _comparisonValue
+            proposalId,
+            block.number + voteStrategiesByPod[_podId].votingPeriod,
+            0,
+            0,
+            true,
+            _contractAddress,
+            _functionSignature,
+            _functionParams,
+            _comparisonLogic,
+            _comparisonValue
         );
         emit CreateProposal(
-          voteProposalByPod[_podId].proposalId,
-          _podId,
-          voteProposalByPod[_podId].contractAddress,
-          voteProposalByPod[_podId].functionSignature,
-          voteProposalByPod[_podId].functionParams,
-          voteProposalByPod[_podId].comparisonLogic,
-          voteProposalByPod[_podId].comparisonValue,
-          msg.sender
+            voteProposalByPod[_podId].proposalId,
+            _podId,
+            voteProposalByPod[_podId].contractAddress,
+            voteProposalByPod[_podId].functionSignature,
+            voteProposalByPod[_podId].functionParams,
+            voteProposalByPod[_podId].comparisonLogic,
+            voteProposalByPod[_podId].comparisonValue,
+            msg.sender
         );
     }
 
@@ -151,29 +150,45 @@ contract OrcaVoteManager {
     function finalizeVote(uint256 _podId) public {
         PodVoteProposal storage proposal = voteProposalByPod[_podId];
         require(proposal.pending, "There is no current proposal");
-        require(block.number > proposal.proposalBlock, "The voting period has not ended");
+        require(
+            block.number > proposal.proposalBlock,
+            "The voting period has not ended"
+        );
 
-        if(proposal.approveVotes + proposal.rejectVotes >= voteStrategiesByPod[_podId].minQuorum) {
-          // check if enough people voted yes
-          // TODO: add necessary approve votes for rule
-          if(proposal.approveVotes > 0) {
-            proposal.pending = false;
-            podManager.setPodRule(
-              _podId,
-              voteProposalByPod[_podId].contractAddress,
-              voteProposalByPod[_podId].functionSignature,
-              voteProposalByPod[_podId].functionParams,
-              voteProposalByPod[_podId].comparisonLogic,
-              voteProposalByPod[_podId].comparisonValue
-            );
+        if (
+            proposal.approveVotes + proposal.rejectVotes >=
+            voteStrategiesByPod[_podId].minQuorum
+        ) {
+            // check if enough people voted yes
+            // TODO: add necessary approve votes for rule
+            if (proposal.approveVotes > 0) {
+                proposal.pending = false;
+                podManager.setPodRule(
+                    _podId,
+                    voteProposalByPod[_podId].contractAddress,
+                    voteProposalByPod[_podId].functionSignature,
+                    voteProposalByPod[_podId].functionParams,
+                    voteProposalByPod[_podId].comparisonLogic,
+                    voteProposalByPod[_podId].comparisonValue
+                );
 
-            emit FinalizeProposal(_podId, proposal.proposalId, msg.sender, true);
-            // reward sender
-          } else {
-            proposal.pending = false;
+                emit FinalizeProposal(
+                    _podId,
+                    proposal.proposalId,
+                    msg.sender,
+                    true
+                );
+                // reward sender
+            } else {
+                proposal.pending = false;
 
-            emit FinalizeProposal(_podId, proposal.proposalId, msg.sender, false);
-          }
+                emit FinalizeProposal(
+                    _podId,
+                    proposal.proposalId,
+                    msg.sender,
+                    false
+                );
+            }
         }
     }
 }

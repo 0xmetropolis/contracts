@@ -1,10 +1,7 @@
 pragma solidity 0.7.4;
 
 contract BalanceTest {
-
-    constructor () public{
-
-    }
+    constructor() public {}
 
     function balanceOfAddress(address account) public returns (uint256) {
         return 100;
@@ -14,7 +11,11 @@ contract BalanceTest {
         return 101;
     }
 
-    function balanceOfMulti(address account, uint256 number, bytes32 word) public returns (uint256) {
+    function balanceOfMulti(
+        address account,
+        uint256 number,
+        bytes32 word
+    ) public returns (uint256) {
         return 102;
     }
 }

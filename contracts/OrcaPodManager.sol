@@ -56,16 +56,8 @@ contract OrcaPodManager is ERC1155Receiver {
     // dependent on how we are managing contract deployment
     modifier onlyProtocol {
         require(
-            msg.sender == deployer,
+            (msg.sender == deployer) || (msg.sender == votingManager),
             "Only OrcaProtocol can call this function."
-        );
-        _;
-    }
-
-    modifier onlyVotingManager {
-        require(
-            msg.sender == votingManager,
-            "Only VotingManager can call this function."
         );
         _;
     }
@@ -74,30 +66,46 @@ contract OrcaPodManager is ERC1155Receiver {
         votingManager = _votingManager;
     }
 
-    function claimMembership(uint256 _podId) public {
-        require(membershipsByPod[_podId] >= 1, "No Memberships Availible");
-
+    function isRuleCompliant(uint256 _podId, address _user) public returns(bool) {
         Rule memory currentRule = rulesByPod[_podId];
 
         // check function params for keywords
-        for (uint i = 0; i < currentRule.functionParams.length; i++) {
-            if ( currentRule.functionParams[i] == bytes32("msg.sender") ){
-                currentRule.functionParams[i] =  bytes32(uint256(msg.sender));
+        for (uint256 i = 0; i < currentRule.functionParams.length; i++) {
+            if (currentRule.functionParams[i] == bytes32("MEMBER")) {
+                currentRule.functionParams[i] = bytes32(uint256(_user));
             }
         }
 
-        (bool success, bytes memory result) = currentRule.contractAddress.call(abi.encodePacked(currentRule.functionSignature, currentRule.functionParams[0], currentRule.functionParams[1], currentRule.functionParams[2], currentRule.functionParams[3], currentRule.functionParams[4]));
-        require(success == true, "Claim Transaction Failed");
+        (bool success, bytes memory result) =
+            currentRule.contractAddress.call(
+                abi.encodePacked(
+                    currentRule.functionSignature,
+                    currentRule.functionParams[0],
+                    currentRule.functionParams[1],
+                    currentRule.functionParams[2],
+                    currentRule.functionParams[3],
+                    currentRule.functionParams[4]
+                )
+            );
+        require(success == true, "Rule Transaction Failed");
 
-        if(currentRule.comparisonLogic == 0){
-          require(toUint256(result) == currentRule.comparisonValue , "Claim Rule Failed");
+        if (currentRule.comparisonLogic == 0) {
+            return toUint256(result) == currentRule.comparisonValue;
         }
-        if(currentRule.comparisonLogic == 1){
-          require(toUint256(result) > currentRule.comparisonValue , "Claim Rule Failed");
+        if (currentRule.comparisonLogic == 1) {
+            return toUint256(result) > currentRule.comparisonValue;
         }
-        if(currentRule.comparisonLogic == 2){
-          require(toUint256(result) < currentRule.comparisonValue , "Claim Rule Failed");
+        if (currentRule.comparisonLogic == 2) {
+            return toUint256(result) < currentRule.comparisonValue;
         }
+        // if invalid rule it is impossible to be compliant
+        return false;
+    }
+
+    function claimMembership(uint256 _podId) public {
+        require(membershipsByPod[_podId] >= 1, "No Memberships Availible");
+
+        require(isRuleCompliant(_podId, msg.sender), "Not Rule Compliant"); 
 
         memberToken.safeTransferFrom(
             address(this),
@@ -109,25 +117,10 @@ contract OrcaPodManager is ERC1155Receiver {
     }
 
     // // add modifier for only OrcaProtocol
-    // function retractMembership(){}
+    function retractMembership(uint256 _podId, address _member) public {
+        require(!isRuleCompliant(_podId, _member), "Rule Compliant" );
 
-    function createPodRule(
-        uint256 _podId,
-        address _contractAddress,
-        bytes4 _functionSignature,
-        bytes32[5] memory _functionParams,
-        uint256 _comparisonLogic,
-        uint256 _comparisonValue
-    ) public onlyProtocol {
-        rulesByPod[_podId] = Rule(_contractAddress, _functionSignature, _functionParams, _comparisonLogic, _comparisonValue);
-        emit CreateRule(
-          _podId,
-          rulesByPod[_podId].contractAddress,
-          rulesByPod[_podId].functionSignature,
-          rulesByPod[_podId].functionParams,
-          rulesByPod[_podId].comparisonLogic,
-          rulesByPod[_podId].comparisonValue
-        );
+        memberToken.unsafeRevoke(_podId, _member);
     }
 
     function setPodRule(
@@ -137,15 +130,21 @@ contract OrcaPodManager is ERC1155Receiver {
         bytes32[5] memory _functionParams,
         uint256 _comparisonLogic,
         uint256 _comparisonValue
-    ) public onlyVotingManager {
-        rulesByPod[_podId] = Rule(_contractAddress, _functionSignature, _functionParams, _comparisonLogic, _comparisonValue);
+    ) public onlyProtocol {
+        rulesByPod[_podId] = Rule(
+            _contractAddress,
+            _functionSignature,
+            _functionParams,
+            _comparisonLogic,
+            _comparisonValue
+        );
         emit UpdateRule(
-          _podId,
-          rulesByPod[_podId].contractAddress,
-          rulesByPod[_podId].functionSignature,
-          rulesByPod[_podId].functionParams,
-          rulesByPod[_podId].comparisonLogic,
-          rulesByPod[_podId].comparisonValue
+            _podId,
+            rulesByPod[_podId].contractAddress,
+            rulesByPod[_podId].functionSignature,
+            rulesByPod[_podId].functionParams,
+            rulesByPod[_podId].comparisonLogic,
+            rulesByPod[_podId].comparisonValue
         );
     }
 
@@ -177,7 +176,11 @@ contract OrcaPodManager is ERC1155Receiver {
         return this.onERC1155BatchReceived.selector;
     }
 
-    function toUint256(bytes memory _bytes) internal pure returns (uint256 value) {
+    function toUint256(bytes memory _bytes)
+        internal
+        pure
+        returns (uint256 value)
+    {
         assembly {
             value := mload(add(_bytes, 0x20))
         }

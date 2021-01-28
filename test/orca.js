@@ -12,7 +12,7 @@ const { deployContract, provider, solidity } = waffle;
 use(solidity);
 
 describe("Orca Tests", () => {
-  const [admin, host, member, other] = provider.getWallets();
+  const [admin, host, member, shephard] = provider.getWallets();
 
   let orcaProtocol;
   let orcaToken;
@@ -25,7 +25,7 @@ describe("Orca Tests", () => {
   const totalSupply = 10;
   const functionHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("balanceOf(address)"));
   const functionSignature = ethers.utils.hexDataSlice(functionHash, 0, 4);
-  const param1 = ethers.utils.formatBytes32String("msg.sender");
+  const param1 = ethers.utils.formatBytes32String("MEMBER");
   const param2 = ethers.utils.formatBytes32String("");
   const param3 = ethers.utils.formatBytes32String("");
   const param4 = ethers.utils.formatBytes32String("");
@@ -81,26 +81,31 @@ describe("Orca Tests", () => {
     )
       .to.emit(orcaProtocol, "CreatePod")
       .withArgs(1)
-      .to.emit(orcaPodManager, "CreateRule")
+      .to.emit(orcaPodManager, "UpdateRule")
       .withArgs(1, orcaToken.address, functionSignature, params, comparisonLogic, comparisonValue)
       .to.emit(orcaVoteManager, "CreateVoteStrategy")
       .withArgs(1, 2, 1);
   });
 
   it("should not claim membership without min tokens", async () => {
-    await expect(orcaPodManager.connect(host).claimMembership(1)).to.be.revertedWith("Claim Rule Failed");
+    await expect(orcaPodManager.connect(host).claimMembership(1)).to.be.revertedWith("Not Rule Compliant");
   });
 
   it("should claim membership with min tokens", async () => {
     // can only use changeTokenBalance with ERC20/721
     await expect(() => orcaToken.connect(host).mint()).to.changeTokenBalance(orcaToken, host, 6);
 
-    await expect(orcaPodManager.connect(host).claimMembership(1))
+    await expect(orcaPodManager.connect(host).claimMembership(1, { gasLimit: "9500000" }))
       .to.emit(orcaMemberToken, "TransferSingle")
       .withArgs(orcaPodManager.address, orcaPodManager.address, host.address, 1, 1);
+
+    expect(await orcaMemberToken.balanceOf(host.address, 1)).to.equal(1);
   });
 
   it("should create a proposal to raise membership min tokens", async () => {
+    // can only use changeTokenBalance with ERC20/721
+    await expect(() => orcaToken.connect(member).mint()).to.changeTokenBalance(orcaToken, member, 6);
+
     await expect(
       orcaVoteManager
         .connect(member)
@@ -160,5 +165,11 @@ describe("Orca Tests", () => {
     await expect(podRule.comparisonValue).to.equal(10);
 
     // add reward
+  });
+
+  it("should not revoke a valid membership", async () => {
+    await expect(orcaPodManager.connect(shephard).retractMembership(1, host.address)).to.be.revertedWith(
+      "Rule Compliant",
+    );
   });
 });
