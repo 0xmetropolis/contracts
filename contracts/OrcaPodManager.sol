@@ -8,6 +8,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 //TODO: make this an interface
 import "./OrcaMemberToken.sol";
 
+/* solhint-disable indent */
+
 // This contract manages the membership rules
 // it is responsible for distributing and retracting memberships
 
@@ -22,6 +24,7 @@ contract OrcaPodManager is ERC1155Receiver {
     }
 
     OrcaMemberToken memberToken;
+
     address public deployer;
     address public votingManager;
     mapping(uint256 => Rule) public rulesByPod;
@@ -66,7 +69,10 @@ contract OrcaPodManager is ERC1155Receiver {
         votingManager = _votingManager;
     }
 
-    function isRuleCompliant(uint256 _podId, address _user) public returns(bool) {
+    function isRuleCompliant(uint256 _podId, address _user)
+        public
+        returns (bool)
+    {
         Rule memory currentRule = rulesByPod[_podId];
 
         // check function params for keywords
@@ -105,7 +111,7 @@ contract OrcaPodManager is ERC1155Receiver {
     function claimMembership(uint256 _podId) public {
         require(membershipsByPod[_podId] >= 1, "No Memberships Availible");
 
-        require(isRuleCompliant(_podId, msg.sender), "Not Rule Compliant"); 
+        require(isRuleCompliant(_podId, msg.sender), "Not Rule Compliant");
 
         memberToken.safeTransferFrom(
             address(this),
@@ -118,9 +124,15 @@ contract OrcaPodManager is ERC1155Receiver {
 
     // // add modifier for only OrcaProtocol
     function retractMembership(uint256 _podId, address _member) public {
-        require(!isRuleCompliant(_podId, _member), "Rule Compliant" );
+        require(!isRuleCompliant(_podId, _member), "Rule Compliant");
 
-        memberToken.unsafeRevoke(_podId, _member);
+        memberToken.safeTransferFrom(
+            _member,
+            address(this),
+            _podId,
+            1,
+            "non-compliant"
+        );
     }
 
     function setPodRule(
