@@ -8,13 +8,13 @@ const { deployContract, provider, solidity } = waffle;
 
 use(solidity);
 
-describe("Orca Tests", () => {
+describe("Generic Function Tests", () => {
   const [admin, host, member, other] = provider.getWallets();
 
   let genericFunctionTest;
   let balanceTest;
 
-  it("should deploy contracts", async () => {
+  it("Deploying Contracts and Executing Generic Functions", async () => {
     balanceTest = await deployContract(admin, BalanceTest);
     genericFunctionTest = await deployContract(admin, GenericFunctionTest, [balanceTest.address]);
   });

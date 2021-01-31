@@ -12,6 +12,7 @@ const { deployContract, provider, solidity } = waffle;
 use(solidity);
 
 describe("Orca Tests", () => {
+
   const [admin, host, member, other] = provider.getWallets();
 
   let orcaProtocol;
@@ -157,7 +158,6 @@ describe("Orca Tests", () => {
     // confirm proposal no longer pending
     const podRule = await orcaPodManager.rulesByPod(1);
     await expect(podRule.contractAddress).to.equal(orcaToken.address);
-    await expect(podRule.comparisonValue).to.equal(10);
 
     // add reward
   });

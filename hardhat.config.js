@@ -24,4 +24,11 @@ module.exports = {
     gasPrice: 120,
     coinmarketcap: "89cb5fbd-4c95-4879-a48a-ef63a5939d49",
   },
+  networks: {
+    hardhat: {
+      forking: {
+        url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_TOKEN}`,
+      },
+    },
+  },
 };
