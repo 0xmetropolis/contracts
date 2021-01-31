@@ -80,23 +80,42 @@ contract OrcaPodManager is ERC1155Receiver {
         Rule memory currentRule = rulesByPod[_podId];
 
         // check function params for keywords
-        for (uint i = 0; i < currentRule.functionParams.length; i++) {
-            if ( currentRule.functionParams[i] == bytes32("msg.sender") ){
-                currentRule.functionParams[i] =  bytes32(uint256(msg.sender));
+        for (uint256 i = 0; i < currentRule.functionParams.length; i++) {
+            if (currentRule.functionParams[i] == bytes32("msg.sender")) {
+                currentRule.functionParams[i] = bytes32(uint256(msg.sender));
             }
         }
 
-        (bool success, bytes memory result) = currentRule.contractAddress.call(abi.encodePacked(currentRule.functionSignature, currentRule.functionParams[0], currentRule.functionParams[1], currentRule.functionParams[2], currentRule.functionParams[3], currentRule.functionParams[4]));
+        (bool success, bytes memory result) =
+            currentRule.contractAddress.call(
+                abi.encodePacked(
+                    currentRule.functionSignature,
+                    currentRule.functionParams[0],
+                    currentRule.functionParams[1],
+                    currentRule.functionParams[2],
+                    currentRule.functionParams[3],
+                    currentRule.functionParams[4]
+                )
+            );
         require(success == true, "Claim Transaction Failed");
 
-        if(currentRule.comparisonLogic == 0){
-          require(toUint256(result) == currentRule.comparisonValue , "Claim Rule Failed");
+        if (currentRule.comparisonLogic == 0) {
+            require(
+                toUint256(result) == currentRule.comparisonValue,
+                "Claim Rule Failed"
+            );
         }
-        if(currentRule.comparisonLogic == 1){
-          require(toUint256(result) > currentRule.comparisonValue , "Claim Rule Failed");
+        if (currentRule.comparisonLogic == 1) {
+            require(
+                toUint256(result) > currentRule.comparisonValue,
+                "Claim Rule Failed"
+            );
         }
-        if(currentRule.comparisonLogic == 2){
-          require(toUint256(result) < currentRule.comparisonValue , "Claim Rule Failed");
+        if (currentRule.comparisonLogic == 2) {
+            require(
+                toUint256(result) < currentRule.comparisonValue,
+                "Claim Rule Failed"
+            );
         }
 
         memberToken.safeTransferFrom(
@@ -119,14 +138,20 @@ contract OrcaPodManager is ERC1155Receiver {
         uint256 _comparisonLogic,
         uint256 _comparisonValue
     ) public onlyProtocol {
-        rulesByPod[_podId] = Rule(_contractAddress, _functionSignature, _functionParams, _comparisonLogic, _comparisonValue);
+        rulesByPod[_podId] = Rule(
+            _contractAddress,
+            _functionSignature,
+            _functionParams,
+            _comparisonLogic,
+            _comparisonValue
+        );
         emit CreateRule(
-          _podId,
-          rulesByPod[_podId].contractAddress,
-          rulesByPod[_podId].functionSignature,
-          rulesByPod[_podId].functionParams,
-          rulesByPod[_podId].comparisonLogic,
-          rulesByPod[_podId].comparisonValue
+            _podId,
+            rulesByPod[_podId].contractAddress,
+            rulesByPod[_podId].functionSignature,
+            rulesByPod[_podId].functionParams,
+            rulesByPod[_podId].comparisonLogic,
+            rulesByPod[_podId].comparisonValue
         );
     }
 
@@ -138,14 +163,20 @@ contract OrcaPodManager is ERC1155Receiver {
         uint256 _comparisonLogic,
         uint256 _comparisonValue
     ) public onlyVotingManager {
-        rulesByPod[_podId] = Rule(_contractAddress, _functionSignature, _functionParams, _comparisonLogic, _comparisonValue);
+        rulesByPod[_podId] = Rule(
+            _contractAddress,
+            _functionSignature,
+            _functionParams,
+            _comparisonLogic,
+            _comparisonValue
+        );
         emit UpdateRule(
-          _podId,
-          rulesByPod[_podId].contractAddress,
-          rulesByPod[_podId].functionSignature,
-          rulesByPod[_podId].functionParams,
-          rulesByPod[_podId].comparisonLogic,
-          rulesByPod[_podId].comparisonValue
+            _podId,
+            rulesByPod[_podId].contractAddress,
+            rulesByPod[_podId].functionSignature,
+            rulesByPod[_podId].functionParams,
+            rulesByPod[_podId].comparisonLogic,
+            rulesByPod[_podId].comparisonValue
         );
     }
 
@@ -177,7 +208,11 @@ contract OrcaPodManager is ERC1155Receiver {
         return this.onERC1155BatchReceived.selector;
     }
 
-    function toUint256(bytes memory _bytes) internal pure returns (uint256 value) {
+    function toUint256(bytes memory _bytes)
+        internal
+        pure
+        returns (uint256 value)
+    {
         assembly {
             value := mload(add(_bytes, 0x20))
         }
