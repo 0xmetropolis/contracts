@@ -30,6 +30,7 @@ contract OrcaPodManager is ERC1155Receiver {
     mapping(uint256 => Rule) public rulesByPod;
     mapping(uint256 => uint256) public membershipsByPod;
 
+    event MemberTokenAddress(address contractAddress);
     event MembershipChange(uint256 podId, address from, address to);
 
     event CreateRule(
@@ -50,8 +51,9 @@ contract OrcaPodManager is ERC1155Receiver {
         uint256 comparisonValue
     );
 
-    constructor(OrcaMemberToken _memberToken) public {
-        memberToken = _memberToken;
+    constructor() public {
+        memberToken = new OrcaMemberToken(address(this));
+        emit MemberTokenAddress(address(memberToken));
         deployer = msg.sender;
     }
 
@@ -113,6 +115,8 @@ contract OrcaPodManager is ERC1155Receiver {
 
         require(isRuleCompliant(_podId, msg.sender), "Not Rule Compliant");
 
+        require(memberToken.balanceOf(msg.sender, _podId) == 0, "User is already member");
+
         memberToken.safeTransferFrom(
             address(this),
             msg.sender,
@@ -132,6 +136,29 @@ contract OrcaPodManager is ERC1155Receiver {
             _podId,
             1,
             "non-compliant"
+        );
+    }
+
+    // Creates a pod and assigns one token to _creator
+    function createPod(
+        address _creator,
+        uint256 _podId,
+        uint256 _totalSupply,
+        address _contractAddress,
+        bytes4 _functionSignature,
+        bytes32[5] calldata _functionParams,
+        uint256 _comparisonLogic,
+        uint256 _comparisonValue
+    ) public onlyProtocol {
+        memberToken.createPod(_creator, _podId, _totalSupply);
+
+        setPodRule(
+            _podId,
+            _contractAddress,
+            _functionSignature,
+            _functionParams,
+            _comparisonLogic,
+            _comparisonValue
         );
     }
 

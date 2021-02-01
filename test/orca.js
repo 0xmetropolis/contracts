@@ -40,8 +40,8 @@ describe("Orca Tests", () => {
 
   it("should deploy contracts", async () => {
     orcaToken = await deployContract(admin, OrcaToken);
-    orcaMemberToken = await deployContract(admin, OrcaMemberToken);
-    orcaProtocol = await deployContract(admin, OrcaProtocol, [orcaMemberToken.address]);
+    // orcaMemberToken = await deployContract(admin, OrcaMemberToken);
+    orcaProtocol = await deployContract(admin, OrcaProtocol);
 
     // Grab pod manager address from the constructor event
     const [podEvent] = await orcaProtocol.queryFilter("PodManagerAddress");
@@ -50,6 +50,9 @@ describe("Orca Tests", () => {
     // Grab pod manager address from the constructor event
     const [voteEvent] = await orcaProtocol.queryFilter("VoteManagerAddress");
     orcaVoteManager = new ethers.Contract(voteEvent.args[0], OrcaVoteManager.abi, admin);
+
+    const [memberEvent] = await orcaPodManager.queryFilter("MemberTokenAddress");
+    orcaMemberToken = new ethers.Contract(memberEvent.args[0], OrcaMemberToken.abi, admin);
   });
 
   it("should create a pod", async () => {
@@ -85,6 +88,7 @@ describe("Orca Tests", () => {
       .withArgs(1, orcaToken.address, functionSignature, params, comparisonLogic, comparisonValue)
       .to.emit(orcaVoteManager, "CreateVoteStrategy")
       .withArgs(1, 2, 1);
+      // TODO: Check to see if tokens were distributed correctly.
   });
 
   it("should not claim membership without min tokens", async () => {
@@ -101,6 +105,11 @@ describe("Orca Tests", () => {
 
     expect(await orcaMemberToken.balanceOf(host.address, 1)).to.equal(1);
   });
+
+  it("should prevent users from claiming membership when they are already a member", async () => {
+    await expect(orcaPodManager.connect(host).claimMembership(1, { gasLimit: "9500000" }))
+      .to.be.revertedWith("User is already member");
+});
 
   it("should create a proposal to raise membership min tokens", async () => {
     // can only use changeTokenBalance with ERC20/721
