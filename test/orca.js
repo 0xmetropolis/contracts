@@ -12,7 +12,7 @@ const { deployContract, provider, solidity } = waffle;
 use(solidity);
 
 describe("Orca Tests", () => {
-  const [admin, host, member, other] = provider.getWallets();
+  const [admin, host, member, shepherd] = provider.getWallets();
 
   let orcaProtocol;
   let orcaToken;
@@ -25,7 +25,7 @@ describe("Orca Tests", () => {
   const totalSupply = 10;
   const functionHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("balanceOf(address)"));
   const functionSignature = ethers.utils.hexDataSlice(functionHash, 0, 4);
-  const param1 = ethers.utils.formatBytes32String("msg.sender");
+  const param1 = ethers.utils.formatBytes32String("MEMBER");
   const param2 = ethers.utils.formatBytes32String("");
   const param3 = ethers.utils.formatBytes32String("");
   const param4 = ethers.utils.formatBytes32String("");
@@ -40,8 +40,8 @@ describe("Orca Tests", () => {
 
   it("should deploy contracts", async () => {
     orcaToken = await deployContract(admin, OrcaToken);
-    orcaMemberToken = await deployContract(admin, OrcaMemberToken);
-    orcaProtocol = await deployContract(admin, OrcaProtocol, [orcaMemberToken.address]);
+    // orcaMemberToken = await deployContract(admin, OrcaMemberToken);
+    orcaProtocol = await deployContract(admin, OrcaProtocol);
 
     // Grab pod manager address from the constructor event
     const [podEvent] = await orcaProtocol.queryFilter("PodManagerAddress");
@@ -50,6 +50,9 @@ describe("Orca Tests", () => {
     // Grab pod manager address from the constructor event
     const [voteEvent] = await orcaProtocol.queryFilter("VoteManagerAddress");
     orcaVoteManager = new ethers.Contract(voteEvent.args[0], OrcaVoteManager.abi, admin);
+
+    const [memberEvent] = await orcaPodManager.queryFilter("MemberTokenAddress");
+    orcaMemberToken = new ethers.Contract(memberEvent.args[0], OrcaMemberToken.abi, admin);
   });
 
   it("should create a pod", async () => {
@@ -81,26 +84,37 @@ describe("Orca Tests", () => {
     )
       .to.emit(orcaProtocol, "CreatePod")
       .withArgs(1)
-      .to.emit(orcaPodManager, "CreateRule")
+      .to.emit(orcaPodManager, "UpdateRule")
       .withArgs(1, orcaToken.address, functionSignature, params, comparisonLogic, comparisonValue)
       .to.emit(orcaVoteManager, "CreateVoteStrategy")
       .withArgs(1, 2, 1);
+      // TODO: Check to see if tokens were distributed correctly.
   });
 
   it("should not claim membership without min tokens", async () => {
-    await expect(orcaPodManager.connect(host).claimMembership(1)).to.be.revertedWith("Claim Rule Failed");
+    await expect(orcaPodManager.connect(host).claimMembership(1)).to.be.revertedWith("Not Rule Compliant");
   });
 
   it("should claim membership with min tokens", async () => {
     // can only use changeTokenBalance with ERC20/721
     await expect(() => orcaToken.connect(host).mint()).to.changeTokenBalance(orcaToken, host, 6);
 
-    await expect(orcaPodManager.connect(host).claimMembership(1))
+    await expect(orcaPodManager.connect(host).claimMembership(1, { gasLimit: "9500000" }))
       .to.emit(orcaMemberToken, "TransferSingle")
       .withArgs(orcaPodManager.address, orcaPodManager.address, host.address, 1, 1);
+
+    expect(await orcaMemberToken.balanceOf(host.address, 1)).to.equal(1);
   });
 
+  it("should prevent users from claiming membership when they are already a member", async () => {
+    await expect(orcaPodManager.connect(host).claimMembership(1, { gasLimit: "9500000" }))
+      .to.be.revertedWith("User is already member");
+});
+
   it("should create a proposal to raise membership min tokens", async () => {
+    // can only use changeTokenBalance with ERC20/721
+    await expect(() => orcaToken.connect(member).mint()).to.changeTokenBalance(orcaToken, member, 6);
+
     await expect(
       orcaVoteManager
         .connect(member)
@@ -110,25 +124,24 @@ describe("Orca Tests", () => {
       .withArgs(1, 1, orcaToken.address, functionSignature, params, comparisonLogic, 10, member.address);
 
     const voteProposal = await orcaVoteManager.voteProposalByPod(1);
-
-    await expect(voteProposal.proposalId).to.equal(1);
-    await expect(voteProposal.approveVotes).to.equal(0);
-    await expect(voteProposal.rejectVotes).to.equal(0);
-    await expect(voteProposal.pending).to.equal(true);
+    expect(voteProposal.proposalId).to.equal(1);
+    expect(voteProposal.approveVotes).to.equal(0);
+    expect(voteProposal.rejectVotes).to.equal(0);
+    expect(voteProposal.pending).to.equal(true);
   });
 
   it("should cast a vote on a proposal", async () => {
     let voteProposal = await orcaVoteManager.voteProposalByPod(1);
-    await expect(voteProposal.approveVotes).to.equal(0);
-    await expect(voteProposal.rejectVotes).to.equal(0);
+    expect(voteProposal.approveVotes).to.equal(0);
+    expect(voteProposal.rejectVotes).to.equal(0);
 
     await expect(orcaVoteManager.connect(member).vote(1, true))
       .to.emit(orcaVoteManager, "CastVote")
       .withArgs(1, 1, member.address, true);
 
     voteProposal = await orcaVoteManager.voteProposalByPod(1);
-    await expect(voteProposal.approveVotes).to.equal(1);
-    await expect(voteProposal.rejectVotes).to.equal(0);
+    expect(voteProposal.approveVotes).to.equal(1);
+    expect(voteProposal.rejectVotes).to.equal(0);
   });
 
   it("should cast a duplicate vote and revert", async () => {
@@ -151,14 +164,21 @@ describe("Orca Tests", () => {
 
     // confirm proposal no longer pending
     const voteProposal = await orcaVoteManager.voteProposalByPod(1);
-    await expect(voteProposal.pending).to.equal(false);
+    expect(voteProposal.pending).to.equal(false);
 
     // confirm rule updated
     // confirm proposal no longer pending
     const podRule = await orcaPodManager.rulesByPod(1);
-    await expect(podRule.contractAddress).to.equal(orcaToken.address);
-    await expect(podRule.comparisonValue).to.equal(10);
+    expect(podRule.contractAddress).to.equal(orcaToken.address);
+    expect(podRule.comparisonValue).to.equal(10);
 
     // add reward
   });
+
+  // TODO: Good luck Steven
+  // it("should not revoke a valid membership", async () => {
+  //   await expect(orcaPodManager.connect(shephard).retractMembership(1, host.address)).to.be.revertedWith(
+  //     "Rule Compliant",
+  //   );
+  // });
 });
