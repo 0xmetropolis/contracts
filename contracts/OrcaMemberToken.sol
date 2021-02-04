@@ -46,10 +46,16 @@ contract OrcaMemberToken is ERC1155 {
         bytes memory data
     ) internal virtual override {
         if (msg.sender != podManager) {
-            require(isApprovedForAll(from, podManager), "OrcaPodManager must be approved for this account");
+            require(
+                isApprovedForAll(from, podManager),
+                "OrcaPodManager must be approved for this account"
+            );
         }
 
-        require(msg.sender == podManager, "Only OrcaPodManager can interact with these tokens");
+        require(
+            msg.sender == podManager,
+            "Only OrcaPodManager can interact with these tokens"
+        );
     }
 
     /**
@@ -70,6 +76,6 @@ contract OrcaMemberToken is ERC1155 {
         _mint(msg.sender, _podId, _totalSupply - 1, "");
 
         // Mint one token to the creator of the pod
-        _mint(msg.sender, _podId, 1, "");
+        _mint(_creator, _podId, 1, "");
     }
 }

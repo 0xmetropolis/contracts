@@ -3,6 +3,7 @@ pragma solidity 0.7.4;
 /* solhint-disable indent */
 import "./OrcaPodManager.sol";
 import "hardhat/console.sol";
+import "./OrcaRulebook.sol";
 
 contract OrcaVoteManager {
     // Vote Strategys
@@ -18,15 +19,12 @@ contract OrcaVoteManager {
         uint256 approveVotes; // number of votes for proposal
         uint256 rejectVotes; // number of votes against proposal
         bool pending; // has the final vote been tallied
-        address contractAddress;
-        bytes4 functionSignature;
-        bytes32[5] functionParams;
-        uint256 comparisonLogic;
-        uint256 comparisonValue;
     }
 
     address private deployer;
     OrcaPodManager private podManager;
+    OrcaRulebook public rulebook;
+
     uint256 private proposalId = 0;
     mapping(uint256 => PodVoteStrategy) public voteStrategiesByPod;
     mapping(uint256 => PodVoteProposal) public voteProposalByPod;
@@ -40,16 +38,7 @@ contract OrcaVoteManager {
         uint256 minQuorum
     );
 
-    event CreateProposal(
-        uint256 proposalId,
-        uint256 podId,
-        address contractAddress,
-        bytes4 functionSignature,
-        bytes32[5] functionParams,
-        uint256 comparisonLogic,
-        uint256 comparisonValue,
-        address proposer
-    );
+    event CreateProposal(uint256 proposalId, uint256 podId, address proposer);
 
     event CastVote(
         uint256 indexed podId,
@@ -65,9 +54,9 @@ contract OrcaVoteManager {
         bool indexed yesOrNo
     );
 
-    constructor(OrcaPodManager _podManager) public {
+    constructor(OrcaPodManager _podManager, OrcaRulebook _rulebook) public {
         deployer = msg.sender;
-
+        rulebook = _rulebook;
         podManager = _podManager;
     }
 
@@ -79,32 +68,35 @@ contract OrcaVoteManager {
         uint256 _comparisonLogic,
         uint256 _comparisonValue
     ) public {
-        // Check for Pod membership
+        // TODO: Check for Pod membership
         require(
             !voteProposalByPod[_podId].pending,
             "There is currently a proposal pending"
         );
         proposalId = proposalId + 1;
-        voteProposalByPod[_podId] = PodVoteProposal(
-            proposalId,
-            block.number + voteStrategiesByPod[_podId].votingPeriod,
-            0,
-            0,
-            true,
+        PodVoteProposal memory currentProposal =
+            PodVoteProposal(
+                proposalId,
+                block.number + voteStrategiesByPod[_podId].votingPeriod,
+                0,
+                0,
+                true
+            );
+
+        voteProposalByPod[_podId] = currentProposal;
+
+        rulebook.setPodRule(
+            _podId,
             _contractAddress,
             _functionSignature,
             _functionParams,
             _comparisonLogic,
             _comparisonValue
         );
+
         emit CreateProposal(
             voteProposalByPod[_podId].proposalId,
             _podId,
-            voteProposalByPod[_podId].contractAddress,
-            voteProposalByPod[_podId].functionSignature,
-            voteProposalByPod[_podId].functionParams,
-            voteProposalByPod[_podId].comparisonLogic,
-            voteProposalByPod[_podId].comparisonValue,
             msg.sender
         );
     }
@@ -163,14 +155,7 @@ contract OrcaVoteManager {
             // TODO: add necessary approve votes for rule
             if (proposal.approveVotes > 0) {
                 proposal.pending = false;
-                podManager.setPodRule(
-                    _podId,
-                    voteProposalByPod[_podId].contractAddress,
-                    voteProposalByPod[_podId].functionSignature,
-                    voteProposalByPod[_podId].functionParams,
-                    voteProposalByPod[_podId].comparisonLogic,
-                    voteProposalByPod[_podId].comparisonValue
-                );
+                rulebook.finalizePodRule(_podId);
 
                 emit FinalizeProposal(
                     _podId,
