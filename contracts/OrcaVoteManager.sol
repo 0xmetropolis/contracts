@@ -79,7 +79,7 @@ contract OrcaVoteManager {
         uint256 _comparisonLogic,
         uint256 _comparisonValue
     ) public {
-        // Check for Pod membership
+        // TODO: Check for Pod membership
         require(
             !voteProposalByPod[_podId].pending,
             "There is currently a proposal pending"

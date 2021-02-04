@@ -51,9 +51,9 @@ describe("OrcaMemberToken unit tests", () => {
 
   it("should allow users to set the podManager as operator", async () => {
     await expect(orcaMemberToken.connect(member1).setApprovalForAll(admin.address, true))
-        .to.emit(orcaMemberToken, "ApprovalForAll")
-        .withArgs(member1.address, admin.address, true);
-  })
+      .to.emit(orcaMemberToken, "ApprovalForAll")
+      .withArgs(member1.address, admin.address, true);
+  });
 
   it("should allow the pod manager to transfer other user's tokens", async () => {
     await expect(orcaMemberToken.connect(admin).safeTransferFrom(member1.address, member2.address, podId, 1, "0x"))
@@ -68,7 +68,8 @@ describe("OrcaMemberToken unit tests", () => {
   });
 
   it("should prevent a non-pod manager to transfer their own tokens", async () => {
-    await expect(orcaMemberToken.connect(member1).safeTransferFrom(member1.address, member2.address, podId, 1, "0x"))
-      .to.be.revertedWith("Only OrcaPodManager can interact with these tokens");
+    await expect(
+      orcaMemberToken.connect(member1).safeTransferFrom(member1.address, member2.address, podId, 1, "0x"),
+    ).to.be.revertedWith("Only OrcaPodManager can interact with these tokens");
   });
 });

@@ -76,6 +76,7 @@ contract OrcaPodManager is ERC1155Receiver {
         returns (bool)
     {
         Rule memory currentRule = rulesByPod[_podId];
+        require(currentRule.contractAddress != address(0), "No rule set");
 
         // check function params for keywords
         for (uint256 i = 0; i < currentRule.functionParams.length; i++) {
@@ -113,9 +114,9 @@ contract OrcaPodManager is ERC1155Receiver {
     function claimMembership(uint256 _podId) public {
         require(membershipsByPod[_podId] >= 1, "No Memberships Availible");
 
-        require(isRuleCompliant(_podId, msg.sender), "Not Rule Compliant");
-
         require(memberToken.balanceOf(msg.sender, _podId) == 0, "User is already member");
+
+        require(isRuleCompliant(_podId, msg.sender), "Not Rule Compliant");
 
         memberToken.safeTransferFrom(
             address(this),
@@ -143,23 +144,9 @@ contract OrcaPodManager is ERC1155Receiver {
     function createPod(
         address _creator,
         uint256 _podId,
-        uint256 _totalSupply,
-        address _contractAddress,
-        bytes4 _functionSignature,
-        bytes32[5] calldata _functionParams,
-        uint256 _comparisonLogic,
-        uint256 _comparisonValue
+        uint256 _totalSupply
     ) public onlyProtocol {
         memberToken.createPod(_creator, _podId, _totalSupply);
-
-        setPodRule(
-            _podId,
-            _contractAddress,
-            _functionSignature,
-            _functionParams,
-            _comparisonLogic,
-            _comparisonValue
-        );
     }
 
     function setPodRule(

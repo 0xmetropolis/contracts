@@ -44,11 +44,6 @@ contract OrcaProtocol {
     function createPod(
         uint256 _podId,
         uint256 _totalSupply,
-        address _contractAddress,
-        bytes4 _functionSignature,
-        bytes32[5] calldata _functionParams,
-        uint256 _comparisonLogic,
-        uint256 _comparisonValue,
         uint256 _votingPeriod,
         uint256 _minQuorum
     ) public {
@@ -56,12 +51,7 @@ contract OrcaProtocol {
         orcaPodManager.createPod(
             msg.sender,
             _podId,
-            _totalSupply,
-            _contractAddress,
-            _functionSignature,
-            _functionParams,
-            _comparisonLogic,
-            _comparisonValue
+            _totalSupply
         );
 
         orcaVoteManager.createVotingStrategy(_podId, _votingPeriod, _minQuorum);

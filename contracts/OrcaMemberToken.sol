@@ -70,6 +70,6 @@ contract OrcaMemberToken is ERC1155 {
         _mint(msg.sender, _podId, _totalSupply - 1, "");
 
         // Mint one token to the creator of the pod
-        _mint(msg.sender, _podId, 1, "");
+        _mint(_creator, _podId, 1, "");
     }
 }
