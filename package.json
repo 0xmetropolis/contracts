@@ -25,7 +25,9 @@
   "scripts": {
     "lint": "solhint contracts/**/*.sol",
     "prettier": "prettier --write contracts/**/*.sol",
-    "test": " hardhat test",
+    "test": "hardhat test ./test/orca.js",
+    "testSandbox": "hardhat --config ./hardhat.config.gnosisTest.js test ./test/gnosis.js  ./test/genericFunctions",
+    "testAll": "hardhat --config ./hardhat.config.gnosisTest.js test",
     "compile": " hardhat compile"
   },
   "husky": {

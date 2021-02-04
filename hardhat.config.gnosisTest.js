@@ -40,6 +40,10 @@ module.exports = {
         url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_TOKEN}`,
         blockNumber: 11766801,
       },
+      gas: 12000000,
+      blockGasLimit: 0x1fffffffffffff,
+      allowUnlimitedContractSize: true,
+      timeout: 1800000,
     },
   },
 };
