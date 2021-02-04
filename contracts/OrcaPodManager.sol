@@ -115,7 +115,10 @@ contract OrcaPodManager is ERC1155Receiver {
 
         require(isRuleCompliant(_podId, msg.sender), "Not Rule Compliant");
 
-        require(memberToken.balanceOf(msg.sender, _podId) == 0, "User is already member");
+        require(
+            memberToken.balanceOf(msg.sender, _podId) == 0,
+            "User is already member"
+        );
 
         memberToken.safeTransferFrom(
             address(this),

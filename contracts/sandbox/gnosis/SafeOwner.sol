@@ -1,7 +1,7 @@
 pragma solidity 0.5.4;
 
 import "hardhat/console.sol";
-import "./safe-contracts/contracts/GnosisSafe.sol";
+import "./sc/contracts/GnosisSafe.sol";
 
 contract SafeOwner {
     address public proxyFactoryAddress =

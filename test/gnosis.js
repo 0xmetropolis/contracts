@@ -6,7 +6,7 @@ const gnosisProxyFactoryAbi = require("../abis/GnosisProxyFactory.json");
 
 const SafeOwner = require("../artifacts/contracts/sandbox/gnosis/SafeOwner.sol/SafeOwner.json");
 const MintTest = require("../artifacts/contracts/sandbox/gnosis/MintTest.sol/MintTest.json");
-const GnosisSafe = require("../artifacts/contracts/sandbox/gnosis/safe-contracts/contracts/GnosisSafe.sol/GnosisSafe.json");
+const GnosisSafe = require("../artifacts/contracts/sandbox/gnosis/sc/contracts/GnosisSafe.sol/GnosisSafe.json");
 
 const { provider, solidity, deployContract } = waffle;
 
