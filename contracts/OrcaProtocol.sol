@@ -5,6 +5,7 @@ pragma solidity 0.7.4;
 import "hardhat/console.sol";
 import "./OrcaPodManager.sol";
 import "./OrcaVoteManager.sol";
+import "./OrcaRulebook.sol";
 
 import "hardhat/console.sol";
 
@@ -18,20 +19,25 @@ import "hardhat/console.sol";
 // only allow for one token per user
 
 contract OrcaProtocol {
+    event RulebookAddress(address contractAddress);
     event PodManagerAddress(address contractAddress);
     event VoteManagerAddress(address contractAddress);
     event CreatePod(uint256 podId);
 
     OrcaPodManager orcaPodManager;
     OrcaVoteManager orcaVoteManager;
+    OrcaRulebook orcaRulebook;
 
     constructor() public // address OrcaPodManagerAddress,
     // address OrcaVotingManagerAddress,
     {
-        orcaPodManager = new OrcaPodManager();
+        orcaRulebook = new OrcaRulebook();
+        emit RulebookAddress(address(orcaRulebook));
+
+        orcaPodManager = new OrcaPodManager(orcaRulebook);
         emit PodManagerAddress(address(orcaPodManager));
 
-        orcaVoteManager = new OrcaVoteManager(orcaPodManager);
+        orcaVoteManager = new OrcaVoteManager(orcaPodManager, orcaRulebook);
         emit VoteManagerAddress(address(orcaVoteManager));
 
         orcaPodManager.setVoteManager(address(orcaVoteManager));
@@ -48,11 +54,7 @@ contract OrcaProtocol {
         uint256 _minQuorum
     ) public {
         // add a require to confirm minting was successful otherwise revert
-        orcaPodManager.createPod(
-            msg.sender,
-            _podId,
-            _totalSupply
-        );
+        orcaPodManager.createPod(msg.sender, _podId, _totalSupply);
 
         orcaVoteManager.createVotingStrategy(_podId, _votingPeriod, _minQuorum);
         emit CreatePod(_podId);

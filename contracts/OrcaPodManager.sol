@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 //TODO: make this an interface
 import "./OrcaMemberToken.sol";
+import "./OrcaRulebook.sol";
 
 /* solhint-disable indent */
 
@@ -14,46 +15,21 @@ import "./OrcaMemberToken.sol";
 // it is responsible for distributing and retracting memberships
 
 contract OrcaPodManager is ERC1155Receiver {
-    // Rules
-    struct Rule {
-        address contractAddress;
-        bytes4 functionSignature;
-        bytes32[5] functionParams;
-        uint256 comparisonLogic;
-        uint256 comparisonValue;
-    }
-
-    OrcaMemberToken memberToken;
+    OrcaMemberToken public memberToken;
+    OrcaRulebook public rulebook;
 
     address public deployer;
     address public votingManager;
-    mapping(uint256 => Rule) public rulesByPod;
     mapping(uint256 => uint256) public membershipsByPod;
 
     event MemberTokenAddress(address contractAddress);
     event MembershipChange(uint256 podId, address from, address to);
 
-    event CreateRule(
-        uint256 podId,
-        address contractAddress,
-        bytes4 functionSignature,
-        bytes32[5] functionParams,
-        uint256 comparisonLogic,
-        uint256 comparisonValue
-    );
-
-    event UpdateRule(
-        uint256 podId,
-        address contractAddress,
-        bytes4 functionSignature,
-        bytes32[5] functionParams,
-        uint256 comparisonLogic,
-        uint256 comparisonValue
-    );
-
-    constructor() public {
+    constructor(OrcaRulebook _rulebook) public {
+        rulebook = _rulebook;
         memberToken = new OrcaMemberToken(address(this));
         emit MemberTokenAddress(address(memberToken));
+        new OrcaRulebook();
         deployer = msg.sender;
     }
 
@@ -71,52 +47,18 @@ contract OrcaPodManager is ERC1155Receiver {
         votingManager = _votingManager;
     }
 
-    function isRuleCompliant(uint256 _podId, address _user)
-        public
-        returns (bool)
-    {
-        Rule memory currentRule = rulesByPod[_podId];
-        require(currentRule.contractAddress != address(0), "No rule set");
-
-        // check function params for keywords
-        for (uint256 i = 0; i < currentRule.functionParams.length; i++) {
-            if (currentRule.functionParams[i] == bytes32("MEMBER")) {
-                currentRule.functionParams[i] = bytes32(uint256(_user));
-            }
-        }
-
-        (bool success, bytes memory result) =
-            currentRule.contractAddress.call(
-                abi.encodePacked(
-                    currentRule.functionSignature,
-                    currentRule.functionParams[0],
-                    currentRule.functionParams[1],
-                    currentRule.functionParams[2],
-                    currentRule.functionParams[3],
-                    currentRule.functionParams[4]
-                )
-            );
-        require(success == true, "Rule Transaction Failed");
-
-        if (currentRule.comparisonLogic == 0) {
-            return toUint256(result) == currentRule.comparisonValue;
-        }
-        if (currentRule.comparisonLogic == 1) {
-            return toUint256(result) > currentRule.comparisonValue;
-        }
-        if (currentRule.comparisonLogic == 2) {
-            return toUint256(result) < currentRule.comparisonValue;
-        }
-        // if invalid rule it is impossible to be compliant
-        return false;
-    }
-
     function claimMembership(uint256 _podId) public {
         require(membershipsByPod[_podId] >= 1, "No Memberships Availible");
 
-        require(memberToken.balanceOf(msg.sender, _podId) == 0, "User is already member");
+        require(
+            memberToken.balanceOf(msg.sender, _podId) == 0,
+            "User is already member"
+        );
 
-        require(isRuleCompliant(_podId, msg.sender), "Not Rule Compliant");
+        require(
+            rulebook.isRuleCompliant(_podId, msg.sender),
+            "Not Rule Compliant"
+        );
 
         memberToken.safeTransferFrom(
             address(this),
@@ -129,7 +71,7 @@ contract OrcaPodManager is ERC1155Receiver {
 
     // // add modifier for only OrcaProtocol
     function retractMembership(uint256 _podId, address _member) public {
-        require(!isRuleCompliant(_podId, _member), "Rule Compliant");
+        require(!rulebook.isRuleCompliant(_podId, _member), "Rule Compliant");
 
         memberToken.safeTransferFrom(
             _member,
@@ -147,31 +89,6 @@ contract OrcaPodManager is ERC1155Receiver {
         uint256 _totalSupply
     ) public onlyProtocol {
         memberToken.createPod(_creator, _podId, _totalSupply);
-    }
-
-    function setPodRule(
-        uint256 _podId,
-        address _contractAddress,
-        bytes4 _functionSignature,
-        bytes32[5] memory _functionParams,
-        uint256 _comparisonLogic,
-        uint256 _comparisonValue
-    ) public onlyProtocol {
-        rulesByPod[_podId] = Rule(
-            _contractAddress,
-            _functionSignature,
-            _functionParams,
-            _comparisonLogic,
-            _comparisonValue
-        );
-        emit UpdateRule(
-            _podId,
-            rulesByPod[_podId].contractAddress,
-            rulesByPod[_podId].functionSignature,
-            rulesByPod[_podId].functionParams,
-            rulesByPod[_podId].comparisonLogic,
-            rulesByPod[_podId].comparisonValue
-        );
     }
 
     function onERC1155Received(
@@ -200,15 +117,5 @@ contract OrcaPodManager is ERC1155Receiver {
             membershipsByPod[_id[i]] += _value[i];
         }
         return this.onERC1155BatchReceived.selector;
-    }
-
-    function toUint256(bytes memory _bytes)
-        internal
-        pure
-        returns (uint256 value)
-    {
-        assembly {
-            value := mload(add(_bytes, 0x20))
-        }
     }
 }
