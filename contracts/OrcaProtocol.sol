@@ -5,7 +5,6 @@ pragma solidity 0.7.4;
 import "hardhat/console.sol";
 import "./OrcaPodManager.sol";
 import "./OrcaVoteManager.sol";
-import "./OrcaMemberToken.sol";
 
 import "hardhat/console.sol";
 
@@ -25,16 +24,11 @@ contract OrcaProtocol {
 
     OrcaPodManager orcaPodManager;
     OrcaVoteManager orcaVoteManager;
-    OrcaMemberToken orcaMemberToken;
 
-    constructor(address _orcaMemberTokenAddress)
-        public
-    // address OrcaPodManagerAddress,
+    constructor() public // address OrcaPodManagerAddress,
     // address OrcaVotingManagerAddress,
     {
-        orcaMemberToken = OrcaMemberToken(_orcaMemberTokenAddress);
-
-        orcaPodManager = new OrcaPodManager(orcaMemberToken);
+        orcaPodManager = new OrcaPodManager();
         emit PodManagerAddress(address(orcaPodManager));
 
         orcaVoteManager = new OrcaVoteManager(orcaPodManager);
@@ -43,6 +37,10 @@ contract OrcaProtocol {
         orcaPodManager.setVoteManager(address(orcaVoteManager));
     }
 
+    /*
+     * This function creates a pod, assigns one token to the sender of the message,
+     * and sets the initial rules for that pod.
+     */
     function createPod(
         uint256 _podId,
         uint256 _totalSupply,
@@ -55,16 +53,10 @@ contract OrcaProtocol {
         uint256 _minQuorum
     ) public {
         // add a require to confirm minting was successful otherwise revert
-        orcaMemberToken.mint(
-            address(orcaPodManager),
+        orcaPodManager.createPod(
+            msg.sender,
             _podId,
             _totalSupply,
-            bytes("bytes test")
-        );
-
-        // create rule
-        orcaPodManager.createPodRule(
-            _podId,
             _contractAddress,
             _functionSignature,
             _functionParams,
