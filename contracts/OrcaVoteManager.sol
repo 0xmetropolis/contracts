@@ -41,12 +41,14 @@ contract OrcaVoteManager {
     // proposalId => address => hasVoted
     mapping(uint256 => mapping(address => bool)) public userHasVotedByProposal;
 
-    // safe variables
+    // safe variables - Orca Governance should be able to update
     address public proxyFactoryAddress =
         0x76E2cFc1F5Fa8F6a5b3fC4c8F4788F0116861F9B;
     string public functionSigCreateProxy = "createProxy(address,bytes)";
     string public functionSigSetup =
         "setup(address[],uint256,address,bytes,address,address,uint256,address)";
+    string public functionSigExecTransaction =
+        "execTransaction(address,uint256,bytes,uint8,uint256,uint256,uint256,address,address,bytes)";
 
     // podId => safeAddress
     mapping(uint256 => address) public safes;
@@ -211,6 +213,8 @@ contract OrcaVoteManager {
         ActionProposal memory actionProposal =
             ActionProposal(_to, _value, _data);
 
+        actionProposalByPod[_podId] = actionProposal;
+
         emit CreateActionProposal(
             voteProposalByPod[_podId].proposalId,
             _podId,
@@ -259,9 +263,10 @@ contract OrcaVoteManager {
         emit CastVote(_podId, proposal.proposalId, msg.sender, _yesOrNo);
     }
 
-    function finalizeVote(uint256 _podId) public {
+    function finalizeRuleVote(uint256 _podId) public {
         PodVoteProposal storage proposal = voteProposalByPod[_podId];
         require(proposal.pending, "There is no current proposal");
+        require(proposal.ruleOrAction == 0, "There is not a rule proposal");
         require(
             block.number > proposal.proposalBlock,
             "The voting period has not ended"
@@ -295,6 +300,80 @@ contract OrcaVoteManager {
                 );
             }
         }
+    }
+
+    function finalizeActionVote(uint256 _podId) public {
+        PodVoteProposal storage proposal = voteProposalByPod[_podId];
+        require(proposal.pending, "There is no current proposal");
+        require(proposal.ruleOrAction == 1, "There is not a rule proposal");
+
+        require(
+            block.number > proposal.proposalBlock,
+            "The voting period has not ended"
+        );
+
+        if (
+            proposal.approveVotes + proposal.rejectVotes >=
+            voteStrategiesByPod[_podId].minQuorum
+        ) {
+            // check if enough people voted yes
+            // TODO: add necessary approve votes for rule
+            ActionProposal memory action = actionProposalByPod[_podId];
+            if (proposal.approveVotes > 0) {
+                proposal.pending = false;
+
+                executeAction(safes[_podId], action.to, action.value, action.data);
+
+                emit FinalizeProposal(
+                    _podId,
+                    proposal.proposalId,
+                    msg.sender,
+                    true
+                );
+                // reward sender
+            } else {
+                proposal.pending = false;
+
+                emit FinalizeProposal(
+                    _podId,
+                    proposal.proposalId,
+                    msg.sender,
+                    false
+                );
+            }
+        }
+    }
+
+    function executeAction(address _safeAddress, address _to, uint256 _value, bytes memory _data) internal {
+        uint8 operation = uint8(0);
+        uint256 safeTxGas = uint256(0);
+        uint256 baseGas = uint256(0);
+        uint256 gasPrice = uint256(0);
+        address gasToken = address(0);
+        address refundReceiver = address(0);
+        bytes memory signatures =
+            abi.encodePacked(
+                bytes32(uint256(address(this))),
+                bytes32(uint256(0)),
+                uint8(1)
+            );
+
+        bytes memory executeTransactionData =
+            abi.encodeWithSignature(
+                functionSigExecTransaction,
+                _to,
+                _value,
+                _data,
+                operation,
+                safeTxGas,
+                baseGas,
+                gasPrice,
+                gasToken,
+                refundReceiver,
+                signatures
+            );
+        (bool success, bytes memory result) =
+            _safeAddress.call(executeTransactionData);
     }
 
     function bytesToAddress(bytes memory bys)

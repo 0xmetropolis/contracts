@@ -24,6 +24,8 @@ describe("Orca Tests", () => {
   let orcaVoteManager;
   let orcaRulebook;
 
+  let podSafe;
+
   // create pod args
   const podId = 1;
   const totalSupply = 10;
@@ -79,7 +81,7 @@ describe("Orca Tests", () => {
 
     // query the new gnosis safe and confirm the orcaVoteManager is the only owner
     const safeAddress = await orcaVoteManager.safes(1);
-    const podSafe = new ethers.Contract(safeAddress, GnosisSafeAbi, admin);
+    podSafe = new ethers.Contract(safeAddress, GnosisSafeAbi, admin);
     const podSafeOwners = await podSafe.getOwners();
     await expect(podSafeOwners.length).to.be.equal(1);
     await expect(podSafeOwners[0]).to.be.equal(orcaVoteManager.address);
@@ -93,7 +95,7 @@ describe("Orca Tests", () => {
     await expect(orcaPodManager.connect(member).claimMembership(1)).to.be.revertedWith("No rule set");
   });
 
-  it("should create a proposal to raise membership min tokens", async () => {
+  it("should create a rule proposal to raise membership min tokens", async () => {
     // can only use changeTokenBalance with ERC20/721
     await expect(() => orcaToken.connect(host).mint()).to.changeTokenBalance(orcaToken, host, 6);
 
@@ -131,14 +133,14 @@ describe("Orca Tests", () => {
   });
 
   it("should fail to finalize vote due to voting period", async () => {
-    await expect(orcaVoteManager.connect(host).finalizeVote(1, { gasLimit: "9500000" })).to.be.revertedWith(
+    await expect(orcaVoteManager.connect(host).finalizeRuleVote(1, { gasLimit: "9500000" })).to.be.revertedWith(
       "The voting period has not ended",
     );
   });
 
-  it("should finalize vote", async () => {
+  it("should finalize rule vote", async () => {
     // finalize proposal
-    await expect(orcaVoteManager.connect(member).finalizeVote(1, { gasLimit: "9500000" }))
+    await expect(orcaVoteManager.connect(member).finalizeRuleVote(1, { gasLimit: "9500000" }))
       .to.emit(orcaVoteManager, "FinalizeProposal")
       .withArgs(1, 1, member.address, true)
       .to.emit(orcaRulebook, "UpdateRule")
@@ -182,6 +184,26 @@ describe("Orca Tests", () => {
     voteProposal = await orcaVoteManager.voteProposalByPod(1);
     expect(voteProposal.approveVotes).to.equal(1);
     expect(voteProposal.rejectVotes).to.equal(0);
+  });
+
+  it("should fail to finalize vote due to voting period", async () => {
+    await expect(orcaVoteManager.connect(host).finalizeActionVote(1, { gasLimit: "9500000" })).to.be.revertedWith(
+      "The voting period has not ended",
+    );
+  });
+
+  it("should finalize action vote and mint more orcaTokens", async () => {
+    const initialOrcaTokenSupply = await orcaToken.totalSupply();
+
+    // finalize proposal
+    await expect(orcaVoteManager.connect(member).finalizeActionVote(1, { gasLimit: "9500000" }))
+      .to.emit(orcaVoteManager, "FinalizeProposal")
+      .withArgs(1, 2, member.address, true)
+      .to.emit(podSafe, "ExecutionSuccess");
+
+    const updatedOrcaTokenSupply = await orcaToken.totalSupply();
+
+    await expect(updatedOrcaTokenSupply.sub(initialOrcaTokenSupply)).to.equal(6);
   });
 
   // TODO: Good luck Steven
