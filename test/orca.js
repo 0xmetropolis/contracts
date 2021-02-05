@@ -8,6 +8,8 @@ const OrcaPodManager = require("../artifacts/contracts/OrcaPodManager.sol/OrcaPo
 const OrcaVoteManager = require("../artifacts/contracts/OrcaVoteManager.sol/OrcaVoteManager.json");
 const OrcaRulebook = require("../artifacts/contracts/OrcaRulebook.sol/OrcaRulebook.json");
 
+const GnosisSafeAbi = require("../abis/GnosisSafe.json");
+
 const { deployContract, provider, solidity } = waffle;
 
 use(solidity);
@@ -40,6 +42,8 @@ describe("Orca Tests", () => {
   const votingPeriod = 2;
   const minQuorum = 1;
 
+  const masterGnosisContract = "0x34CfAC646f301356fAa8B21e94227e3583Fe3F5F";
+
   it("should deploy contracts", async () => {
     orcaToken = await deployContract(admin, OrcaToken);
     // orcaMemberToken = await deployContract(admin, OrcaMemberToken);
@@ -61,13 +65,22 @@ describe("Orca Tests", () => {
   });
 
   it("should create a pod", async () => {
-    await expect(orcaProtocol.connect(host).createPod(podId, totalSupply, votingPeriod, minQuorum))
+    await expect(
+      orcaProtocol.connect(host).createPod(podId, totalSupply, votingPeriod, minQuorum, masterGnosisContract),
+    )
       .to.emit(orcaProtocol, "CreatePod")
       .withArgs(1)
       .to.emit(orcaVoteManager, "CreateVoteStrategy")
-      .withArgs(1, 2, 1);
+      .withArgs(1, 2, 1)
+      .to.emit(orcaVoteManager, "CreateSafe");
 
     expect(await orcaMemberToken.balanceOf(host.address, 1)).to.equal(1);
+
+    const safeAddress = await orcaVoteManager.safes(1);
+    const podSafe = new ethers.Contract(safeAddress, GnosisSafeAbi, admin);
+    const podSafeOwners = await podSafe.getOwners();
+    await expect(podSafeOwners.length).to.be.equal(1);
+    await expect(podSafeOwners[0]).to.be.equal(orcaVoteManager.address);
   });
 
   it("should not claim second membership", async () => {

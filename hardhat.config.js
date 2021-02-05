@@ -24,4 +24,16 @@ module.exports = {
     gasPrice: 120,
     coinmarketcap: "89cb5fbd-4c95-4879-a48a-ef63a5939d49",
   },
+  networks: {
+    hardhat: {
+      forking: {
+        url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_TOKEN}`,
+        blockNumber: 11766801,
+      },
+      gas: 12000000,
+      blockGasLimit: 0xBEBC20,
+      allowUnlimitedContractSize: true,
+      timeout: 1800000000,
+    },
+  },
 };

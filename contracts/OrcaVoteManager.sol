@@ -32,6 +32,15 @@ contract OrcaVoteManager {
     // proposalId => address => hasVoted
     mapping(uint256 => mapping(address => bool)) public userHasVotedByProposal;
 
+    // safe variables
+    address public proxyFactoryAddress = 0x76E2cFc1F5Fa8F6a5b3fC4c8F4788F0116861F9B;
+    string public functionSigCreateProxy = "createProxy(address,bytes)";
+    string public functionSigSetup = "setup(address[],uint256,address,bytes,address,address,uint256,address)";
+
+    // podId => safeAddress
+    mapping(uint256 => address) public safes;
+
+
     event CreateVoteStrategy(
         uint256 podId,
         uint256 votingPeriod,
@@ -54,10 +63,62 @@ contract OrcaVoteManager {
         bool indexed yesOrNo
     );
 
+    event CreateSafe(
+        uint256 indexed podId,
+        address safeAddress
+    );
+
     constructor(OrcaPodManager _podManager, OrcaRulebook _rulebook) public {
         deployer = msg.sender;
         rulebook = _rulebook;
         podManager = _podManager;
+    }
+
+    // TODO: onlyProtocol
+    // TODO: onlyCallOnceProtection
+    function setupPodVotingAndSafe(
+        uint256 _podId,
+        uint256 _votingPeriod,
+        uint256 _minQuorum,
+        address _gnosisMasterContract
+
+    ) public {
+        createVotingStrategy(_podId, _votingPeriod, _minQuorum);
+        createSafe(_podId, _gnosisMasterContract);
+    }
+
+    function createSafe(uint256 _podId, address _gnosisMasterContract) internal {
+        bytes memory data = "";
+        address[] memory ownerArray = new address[](1);
+        ownerArray[0] = address(this);
+
+        // encode the setup call that will be called on the new proxy safe
+        // from the proxy factory
+        bytes memory setupData =
+            abi.encodeWithSignature(
+                functionSigSetup,
+                ownerArray,
+                uint256(1),
+                address(0),
+                data,
+                address(0),
+                address(0),
+                uint256(0),
+                address(0)
+            );
+
+        bytes memory createProxyWithSetupData =
+            abi.encodeWithSignature(
+                functionSigCreateProxy,
+                _gnosisMasterContract,
+                setupData
+            );
+        (bool success, bytes memory result) =
+            proxyFactoryAddress.call(createProxyWithSetupData);
+        require(success == true, "Create Proxy With Data Failed");
+        address safeAddress = bytesToAddress(result);
+        safes[_podId] = safeAddress;
+        emit CreateSafe(_podId, safeAddress);
     }
 
     function createProposal(
@@ -175,5 +236,15 @@ contract OrcaVoteManager {
                 );
             }
         }
+    }
+
+    function bytesToAddress(bytes memory bys)
+      public
+      pure
+      returns (address addr)
+    {
+      assembly {
+        addr := mload(add(bys, 32))
+      }
     }
 }
