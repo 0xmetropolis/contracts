@@ -27,8 +27,9 @@ describe("Orca Tests", () => {
   // create pod args
   const podId = 1;
   const totalSupply = 10;
-  const functionHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("balanceOf(address)"));
-  const functionSignature = ethers.utils.hexDataSlice(functionHash, 0, 4);
+  const balanceOfFunctionHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("balanceOf(address)"));
+  const balanceOfFuncSig = ethers.utils.hexDataSlice(balanceOfFunctionHash, 0, 4);
+
   const param1 = ethers.utils.formatBytes32String("MEMBER");
   const param2 = ethers.utils.formatBytes32String("");
   const param3 = ethers.utils.formatBytes32String("");
@@ -97,9 +98,11 @@ describe("Orca Tests", () => {
     await expect(() => orcaToken.connect(host).mint()).to.changeTokenBalance(orcaToken, host, 6);
 
     await expect(
-      orcaVoteManager.connect(host).createProposal(1, orcaToken.address, functionSignature, params, comparisonLogic, 5),
+      orcaVoteManager
+        .connect(host)
+        .createRuleProposal(1, orcaToken.address, balanceOfFuncSig, params, comparisonLogic, 5),
     )
-      .to.emit(orcaVoteManager, "CreateProposal")
+      .to.emit(orcaVoteManager, "CreateRuleProposal")
       .withArgs(1, 1, host.address);
 
     const voteProposal = await orcaVoteManager.voteProposalByPod(1);
@@ -139,7 +142,7 @@ describe("Orca Tests", () => {
       .to.emit(orcaVoteManager, "FinalizeProposal")
       .withArgs(1, 1, member.address, true)
       .to.emit(orcaRulebook, "UpdateRule")
-      .withArgs(1, orcaToken.address, functionSignature, params, comparisonLogic, 5);
+      .withArgs(1, orcaToken.address, balanceOfFuncSig, params, comparisonLogic, comparisonValue);
 
     // confirm proposal no longer pending
     const voteProposal = await orcaRulebook.rulesByPod(1);
@@ -158,6 +161,27 @@ describe("Orca Tests", () => {
       .withArgs(orcaPodManager.address, orcaPodManager.address, member.address, 1, 1);
 
     expect(await orcaMemberToken.balanceOf(member.address, 1)).to.equal(1);
+  });
+
+  it("should create an Action Proposal", async () => {
+    const encodedMint = orcaToken.interface.encodeFunctionData("mint");
+    await expect(orcaVoteManager.connect(host).createActionProposal(1, orcaToken.address, 0, encodedMint))
+      .to.emit(orcaVoteManager, "CreateActionProposal")
+      .withArgs(2, 1, host.address, orcaToken.address, 0, encodedMint);
+  });
+
+  it("should cast a vote on an Action proposal", async () => {
+    let voteProposal = await orcaVoteManager.voteProposalByPod(1);
+    expect(voteProposal.approveVotes).to.equal(0);
+    expect(voteProposal.rejectVotes).to.equal(0);
+
+    await expect(orcaVoteManager.connect(host).vote(1, true))
+      .to.emit(orcaVoteManager, "CastVote")
+      .withArgs(1, 2, host.address, true);
+
+    voteProposal = await orcaVoteManager.voteProposalByPod(1);
+    expect(voteProposal.approveVotes).to.equal(1);
+    expect(voteProposal.rejectVotes).to.equal(0);
   });
 
   // TODO: Good luck Steven

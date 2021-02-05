@@ -19,6 +19,14 @@ contract OrcaVoteManager {
         uint256 approveVotes; // number of votes for proposal
         uint256 rejectVotes; // number of votes against proposal
         bool pending; // has the final vote been tallied
+        uint256 ruleOrAction; // 0 = rule, 1 = action
+    }
+
+    // Action Proposals
+    struct ActionProposal {
+        address to;
+        uint256 value; // block number of proposal
+        bytes data; // number of votes for proposal
     }
 
     address private deployer;
@@ -28,6 +36,7 @@ contract OrcaVoteManager {
     uint256 private proposalId = 0;
     mapping(uint256 => PodVoteStrategy) public voteStrategiesByPod;
     mapping(uint256 => PodVoteProposal) public voteProposalByPod;
+    mapping(uint256 => ActionProposal) public actionProposalByPod;
 
     // proposalId => address => hasVoted
     mapping(uint256 => mapping(address => bool)) public userHasVotedByProposal;
@@ -48,7 +57,16 @@ contract OrcaVoteManager {
         uint256 minQuorum
     );
 
-    event CreateProposal(uint256 proposalId, uint256 podId, address proposer);
+    event CreateRuleProposal(uint256 proposalId, uint256 podId, address proposer);
+
+    event CreateActionProposal(
+        uint256 proposalId,
+        uint256 podId,
+        address proposer,
+        address to,
+        uint256 value,
+        bytes data
+    );
 
     event CastVote(
         uint256 indexed podId,
@@ -120,7 +138,7 @@ contract OrcaVoteManager {
         emit CreateSafe(_podId, safeAddress);
     }
 
-    function createProposal(
+    function createRuleProposal(
         uint256 _podId,
         address _contractAddress,
         bytes4 _functionSignature,
@@ -140,7 +158,8 @@ contract OrcaVoteManager {
                 block.number + voteStrategiesByPod[_podId].votingPeriod,
                 0,
                 0,
-                true
+                true,
+                0
             );
 
         voteProposalByPod[_podId] = currentProposal;
@@ -154,10 +173,47 @@ contract OrcaVoteManager {
             _comparisonValue
         );
 
-        emit CreateProposal(
+        emit CreateRuleProposal(
             voteProposalByPod[_podId].proposalId,
             _podId,
             msg.sender
+        );
+    }
+
+    function createActionProposal(
+        uint256 _podId,
+        address _to,
+        uint256 _value,
+        bytes memory _data
+    ) public {
+        // TODO: Check for Pod membership
+        require(
+            !voteProposalByPod[_podId].pending,
+            "There is currently a proposal pending"
+        );
+        proposalId = proposalId + 1;
+        PodVoteProposal memory currentProposal =
+            PodVoteProposal(
+                proposalId,
+                block.number + voteStrategiesByPod[_podId].votingPeriod,
+                0,
+                0,
+                true,
+                1
+            );
+
+        voteProposalByPod[_podId] = currentProposal;
+
+
+        ActionProposal memory actionProposal = ActionProposal(_to, _value, _data);
+
+        emit CreateActionProposal(
+            voteProposalByPod[_podId].proposalId,
+            _podId,
+            msg.sender,
+            _to,
+            _value,
+            _data
         );
     }
 
