@@ -76,6 +76,7 @@ describe("Orca Tests", () => {
 
     expect(await orcaMemberToken.balanceOf(host.address, 1)).to.equal(1);
 
+    // query the new gnosis safe and confirm the orcaVoteManager is the only owner
     const safeAddress = await orcaVoteManager.safes(1);
     const podSafe = new ethers.Contract(safeAddress, GnosisSafeAbi, admin);
     const podSafeOwners = await podSafe.getOwners();

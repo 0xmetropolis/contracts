@@ -33,13 +33,14 @@ contract OrcaVoteManager {
     mapping(uint256 => mapping(address => bool)) public userHasVotedByProposal;
 
     // safe variables
-    address public proxyFactoryAddress = 0x76E2cFc1F5Fa8F6a5b3fC4c8F4788F0116861F9B;
+    address public proxyFactoryAddress =
+        0x76E2cFc1F5Fa8F6a5b3fC4c8F4788F0116861F9B;
     string public functionSigCreateProxy = "createProxy(address,bytes)";
-    string public functionSigSetup = "setup(address[],uint256,address,bytes,address,address,uint256,address)";
+    string public functionSigSetup =
+        "setup(address[],uint256,address,bytes,address,address,uint256,address)";
 
     // podId => safeAddress
     mapping(uint256 => address) public safes;
-
 
     event CreateVoteStrategy(
         uint256 podId,
@@ -63,10 +64,7 @@ contract OrcaVoteManager {
         bool indexed yesOrNo
     );
 
-    event CreateSafe(
-        uint256 indexed podId,
-        address safeAddress
-    );
+    event CreateSafe(uint256 indexed podId, address safeAddress);
 
     constructor(OrcaPodManager _podManager, OrcaRulebook _rulebook) public {
         deployer = msg.sender;
@@ -81,13 +79,14 @@ contract OrcaVoteManager {
         uint256 _votingPeriod,
         uint256 _minQuorum,
         address _gnosisMasterContract
-
     ) public {
         createVotingStrategy(_podId, _votingPeriod, _minQuorum);
         createSafe(_podId, _gnosisMasterContract);
     }
 
-    function createSafe(uint256 _podId, address _gnosisMasterContract) internal {
+    function createSafe(uint256 _podId, address _gnosisMasterContract)
+        internal
+    {
         bytes memory data = "";
         address[] memory ownerArray = new address[](1);
         ownerArray[0] = address(this);
@@ -239,12 +238,12 @@ contract OrcaVoteManager {
     }
 
     function bytesToAddress(bytes memory bys)
-      public
-      pure
-      returns (address addr)
+        public
+        pure
+        returns (address addr)
     {
-      assembly {
-        addr := mload(add(bys, 32))
-      }
+        assembly {
+            addr := mload(add(bys, 32))
+        }
     }
 }
