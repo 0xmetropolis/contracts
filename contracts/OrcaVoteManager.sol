@@ -322,7 +322,12 @@ contract OrcaVoteManager {
             if (proposal.approveVotes > 0) {
                 proposal.pending = false;
 
-                executeAction(safes[_podId], action.to, action.value, action.data);
+                executeAction(
+                    safes[_podId],
+                    action.to,
+                    action.value,
+                    action.data
+                );
 
                 emit FinalizeProposal(
                     _podId,
@@ -344,7 +349,12 @@ contract OrcaVoteManager {
         }
     }
 
-    function executeAction(address _safeAddress, address _to, uint256 _value, bytes memory _data) internal {
+    function executeAction(
+        address _safeAddress,
+        address _to,
+        uint256 _value,
+        bytes memory _data
+    ) internal {
         uint8 operation = uint8(0);
         uint256 safeTxGas = uint256(0);
         uint256 baseGas = uint256(0);
