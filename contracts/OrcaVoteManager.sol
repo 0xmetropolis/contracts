@@ -57,7 +57,11 @@ contract OrcaVoteManager {
         uint256 minQuorum
     );
 
-    event CreateRuleProposal(uint256 proposalId, uint256 podId, address proposer);
+    event CreateRuleProposal(
+        uint256 proposalId,
+        uint256 podId,
+        address proposer
+    );
 
     event CreateActionProposal(
         uint256 proposalId,
@@ -204,8 +208,8 @@ contract OrcaVoteManager {
 
         voteProposalByPod[_podId] = currentProposal;
 
-
-        ActionProposal memory actionProposal = ActionProposal(_to, _value, _data);
+        ActionProposal memory actionProposal =
+            ActionProposal(_to, _value, _data);
 
         emit CreateActionProposal(
             voteProposalByPod[_podId].proposalId,
