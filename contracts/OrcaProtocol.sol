@@ -51,12 +51,18 @@ contract OrcaProtocol {
         uint256 _podId,
         uint256 _totalSupply,
         uint256 _votingPeriod,
-        uint256 _minQuorum
+        uint256 _minQuorum,
+        address _gnosisMasterContract
     ) public {
         // add a require to confirm minting was successful otherwise revert
         orcaPodManager.createPod(msg.sender, _podId, _totalSupply);
 
-        orcaVoteManager.createVotingStrategy(_podId, _votingPeriod, _minQuorum);
+        orcaVoteManager.setupPodVotingAndSafe(
+            _podId,
+            _votingPeriod,
+            _minQuorum,
+            _gnosisMasterContract
+        );
         emit CreatePod(_podId);
     }
 }
