@@ -1,9 +1,13 @@
 const { expect, use } = require("chai");
 const { waffle, ethers } = require("hardhat");
+const hre = require("hardhat");
+
+const AaveTokenV2Abi = require("../abis/AaveTokenV2.json");
+const AaveGovernanceV2Abi = require("../abis/AaveGovernanceV2.json");
 
 const OrcaProtocol = require("../artifacts/contracts/OrcaProtocol.sol/OrcaProtocol.json");
-const OrcaMemberToken = require("../artifacts/contracts/OrcaMemberToken.sol/OrcaMemberToken.json");
 const OrcaToken = require("../artifacts/contracts/OrcaToken.sol/OrcaToken.json");
+const OrcaMemberToken = require("../artifacts/contracts/OrcaMemberToken.sol/OrcaMemberToken.json");
 const OrcaPodManager = require("../artifacts/contracts/OrcaPodManager.sol/OrcaPodManager.json");
 const OrcaVoteManager = require("../artifacts/contracts/OrcaVoteManager.sol/OrcaVoteManager.json");
 const OrcaRulebook = require("../artifacts/contracts/OrcaRulebook.sol/OrcaRulebook.json");
@@ -14,41 +18,48 @@ const { deployContract, provider, solidity } = waffle;
 
 use(solidity);
 
-describe("Orca Tests", () => {
+describe("AAVE Tests", () => {
   const [admin, host, member, shepherd] = provider.getWallets();
 
   let orcaProtocol;
   let orcaToken;
-  let orcaMemberToken;
   let orcaPodManager;
   let orcaVoteManager;
   let orcaRulebook;
 
-  let podSafe;
-
   // create pod args
   const podId = 1;
   const totalSupply = 10;
-  const balanceOfFunctionHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("balanceOf(address)"));
-  const balanceOfFuncSig = ethers.utils.hexDataSlice(balanceOfFunctionHash, 0, 4);
+  const votingPeriod = 2;
+  const minQuorum = 1;
+  const masterGnosisContract = "0x34CfAC646f301356fAa8B21e94227e3583Fe3F5F";
+
+  // vote proposal args
+  const getDelegateeFunctionHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("getDelegateeByType(address,uint8)"));
+  const getDelegateeFuncSig = ethers.utils.hexDataSlice(getDelegateeFunctionHash, 0, 4);
 
   const param1 = ethers.utils.formatBytes32String("MEMBER");
-  const param2 = ethers.utils.formatBytes32String("");
+  const param2 = ethers.utils.hexZeroPad(1, 32);
   const param3 = ethers.utils.formatBytes32String("");
   const param4 = ethers.utils.formatBytes32String("");
   const param5 = ethers.utils.formatBytes32String("");
   const params = [param1, param2, param3, param4, param5];
-  // 0 is equal to, 1 is greaterThan, 2 is less than
-  // ruleResult (comparison logic) (comparison value)
-  const comparisonLogic = 1;
-  const comparisonValue = 5;
-  const votingPeriod = 2;
-  const minQuorum = 1;
+  const comparisonLogic = 0;
+  let comparisonValue;
 
-  const masterGnosisContract = "0x34CfAC646f301356fAa8B21e94227e3583Fe3F5F";
 
-  it("should deploy contracts", async () => {
+  // aave variables
+  const aaveWhaleAddress = "0x3744da57184575064838bbc87a0fc791f5e39ea2";
+  let aaveWhaleSigner;
+  const testAddress = "0x4ffE4F14cec61EDD720aD2855Ff927137b3957e3";
+  const aaveToken = new ethers.Contract("0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9", AaveTokenV2Abi, provider);
+  const aaveGovernanceAddress = "0xEC568fffba86c094cf06b22134B23074DFE2252c"
+  const aaveGovernanceContract = new ethers.Contract(aaveGovernanceAddress, AaveGovernanceV2Abi, provider);
+
+
+  before("Deploy OrcaProtocol", async () => {
     orcaToken = await deployContract(admin, OrcaToken);
+    // orcaMemberToken = await deployContract(admin, OrcaMemberToken);
     orcaProtocol = await deployContract(admin, OrcaProtocol);
 
     // Grab pod manager address from the constructor event
@@ -59,14 +70,22 @@ describe("Orca Tests", () => {
     const [voteEvent] = await orcaProtocol.queryFilter("VoteManagerAddress");
     orcaVoteManager = new ethers.Contract(voteEvent.args[0], OrcaVoteManager.abi, admin);
 
+    const [memberEvent] = await orcaPodManager.queryFilter("MemberTokenAddress");
+    orcaMemberToken = new ethers.Contract(memberEvent.args[0], OrcaMemberToken.abi, admin);
+
     const [ruleEvent] = await orcaProtocol.queryFilter("RulebookAddress");
     orcaRulebook = new ethers.Contract(ruleEvent.args[0], OrcaRulebook.abi, admin);
 
-    const [memberEvent] = await orcaPodManager.queryFilter("MemberTokenAddress");
-    orcaMemberToken = new ethers.Contract(memberEvent.args[0], OrcaMemberToken.abi, admin);
+    // create aave whale account
+    await hre.network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [aaveWhaleAddress],
+    });
+    aaveWhaleSigner = await ethers.provider.getSigner(aaveWhaleAddress);
   });
 
-  it("should create a pod", async () => {
+  it("should create an aave pod for proposition delegation", async () => {
+    // TODO: autoIncrement podId
     await expect(
       orcaProtocol.connect(host).createPod(podId, totalSupply, votingPeriod, minQuorum, masterGnosisContract),
     )
@@ -86,22 +105,13 @@ describe("Orca Tests", () => {
     await expect(podSafeOwners[0]).to.be.equal(orcaVoteManager.address);
   });
 
-  it("should not claim second membership", async () => {
-    await expect(orcaPodManager.connect(host).claimMembership(1)).to.be.revertedWith("User is already member");
-  });
-
-  it("should not claim membership without rule", async () => {
-    await expect(orcaPodManager.connect(member).claimMembership(1)).to.be.revertedWith("No rule set");
-  });
-
-  it("should create a rule proposal to raise membership min tokens", async () => {
-    // can only use changeTokenBalance with ERC20/721
-    await expect(() => orcaToken.connect(host).mint()).to.changeTokenBalance(orcaToken, host, 6);
-
+  // create a new proposal requiring delegation to occur
+  it("should create a rule proposal to require members to delegate to the pod's gnosis safe address", async () => {
+    comparisonValue = ethers.BigNumber.from(podSafe.address)
     await expect(
       orcaVoteManager
         .connect(host)
-        .createRuleProposal(1, orcaToken.address, balanceOfFuncSig, params, comparisonLogic, 5),
+        .createRuleProposal(1, aaveToken.address, getDelegateeFuncSig, params, comparisonLogic, comparisonValue),
     )
       .to.emit(orcaVoteManager, "CreateRuleProposal")
       .withArgs(1, 1, host.address);
@@ -139,36 +149,39 @@ describe("Orca Tests", () => {
 
   it("should finalize rule vote", async () => {
     // finalize proposal
-    await expect(orcaVoteManager.connect(member).finalizeRuleVote(1, { gasLimit: "9500000" }))
+    await expect(orcaVoteManager.connect(host).finalizeRuleVote(1, { gasLimit: "9500000" }))
       .to.emit(orcaVoteManager, "FinalizeProposal")
-      .withArgs(1, 1, member.address, true)
+      .withArgs(1, 1, host.address, true)
       .to.emit(orcaRulebook, "UpdateRule")
-      .withArgs(1, orcaToken.address, balanceOfFuncSig, params, comparisonLogic, comparisonValue);
+      .withArgs(1, aaveToken.address, getDelegateeFuncSig, params, comparisonLogic, comparisonValue);
 
-    // confirm proposal no longer pending
+
+    //confirm proposal no longer pending
     const voteProposal = await orcaRulebook.rulesByPod(1);
     expect(voteProposal.isFinalized).to.equal(true);
-    expect(voteProposal.contractAddress).to.equal(orcaToken.address);
-    expect(voteProposal.comparisonValue).to.equal(5);
-
-    // add reward
+    expect(voteProposal.contractAddress).to.equal(aaveToken.address);
+    expect(voteProposal.comparisonValue).to.equal(comparisonValue);
   });
 
-  it("should claim membership with min tokens", async () => {
-    await expect(() => orcaToken.connect(member).mint()).to.changeTokenBalance(orcaToken, member, 6);
 
-    await expect(orcaPodManager.connect(member).claimMembership(1, { gasLimit: "9500000" }))
-      .to.emit(orcaMemberToken, "TransferSingle")
-      .withArgs(orcaPodManager.address, orcaPodManager.address, member.address, 1, 1);
+  it("should fail to claim membership without delegating", async () => {
+    await expect(orcaPodManager.connect(aaveWhaleSigner).claimMembership(1, { gasLimit: "9500000" })).to.be.revertedWith("Not Rule Compliant");
+  });
 
-    expect(await orcaMemberToken.balanceOf(member.address, 1)).to.equal(1);
+  it("delegate aave whale proposition to pod save and claim membership again", async () => {
+    expect(aaveToken.connect(aaveWhaleSigner).delegateByType(podSafe.address, 1));
+    const delegate = await aaveToken.getDelegateeByType(aaveWhaleAddress, 1);
+    expect(delegate).to.be.equal(podSafe.address);
+
+    await expect(orcaPodManager.connect(aaveWhaleSigner).claimMembership(1, { gasLimit: "9500000" }))
+      .to.emit(orcaMemberToken, "TransferSingle");
   });
 
   it("should create an Action Proposal", async () => {
-    const encodedMint = orcaToken.interface.encodeFunctionData("mint");
-    await expect(orcaVoteManager.connect(host).createActionProposal(1, orcaToken.address, 0, encodedMint))
+    const encodedCreate = "0xf8741a9c000000000000000000000000ee56e2b3d491590b5b31738cc34d5232f378a8d500000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000016000000000000000000000000000000000000000000000000000000000000001c00000000000000000000000000000000000000000000000000000000000000240384dd57abcd23aae459877625228062db4082485a0ac1fc45eb54524f58365070000000000000000000000000000000000000000000000000000000000000001000000000000000000000000d08e12367a7d68caa8ff080d3a56b2dc6650709b00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000004614619540000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001"
+    await expect(orcaVoteManager.connect(host).createActionProposal(1, aaveGovernanceAddress, 0, encodedCreate))
       .to.emit(orcaVoteManager, "CreateActionProposal")
-      .withArgs(2, 1, host.address, orcaToken.address, 0, encodedMint);
+      .withArgs(2, 1, host.address, aaveGovernanceAddress, 0, encodedCreate);
   });
 
   it("should cast a vote on an Action proposal", async () => {
@@ -191,24 +204,14 @@ describe("Orca Tests", () => {
     );
   });
 
-  it("should finalize action vote and mint more orcaTokens", async () => {
+  it("should finalize action vote and create proposal", async () => {
     const initialOrcaTokenSupply = await orcaToken.totalSupply();
 
     // finalize proposal
-    await expect(orcaVoteManager.connect(member).finalizeActionVote(1, { gasLimit: "9500000" }))
+    await expect(orcaVoteManager.connect(host).finalizeActionVote(1, { gasLimit: "9500000" }))
       .to.emit(orcaVoteManager, "FinalizeProposal")
-      .withArgs(1, 2, member.address, true)
+      .withArgs(1, 2, host.address, true)
+      .to.emit(aaveGovernanceContract, "ProposalCreated")
       .to.emit(podSafe, "ExecutionSuccess");
-
-    const updatedOrcaTokenSupply = await orcaToken.totalSupply();
-
-    await expect(updatedOrcaTokenSupply.sub(initialOrcaTokenSupply)).to.equal(6);
   });
-
-  // TODO: Good luck Steven
-  // it("should not revoke a valid membership", async () => {
-  //   await expect(orcaPodManager.connect(shephard).retractMembership(1, host.address)).to.be.revertedWith(
-  //     "Rule Compliant",
-  //   );
-  // });
 });
