@@ -1,7 +1,6 @@
 pragma solidity 0.7.4;
 
 /* solhint-disable indent */
-import "./OrcaPodManager.sol";
 import "hardhat/console.sol";
 import "./OrcaRulebook.sol";
 
@@ -30,7 +29,6 @@ contract OrcaVoteManager {
     }
 
     address private deployer;
-    OrcaPodManager private podManager;
     OrcaRulebook public rulebook;
 
     uint256 private proposalId = 0;
@@ -90,10 +88,9 @@ contract OrcaVoteManager {
 
     event CreateSafe(uint256 indexed podId, address safeAddress);
 
-    constructor(OrcaPodManager _podManager, OrcaRulebook _rulebook) public {
+    constructor(OrcaRulebook _rulebook) public {
         deployer = msg.sender;
         rulebook = _rulebook;
-        podManager = _podManager;
     }
 
     // TODO: onlyProtocol

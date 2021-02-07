@@ -37,6 +37,7 @@ contract OrcaPodManager is ERC1155Receiver {
     // dependent on how we are managing contract deployment
     modifier onlyProtocol {
         require(
+            // TODO: Should these be the same modifier?
             (msg.sender == deployer) || (msg.sender == votingManager),
             "Only OrcaProtocol can call this function."
         );
@@ -68,6 +69,9 @@ contract OrcaPodManager is ERC1155Receiver {
             bytes("")
         );
     }
+
+    // TODO: We probably need some way for someone to give up their own token.
+    // I think this is currently impossible with the way MemberToken is built
 
     // // add modifier for only OrcaProtocol
     function retractMembership(uint256 _podId, address _member) public {

@@ -1,13 +1,5 @@
 pragma solidity 0.7.4;
 
-import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
-import "@openzeppelin/contracts/token/ERC1155/ERC1155Receiver.sol";
-
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
-//TODO: make this an interface
-import "./OrcaMemberToken.sol";
-
 /* solhint-disable indent */
 
 // This contract manages the membership rules

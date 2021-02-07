@@ -37,7 +37,7 @@ contract OrcaProtocol {
         orcaPodManager = new OrcaPodManager(orcaRulebook);
         emit PodManagerAddress(address(orcaPodManager));
 
-        orcaVoteManager = new OrcaVoteManager(orcaPodManager, orcaRulebook);
+        orcaVoteManager = new OrcaVoteManager(orcaRulebook);
         emit VoteManagerAddress(address(orcaVoteManager));
 
         orcaPodManager.setVoteManager(address(orcaVoteManager));
