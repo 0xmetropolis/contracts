@@ -5,7 +5,7 @@ pragma solidity 0.7.4;
 // This contract manages the membership rules
 // it is responsible for distributing and retracting memberships
 
-contract OrcaRulebook {
+contract RuleManager {
     // Rules
     struct Rule {
         address contractAddress;

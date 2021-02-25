@@ -1,8 +1,8 @@
 const { expect, use } = require("chai");
 const { waffle, ethers } = require("hardhat");
 
-const GenericFunctionTest = require("../artifacts/contracts/GenericFunctionTest.sol/GenericFunctionTest.json");
-const BalanceTest = require("../artifacts/contracts/BalanceTest.sol/BalanceTest.json");
+const GenericFunctionTest = require("../artifacts/contracts/test/GenericFunctionTest.sol/GenericFunctionTest.json");
+const BalanceTest = require("../artifacts/contracts/test/BalanceTest.sol/BalanceTest.json");
 
 const { deployContract, provider, solidity } = waffle;
 
