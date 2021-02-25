@@ -5,7 +5,6 @@ pragma solidity 0.7.4;
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./OrcaPodManager.sol";
 
 // TODO: consider  order of contract  deployment. May not want to deploy all together
 // this will impact the modifiers that are important for securiy
@@ -22,6 +21,7 @@ contract OrcaMemberToken is ERC1155 {
 
     address podManager;
 
+    // TODO: Need a way to iterate through both pods and users in the pods.
     struct Pod {
         address creator;
         uint256 totalSupply;
@@ -36,6 +36,8 @@ contract OrcaMemberToken is ERC1155 {
 
     /**
      * Prevent anyone who is not the podManager from interacting with these tokens.
+     * TODO: Currently a user can remove approval from the podManager and lock up tokens.
+     * Will probably need a different scheme in the future.
      */
     function _beforeTokenTransfer(
         address operator,
@@ -51,6 +53,8 @@ contract OrcaMemberToken is ERC1155 {
                 "OrcaPodManager must be approved for this account"
             );
         }
+
+        // TODO: Add check so that user cannot own more than one token.
 
         require(
             msg.sender == podManager,
