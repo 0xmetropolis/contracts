@@ -15,7 +15,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 // enable transfer of the podId token
 // only allow for one token per user
 
-contract OrcaMemberToken is ERC1155 {
+contract MemberToken is ERC1155 {
     using SafeMath for uint256;
     using Address for address;
 
@@ -50,7 +50,7 @@ contract OrcaMemberToken is ERC1155 {
         if (msg.sender != podManager) {
             require(
                 isApprovedForAll(from, podManager),
-                "OrcaPodManager must be approved for this account"
+                "PodManager must be approved for this account"
             );
         }
 
@@ -58,7 +58,7 @@ contract OrcaMemberToken is ERC1155 {
 
         require(
             msg.sender == podManager,
-            "Only OrcaPodManager can interact with these tokens"
+            "Only PodManager can interact with these tokens"
         );
     }
 

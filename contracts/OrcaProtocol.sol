@@ -3,9 +3,9 @@ pragma solidity 0.7.4;
 /* solhint-disable indent */
 
 import "hardhat/console.sol";
-import "./OrcaPodManager.sol";
-import "./OrcaVoteManager.sol";
-import "./OrcaRulebook.sol";
+import "./PodManager.sol";
+import "./VoteManager.sol";
+import "./RuleManager.sol";
 
 import "hardhat/console.sol";
 
@@ -19,28 +19,28 @@ import "hardhat/console.sol";
 // only allow for one token per user
 
 contract OrcaProtocol {
-    event RulebookAddress(address contractAddress);
+    event RuleManagerAddress(address contractAddress);
     event PodManagerAddress(address contractAddress);
     event VoteManagerAddress(address contractAddress);
     event CreatePod(uint256 podId);
 
-    OrcaPodManager orcaPodManager;
-    OrcaVoteManager orcaVoteManager;
-    OrcaRulebook orcaRulebook;
+    PodManager podManager;
+    VoteManager voteManager;
+    RuleManager rulemanager;
 
-    constructor() public // address OrcaPodManagerAddress,
+    constructor() public // address PodManagerAddress,
     // address OrcaVotingManagerAddress,
     {
-        orcaRulebook = new OrcaRulebook();
-        emit RulebookAddress(address(orcaRulebook));
+        rulemanager = new RuleManager();
+        emit RuleManagerAddress(address(rulemanager));
 
-        orcaPodManager = new OrcaPodManager(orcaRulebook);
-        emit PodManagerAddress(address(orcaPodManager));
+        podManager = new PodManager(rulemanager);
+        emit PodManagerAddress(address(podManager));
 
-        orcaVoteManager = new OrcaVoteManager(orcaRulebook);
-        emit VoteManagerAddress(address(orcaVoteManager));
+        voteManager = new VoteManager(rulemanager);
+        emit VoteManagerAddress(address(voteManager));
 
-        orcaPodManager.setVoteManager(address(orcaVoteManager));
+        podManager.setVoteManager(address(voteManager));
     }
 
     /*
@@ -55,9 +55,9 @@ contract OrcaProtocol {
         address _gnosisMasterContract
     ) public {
         // add a require to confirm minting was successful otherwise revert
-        orcaPodManager.createPod(msg.sender, _podId, _totalSupply);
+        podManager.createPod(msg.sender, _podId, _totalSupply);
 
-        orcaVoteManager.setupPodVotingAndSafe(
+        voteManager.setupPodVotingAndSafe(
             _podId,
             _votingPeriod,
             _minQuorum,

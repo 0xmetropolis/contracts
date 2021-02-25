@@ -2,9 +2,9 @@ pragma solidity 0.7.4;
 
 /* solhint-disable indent */
 import "hardhat/console.sol";
-import "./OrcaRulebook.sol";
+import "./RuleManager.sol";
 
-contract OrcaVoteManager {
+contract VoteManager {
     // Vote Strategys
     struct PodVoteStrategy {
         uint256 votingPeriod; // number of blocks.
@@ -29,7 +29,7 @@ contract OrcaVoteManager {
     }
 
     address private deployer;
-    OrcaRulebook public rulebook;
+    RuleManager public rulemanager;
 
     uint256 private proposalId = 0;
     mapping(uint256 => PodVoteStrategy) public voteStrategiesByPod;
@@ -88,9 +88,9 @@ contract OrcaVoteManager {
 
     event CreateSafe(uint256 indexed podId, address safeAddress);
 
-    constructor(OrcaRulebook _rulebook) public {
+    constructor(RuleManager _rulemanager) public {
         deployer = msg.sender;
-        rulebook = _rulebook;
+        rulemanager = _rulemanager;
     }
 
     // TODO: onlyProtocol
@@ -167,7 +167,7 @@ contract OrcaVoteManager {
 
         voteProposalByPod[_podId] = currentProposal;
 
-        rulebook.setPodRule(
+        rulemanager.setPodRule(
             _podId,
             _contractAddress,
             _functionSignature,
@@ -277,7 +277,7 @@ contract OrcaVoteManager {
             // TODO: add necessary approve votes for rule
             if (proposal.approveVotes > 0) {
                 proposal.pending = false;
-                rulebook.finalizePodRule(_podId);
+                rulemanager.finalizePodRule(_podId);
 
                 emit FinalizeProposal(
                     _podId,

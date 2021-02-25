@@ -6,17 +6,17 @@ import "@openzeppelin/contracts/token/ERC1155/ERC1155Receiver.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 //TODO: make this an interface
-import "./OrcaMemberToken.sol";
-import "./OrcaRulebook.sol";
+import "./MemberToken.sol";
+import "./RuleManager.sol";
 
 /* solhint-disable indent */
 
 // This contract manages the membership rules
 // it is responsible for distributing and retracting memberships
 
-contract OrcaPodManager is ERC1155Receiver {
-    OrcaMemberToken public memberToken;
-    OrcaRulebook public rulebook;
+contract PodManager is ERC1155Receiver {
+    MemberToken public memberToken;
+    RuleManager public rulemanager;
 
     address public deployer;
     address public votingManager;
@@ -25,11 +25,11 @@ contract OrcaPodManager is ERC1155Receiver {
     event MemberTokenAddress(address contractAddress);
     event MembershipChange(uint256 podId, address from, address to);
 
-    constructor(OrcaRulebook _rulebook) public {
-        rulebook = _rulebook;
-        memberToken = new OrcaMemberToken(address(this));
+    constructor(RuleManager _rulemanager) public {
+        rulemanager = _rulemanager;
+        memberToken = new MemberToken(address(this));
         emit MemberTokenAddress(address(memberToken));
-        new OrcaRulebook();
+        new RuleManager();
         deployer = msg.sender;
     }
 
@@ -57,7 +57,7 @@ contract OrcaPodManager is ERC1155Receiver {
         );
 
         require(
-            rulebook.isRuleCompliant(_podId, msg.sender),
+            rulemanager.isRuleCompliant(_podId, msg.sender),
             "Not Rule Compliant"
         );
 
@@ -75,7 +75,7 @@ contract OrcaPodManager is ERC1155Receiver {
 
     // // add modifier for only OrcaProtocol
     function retractMembership(uint256 _podId, address _member) public {
-        require(!rulebook.isRuleCompliant(_podId, _member), "Rule Compliant");
+        require(!rulemanager.isRuleCompliant(_podId, _member), "Rule Compliant");
 
         memberToken.safeTransferFrom(
             _member,
@@ -102,7 +102,7 @@ contract OrcaPodManager is ERC1155Receiver {
         uint256 _value,
         bytes memory _data
     ) public virtual override returns (bytes4) {
-        // add modifier for only OrcaMemberTokens
+        // add modifier for only MemberTokens
 
         membershipsByPod[_id] += _value;
         return this.onERC1155Received.selector;
@@ -115,7 +115,7 @@ contract OrcaPodManager is ERC1155Receiver {
         uint256[] memory _value,
         bytes memory _data
     ) public virtual override returns (bytes4) {
-        // add modifier for only OrcaMemberTokens
+        // add modifier for only MemberTokens
 
         for (uint256 i = 0; i < _id.length; i++) {
             membershipsByPod[_id[i]] += _value[i];
