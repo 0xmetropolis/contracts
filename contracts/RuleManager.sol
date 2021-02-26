@@ -3,7 +3,7 @@ pragma solidity 0.7.4;
 /* solhint-disable indent */
 
 // This contract manages the membership rules
-// it is responsible for distributing and retracting memberships
+// it is responsible for storing pod rules, and validating rule compliance
 
 contract RuleManager {
     // Rules
@@ -17,15 +17,6 @@ contract RuleManager {
     }
 
     mapping(uint256 => Rule) public rulesByPod;
-
-    event CreateRule(
-        uint256 podId,
-        address contractAddress,
-        bytes4 functionSignature,
-        bytes32[5] functionParams,
-        uint256 comparisonLogic,
-        uint256 comparisonValue
-    );
 
     event UpdateRule(
         uint256 podId,

@@ -2,9 +2,9 @@ const { expect, use } = require("chai");
 const { waffle, ethers } = require("hardhat");
 
 const OrcaProtocol = require("../artifacts/contracts/OrcaProtocol.sol/OrcaProtocol.json");
-const MemberToken = require("../artifacts/contracts/MemberToken.sol/MemberToken.json");
+const PowerToken = require("../artifacts/contracts/PowerBank.sol/PowerToken.json");
+const PowerBank = require("../artifacts/contracts/PowerBank.sol/PowerBank.json");
 const OrcaToken = require("../artifacts/contracts/OrcaToken.sol/OrcaToken.json");
-const PodManager = require("../artifacts/contracts/PodManager.sol/PodManager.json");
 const VoteManager = require("../artifacts/contracts/VoteManager.sol/VoteManager.json");
 const RuleManager = require("../artifacts/contracts/RuleManager.sol/RuleManager.json");
 
@@ -19,10 +19,10 @@ describe("Orca Tests", () => {
 
   let orcaProtocol;
   let orcaToken;
-  let memberToken;
-  let podManager;
+  let powerToken;
+  let powerBank;
   let voteManager;
-  let rulemanager;
+  let ruleManager;
 
   let podSafe;
 
@@ -49,27 +49,24 @@ describe("Orca Tests", () => {
 
   it("should deploy contracts", async () => {
     orcaToken = await deployContract(admin, OrcaToken);
-    // memberToken = await deployContract(admin, MemberToken);
-    orcaProtocol = await deployContract(admin, OrcaProtocol);
 
-    // Grab pod manager address from the constructor event
-    const [podEvent] = await orcaProtocol.queryFilter("PodManagerAddress");
-    podManager = new ethers.Contract(podEvent.args[0], PodManager.abi, admin);
+    powerToken = await deployContract(admin, PowerToken);
+    powerBank = await deployContract(admin, PowerBank, [powerToken.address]);
+    ruleManager = await deployContract(admin, RuleManager);
+    voteManager = await deployContract(admin, VoteManager, [ruleManager.address]);
 
-    // Grab pod manager address from the constructor event
-    const [voteEvent] = await orcaProtocol.queryFilter("VoteManagerAddress");
-    voteManager = new ethers.Contract(voteEvent.args[0], VoteManager.abi, admin);
-
-    const [ruleEvent] = await orcaProtocol.queryFilter("RuleManagerAddress");
-    rulemanager = new ethers.Contract(ruleEvent.args[0], RuleManager.abi, admin);
-
-    const [memberEvent] = await podManager.queryFilter("MemberTokenAddress");
-    memberToken = new ethers.Contract(memberEvent.args[0], MemberToken.abi, admin);
+    orcaProtocol = await deployContract(admin, OrcaProtocol, [
+      powerBank.address,
+      voteManager.address,
+      ruleManager.address,
+    ]);
   });
 
   it("should create a pod", async () => {
     await expect(
-      orcaProtocol.connect(host).createPod(podId, totalSupply, votingPeriod, minQuorum, masterGnosisContract),
+      orcaProtocol
+        .connect(host)
+        .createPod(podId, totalSupply, votingPeriod, minQuorum, masterGnosisContract, { gasLimit: "9500000" }),
     )
       .to.emit(orcaProtocol, "CreatePod")
       .withArgs(1)
@@ -77,7 +74,7 @@ describe("Orca Tests", () => {
       .withArgs(1, 2, 1)
       .to.emit(voteManager, "CreateSafe");
 
-    expect(await memberToken.balanceOf(host.address, 1)).to.equal(1);
+    expect(await powerToken.balanceOf(host.address, 1)).to.equal(1);
 
     // query the new gnosis safe and confirm the voteManager is the only owner
     const safeAddress = await voteManager.safes(1);
@@ -87,12 +84,8 @@ describe("Orca Tests", () => {
     await expect(podSafeOwners[0]).to.be.equal(voteManager.address);
   });
 
-  it("should not claim second membership", async () => {
-    await expect(podManager.connect(host).claimMembership(1)).to.be.revertedWith("User is already member");
-  });
-
   it("should not claim membership without rule", async () => {
-    await expect(podManager.connect(member).claimMembership(1)).to.be.revertedWith("No rule set");
+    await expect(orcaProtocol.connect(member).claimMembership(1)).to.be.revertedWith("No rule set");
   });
 
   it("should create a rule proposal to raise membership min tokens", async () => {
@@ -100,9 +93,7 @@ describe("Orca Tests", () => {
     await expect(() => orcaToken.connect(host).mint()).to.changeTokenBalance(orcaToken, host, 6);
 
     await expect(
-      voteManager
-        .connect(host)
-        .createRuleProposal(1, orcaToken.address, balanceOfFuncSig, params, comparisonLogic, 5),
+      voteManager.connect(host).createRuleProposal(1, orcaToken.address, balanceOfFuncSig, params, comparisonLogic, 5),
     )
       .to.emit(voteManager, "CreateRuleProposal")
       .withArgs(1, 1, host.address);
@@ -143,11 +134,11 @@ describe("Orca Tests", () => {
     await expect(voteManager.connect(member).finalizeRuleVote(1, { gasLimit: "9500000" }))
       .to.emit(voteManager, "FinalizeProposal")
       .withArgs(1, 1, member.address, true)
-      .to.emit(rulemanager, "UpdateRule")
+      .to.emit(ruleManager, "UpdateRule")
       .withArgs(1, orcaToken.address, balanceOfFuncSig, params, comparisonLogic, comparisonValue);
 
     // confirm proposal no longer pending
-    const voteProposal = await rulemanager.rulesByPod(1);
+    const voteProposal = await ruleManager.rulesByPod(1);
     expect(voteProposal.isFinalized).to.equal(true);
     expect(voteProposal.contractAddress).to.equal(orcaToken.address);
     expect(voteProposal.comparisonValue).to.equal(5);
@@ -155,14 +146,18 @@ describe("Orca Tests", () => {
     // add reward
   });
 
+  it("should not claim second membership", async () => {
+    await expect(orcaProtocol.connect(host).claimMembership(1)).to.be.revertedWith("User is already member");
+  });
+
   it("should claim membership with min tokens", async () => {
     await expect(() => orcaToken.connect(member).mint()).to.changeTokenBalance(orcaToken, member, 6);
 
-    await expect(podManager.connect(member).claimMembership(1, { gasLimit: "9500000" }))
-      .to.emit(memberToken, "TransferSingle")
-      .withArgs(podManager.address, podManager.address, member.address, 1, 1);
+    await expect(orcaProtocol.connect(member).claimMembership(1, { gasLimit: "9500000" }))
+      .to.emit(powerToken, "TransferSingle")
+      .withArgs(powerBank.address, powerBank.address, member.address, 1, 1);
 
-    expect(await memberToken.balanceOf(member.address, 1)).to.equal(1);
+    expect(await powerToken.balanceOf(member.address, 1)).to.equal(1);
   });
 
   it("should create an Action Proposal", async () => {
@@ -208,7 +203,7 @@ describe("Orca Tests", () => {
 
   // TODO: Good luck Steven
   // it("should not revoke a valid membership", async () => {
-  //   await expect(podManager.connect(shephard).retractMembership(1, host.address)).to.be.revertedWith(
+  //   await expect(powerBank.connect(shephard).retractMembership(1, host.address)).to.be.revertedWith(
   //     "Rule Compliant",
   //   );
   // });

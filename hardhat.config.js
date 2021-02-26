@@ -21,7 +21,7 @@ module.exports = {
   solidity: "0.7.4",
   gasReporter: {
     currency: "USD",
-    gasPrice: 120,
+    gasPrice: 300,
     coinmarketcap: "89cb5fbd-4c95-4879-a48a-ef63a5939d49",
   },
   networks: {
@@ -31,7 +31,7 @@ module.exports = {
         blockNumber: 11766801,
       },
       gas: 12000000,
-      blockGasLimit: 0xBEBC20,
+      blockGasLimit: 0xbebc20,
       allowUnlimitedContractSize: true,
       timeout: 1800000000,
     },

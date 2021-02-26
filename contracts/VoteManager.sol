@@ -29,7 +29,7 @@ contract VoteManager {
     }
 
     address private deployer;
-    RuleManager public rulemanager;
+    RuleManager public ruleManager;
 
     uint256 private proposalId = 0;
     mapping(uint256 => PodVoteStrategy) public voteStrategiesByPod;
@@ -88,9 +88,9 @@ contract VoteManager {
 
     event CreateSafe(uint256 indexed podId, address safeAddress);
 
-    constructor(RuleManager _rulemanager) public {
+    constructor(RuleManager _ruleManager) public {
         deployer = msg.sender;
-        rulemanager = _rulemanager;
+        ruleManager = _ruleManager;
     }
 
     // TODO: onlyProtocol
@@ -167,7 +167,7 @@ contract VoteManager {
 
         voteProposalByPod[_podId] = currentProposal;
 
-        rulemanager.setPodRule(
+        ruleManager.setPodRule(
             _podId,
             _contractAddress,
             _functionSignature,
@@ -277,7 +277,7 @@ contract VoteManager {
             // TODO: add necessary approve votes for rule
             if (proposal.approveVotes > 0) {
                 proposal.pending = false;
-                rulemanager.finalizePodRule(_podId);
+                ruleManager.finalizePodRule(_podId);
 
                 emit FinalizeProposal(
                     _podId,

@@ -3,7 +3,7 @@ pragma solidity 0.7.4;
 /* solhint-disable indent */
 
 import "hardhat/console.sol";
-import "./PodManager.sol";
+import "./PowerBank.sol";
 import "./VoteManager.sol";
 import "./RuleManager.sol";
 
@@ -20,27 +20,18 @@ import "hardhat/console.sol";
 
 contract OrcaProtocol {
     event RuleManagerAddress(address contractAddress);
-    event PodManagerAddress(address contractAddress);
+    event PowerBankAddress(address contractAddress);
     event VoteManagerAddress(address contractAddress);
     event CreatePod(uint256 podId);
 
-    PodManager podManager;
+    PowerBank powerBank;
     VoteManager voteManager;
-    RuleManager rulemanager;
+    RuleManager ruleManager;
 
-    constructor() public // address PodManagerAddress,
-    // address OrcaVotingManagerAddress,
-    {
-        rulemanager = new RuleManager();
-        emit RuleManagerAddress(address(rulemanager));
-
-        podManager = new PodManager(rulemanager);
-        emit PodManagerAddress(address(podManager));
-
-        voteManager = new VoteManager(rulemanager);
-        emit VoteManagerAddress(address(voteManager));
-
-        podManager.setVoteManager(address(voteManager));
+    constructor(address _powerBank, address _voteManager, address _ruleManager) public {
+        powerBank = PowerBank(_powerBank);
+        voteManager = VoteManager(_voteManager);
+        ruleManager = RuleManager(_ruleManager);
     }
 
     /*
@@ -55,7 +46,7 @@ contract OrcaProtocol {
         address _gnosisMasterContract
     ) public {
         // add a require to confirm minting was successful otherwise revert
-        podManager.createPod(msg.sender, _podId, _totalSupply);
+        powerBank.createPod(msg.sender, _podId, _totalSupply);
 
         voteManager.setupPodVotingAndSafe(
             _podId,
@@ -64,5 +55,19 @@ contract OrcaProtocol {
             _gnosisMasterContract
         );
         emit CreatePod(_podId);
+    }
+
+    function claimMembership(uint256 _podId) public {
+        require(
+            ruleManager.isRuleCompliant(_podId, msg.sender),
+            "Not Rule Compliant"
+        );
+        powerBank.claimMembership(msg.sender, _podId);
+    }
+
+    function retractMembership(uint256 _podId, address _member) public {
+        require(!ruleManager.isRuleCompliant(_podId, _member), "Rule Compliant");
+
+        powerBank.retractMembership(_podId, _member);
     }
 }
