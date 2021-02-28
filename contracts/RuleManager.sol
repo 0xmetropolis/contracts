@@ -45,7 +45,7 @@ contract RuleManager {
         );
     }
 
-    function finalizePodRule(uint256 _podId) public {
+    function finalizeRule(uint256 _podId) public {
         rulesByPod[_podId].isFinalized = true;
 
         emit UpdateRule(

@@ -4,6 +4,7 @@ pragma solidity 0.7.4;
 import "hardhat/console.sol";
 import "./RuleManager.sol";
 
+
 contract VoteManager {
     // Vote Strategys
     struct PodVoteStrategy {
@@ -11,45 +12,26 @@ contract VoteManager {
         uint256 minQuorum; // minimum number of votes needed to ratify.
     }
 
-    // Vote Proposals
-    struct PodVoteProposal {
+    // Proposals
+    struct Proposal {
         uint256 proposalId;
         uint256 proposalBlock; // block number of proposal
         uint256 approveVotes; // number of votes for proposal
         uint256 rejectVotes; // number of votes against proposal
-        bool pending; // has the final vote been tallied
-        uint256 ruleOrAction; // 0 = rule, 1 = action
-    }
-
-    // Action Proposals
-    struct ActionProposal {
-        address to;
-        uint256 value; // block number of proposal
-        bytes data; // number of votes for proposal
+        bool isOpen; // has the final vote been tallied
+        uint256 proposalType; // 0 = rule, 1 = action
+        uint256 executableId; // id of the corrisponding executable in SafeTeller or RuleManager 
+        bool didPass; // did the proposal pass
     }
 
     address private deployer;
-    RuleManager public ruleManager;
 
     uint256 private proposalId = 0;
     mapping(uint256 => PodVoteStrategy) public voteStrategiesByPod;
-    mapping(uint256 => PodVoteProposal) public voteProposalByPod;
-    mapping(uint256 => ActionProposal) public actionProposalByPod;
+    mapping(uint256 => Proposal) public proposalByPod;
 
     // proposalId => address => hasVoted
     mapping(uint256 => mapping(address => bool)) public userHasVotedByProposal;
-
-    // safe variables - Orca Governance should be able to update
-    address public proxyFactoryAddress =
-        0x76E2cFc1F5Fa8F6a5b3fC4c8F4788F0116861F9B;
-    string public functionSigCreateProxy = "createProxy(address,bytes)";
-    string public functionSigSetup =
-        "setup(address[],uint256,address,bytes,address,address,uint256,address)";
-    string public functionSigExecTransaction =
-        "execTransaction(address,uint256,bytes,uint8,uint256,uint256,uint256,address,address,bytes)";
-
-    // podId => safeAddress
-    mapping(uint256 => address) public safes;
 
     event CreateVoteStrategy(
         uint256 podId,
@@ -57,19 +39,12 @@ contract VoteManager {
         uint256 minQuorum
     );
 
-    event CreateRuleProposal(
-        uint256 proposalId,
-        uint256 podId,
-        address proposer
-    );
-
-    event CreateActionProposal(
+    event CreateProposal(
         uint256 proposalId,
         uint256 podId,
         address proposer,
-        address to,
-        uint256 value,
-        bytes data
+        uint256 proposalType,
+        uint256 executableId
     );
 
     event CastVote(
@@ -82,143 +57,44 @@ contract VoteManager {
     event FinalizeProposal(
         uint256 indexed podId,
         uint256 indexed proposalId,
-        address member,
-        bool indexed yesOrNo
+        bool indexed didPass
     );
 
-    event CreateSafe(uint256 indexed podId, address safeAddress);
-
-    constructor(RuleManager _ruleManager) public {
+    constructor() public {
         deployer = msg.sender;
-        ruleManager = _ruleManager;
     }
 
-    // TODO: onlyProtocol
-    // TODO: onlyCallOnceProtection
-    function setupPodVotingAndSafe(
+    function createProposal(
         uint256 _podId,
-        uint256 _votingPeriod,
-        uint256 _minQuorum,
-        address _gnosisMasterContract
-    ) public {
-        createVotingStrategy(_podId, _votingPeriod, _minQuorum);
-        createSafe(_podId, _gnosisMasterContract);
-    }
-
-    function createSafe(uint256 _podId, address _gnosisMasterContract)
-        internal
-    {
-        bytes memory data = "";
-        address[] memory ownerArray = new address[](1);
-        ownerArray[0] = address(this);
-
-        // encode the setup call that will be called on the new proxy safe
-        // from the proxy factory
-        bytes memory setupData =
-            abi.encodeWithSignature(
-                functionSigSetup,
-                ownerArray,
-                uint256(1),
-                address(0),
-                data,
-                address(0),
-                address(0),
-                uint256(0),
-                address(0)
-            );
-
-        bytes memory createProxyWithSetupData =
-            abi.encodeWithSignature(
-                functionSigCreateProxy,
-                _gnosisMasterContract,
-                setupData
-            );
-        (bool success, bytes memory result) =
-            proxyFactoryAddress.call(createProxyWithSetupData);
-        require(success == true, "Create Proxy With Data Failed");
-        address safeAddress = bytesToAddress(result);
-        safes[_podId] = safeAddress;
-        emit CreateSafe(_podId, safeAddress);
-    }
-
-    function createRuleProposal(
-        uint256 _podId,
-        address _contractAddress,
-        bytes4 _functionSignature,
-        bytes32[5] memory _functionParams,
-        uint256 _comparisonLogic,
-        uint256 _comparisonValue
+        address _proposer,
+        uint256 _proposalType,
+        uint256 _executableId
     ) public {
         // TODO: Check for Pod membership
         require(
-            !voteProposalByPod[_podId].pending,
+            !proposalByPod[_podId].isOpen,
             "There is currently a proposal pending"
         );
-        proposalId = proposalId + 1;
-        PodVoteProposal memory currentProposal =
-            PodVoteProposal(
-                proposalId,
-                block.number + voteStrategiesByPod[_podId].votingPeriod,
-                0,
-                0,
-                true,
-                0
-            );
+        proposalId += 1;
 
-        voteProposalByPod[_podId] = currentProposal;
+        proposalByPod[_podId] =
+            Proposal({
+                proposalId : proposalId,
+                proposalBlock: block.number,
+                approveVotes: 0,
+                rejectVotes: 0,
+                isOpen: true,
+                proposalType: _proposalType,
+                executableId: _executableId,
+                didPass: false
+            });
 
-        ruleManager.setPodRule(
+        emit CreateProposal(
+            proposalId,
             _podId,
-            _contractAddress,
-            _functionSignature,
-            _functionParams,
-            _comparisonLogic,
-            _comparisonValue
-        );
-
-        emit CreateRuleProposal(
-            voteProposalByPod[_podId].proposalId,
-            _podId,
-            msg.sender
-        );
-    }
-
-    function createActionProposal(
-        uint256 _podId,
-        address _to,
-        uint256 _value,
-        bytes memory _data
-    ) public {
-        // TODO: Check for Pod membership
-        require(
-            !voteProposalByPod[_podId].pending,
-            "There is currently a proposal pending"
-        );
-        proposalId = proposalId + 1;
-        PodVoteProposal memory currentProposal =
-            PodVoteProposal(
-                proposalId,
-                block.number + voteStrategiesByPod[_podId].votingPeriod,
-                0,
-                0,
-                true,
-                1
-            );
-
-        voteProposalByPod[_podId] = currentProposal;
-
-        ActionProposal memory actionProposal =
-            ActionProposal(_to, _value, _data);
-
-        actionProposalByPod[_podId] = actionProposal;
-
-        emit CreateActionProposal(
-            voteProposalByPod[_podId].proposalId,
-            _podId,
-            msg.sender,
-            _to,
-            _value,
-            _data
+            _proposer,
+            _proposalType,
+            _executableId
         );
     }
 
@@ -243,8 +119,8 @@ contract VoteManager {
     function vote(uint256 _podId, bool _yesOrNo) public {
         // TODO: add auth (requred msg.sender is in group)
         // TODO: repeat vote protection (if membership transferred)
-        PodVoteProposal storage proposal = voteProposalByPod[_podId];
-        require(proposal.pending, "There is no current proposal");
+        Proposal storage proposal = proposalByPod[_podId];
+        require(proposal.isOpen, "There is no current proposal");
         require(
             !userHasVotedByProposal[proposal.proposalId][msg.sender],
             "This member has already voted"
@@ -252,144 +128,39 @@ contract VoteManager {
 
         userHasVotedByProposal[proposal.proposalId][msg.sender] = true;
         if (_yesOrNo) {
-            proposal.approveVotes = voteProposalByPod[_podId].approveVotes + 1;
+            proposal.approveVotes = proposalByPod[_podId].approveVotes + 1;
         } else {
-            proposal.rejectVotes = voteProposalByPod[_podId].rejectVotes + 1;
+            proposal.rejectVotes = proposalByPod[_podId].rejectVotes + 1;
         }
 
         emit CastVote(_podId, proposal.proposalId, msg.sender, _yesOrNo);
     }
 
-    function finalizeRuleVote(uint256 _podId) public {
-        PodVoteProposal storage proposal = voteProposalByPod[_podId];
-        require(proposal.pending, "There is no current proposal");
-        require(proposal.ruleOrAction == 0, "There is not a rule proposal");
+    function finalizeProposal(uint256 _podId) public returns(bool, uint256, uint256){
+        Proposal storage proposal = proposalByPod[_podId];
+        require(proposal.isOpen, "There is no current proposal");
+
+        PodVoteStrategy memory voteStrategy = voteStrategiesByPod[_podId];
         require(
-            block.number > proposal.proposalBlock,
+            block.number > proposal.proposalBlock + voteStrategy.votingPeriod,
             "The voting period has not ended"
         );
 
-        if (
-            proposal.approveVotes + proposal.rejectVotes >=
-            voteStrategiesByPod[_podId].minQuorum
-        ) {
-            // check if enough people voted yes
-            // TODO: add necessary approve votes for rule
-            if (proposal.approveVotes > 0) {
-                proposal.pending = false;
-                ruleManager.finalizePodRule(_podId);
+        // TODO: allow finalize if voting period has ended
+        require(proposal.approveVotes + proposal.rejectVotes >=
+           voteStrategy.minQuorum, "Minimum Quorum Not Reached");
 
-                emit FinalizeProposal(
-                    _podId,
-                    proposal.proposalId,
-                    msg.sender,
-                    true
-                );
-                // reward sender
-            } else {
-                proposal.pending = false;
+        // TODO: safe math
+        proposal.didPass = proposal.approveVotes > voteStrategy.minQuorum / 2 ;
+        proposal.isOpen = false; 
 
-                emit FinalizeProposal(
-                    _podId,
-                    proposal.proposalId,
-                    msg.sender,
-                    false
-                );
-            }
-        }
-    }
-
-    function finalizeActionVote(uint256 _podId) public {
-        PodVoteProposal storage proposal = voteProposalByPod[_podId];
-        require(proposal.pending, "There is no current proposal");
-        require(proposal.ruleOrAction == 1, "There is not a rule proposal");
-
-        require(
-            block.number > proposal.proposalBlock,
-            "The voting period has not ended"
+        emit FinalizeProposal(
+            _podId,
+            proposal.proposalId,
+            proposal.didPass
         );
 
-        if (
-            proposal.approveVotes + proposal.rejectVotes >=
-            voteStrategiesByPod[_podId].minQuorum
-        ) {
-            // check if enough people voted yes
-            // TODO: add necessary approve votes for rule
-            ActionProposal memory action = actionProposalByPod[_podId];
-            if (proposal.approveVotes > 0) {
-                proposal.pending = false;
-
-                executeAction(
-                    safes[_podId],
-                    action.to,
-                    action.value,
-                    action.data
-                );
-
-                emit FinalizeProposal(
-                    _podId,
-                    proposal.proposalId,
-                    msg.sender,
-                    true
-                );
-                // reward sender
-            } else {
-                proposal.pending = false;
-
-                emit FinalizeProposal(
-                    _podId,
-                    proposal.proposalId,
-                    msg.sender,
-                    false
-                );
-            }
-        }
+        return (proposal.didPass, proposal.proposalType, proposal.executableId);
     }
 
-    function executeAction(
-        address _safeAddress,
-        address _to,
-        uint256 _value,
-        bytes memory _data
-    ) internal {
-        uint8 operation = uint8(0);
-        uint256 safeTxGas = uint256(0);
-        uint256 baseGas = uint256(0);
-        uint256 gasPrice = uint256(0);
-        address gasToken = address(0);
-        address refundReceiver = address(0);
-        bytes memory signatures =
-            abi.encodePacked(
-                bytes32(uint256(address(this))),
-                bytes32(uint256(0)),
-                uint8(1)
-            );
-
-        bytes memory executeTransactionData =
-            abi.encodeWithSignature(
-                functionSigExecTransaction,
-                _to,
-                _value,
-                _data,
-                operation,
-                safeTxGas,
-                baseGas,
-                gasPrice,
-                gasToken,
-                refundReceiver,
-                signatures
-            );
-        (bool success, bytes memory result) =
-            _safeAddress.call(executeTransactionData);
-    }
-
-    function bytesToAddress(bytes memory bys)
-        public
-        pure
-        returns (address addr)
-    {
-        assembly {
-            addr := mload(add(bys, 32))
-        }
-    }
 }

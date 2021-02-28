@@ -99,6 +99,10 @@ contract PowerBank is ERC1155Holder {
         );
     }
 
+    function getPower(address _user, uint256 _podId) public view returns(uint256){
+        return powerToken.balanceOf(_user, _podId);
+    }
+
     // TODO: We probably need some way for someone to give up their own token.
     // I think this is currently impossible with the way PowerBank is built
 
