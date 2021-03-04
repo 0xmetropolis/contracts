@@ -105,7 +105,14 @@ contract OrcaProtocol {
         voteManager.createProposal(_podId, msg.sender, 1, _podId);
     }
 
-    function finalizeProposal(uint256 _podId) public {
+    function vote(uint256 _podId, bool _yesOrNo) public {
+        
+        require(powerBank.getPower(msg.sender, _podId) != 0 ,"User lacks power");
+
+        voteManager.vote(_podId, _yesOrNo, msg.sender);
+    }
+
+    function finalizeProposal(uint _podId) public{
         // proposalType 0 = rule, 1 = action
         (bool didPass, uint256 proposalType, uint256 executableId) =
             voteManager.finalizeProposal(_podId);

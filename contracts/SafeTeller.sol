@@ -13,6 +13,8 @@ contract SafeTeller {
     string public functionSigExecTransaction =
         "execTransaction(address,uint256,bytes,uint8,uint256,uint256,uint256,address,address,bytes)";
 
+    address controller;
+
     struct Action {
         address to;
         uint256 value;
@@ -30,7 +32,20 @@ contract SafeTeller {
     );
     event ActionExecuted(bool success, bytes result);
 
-    function createSafe(uint256 _podId) public returns (address safeAddress) {
+    constructor() {
+        controller = msg.sender;
+    }
+
+    function updateController(address _controller) public {
+        require(controller == msg.sender, "!controller");
+        controller = _controller;
+    }
+    
+    function createSafe(uint256 _podId)
+        public
+        returns(address safeAddres)
+    {
+        require(controller == msg.sender, "!controller");
         bytes memory data = "";
         address[] memory ownerArray = new address[](1);
         ownerArray[0] = address(this);
@@ -70,6 +85,7 @@ contract SafeTeller {
         uint256 _value,
         bytes memory _data
     ) public {
+        require(controller == msg.sender, "!controller");
         actionProposalByPod[_podId] = Action({
             to: _to,
             value: _value,
@@ -78,7 +94,11 @@ contract SafeTeller {
         UpdateAction(_podId, _to, _value, _data);
     }
 
-    function executeAction(uint256 _podId, address _safeAddress) public {
+    function executeAction(
+        uint _podId,
+        address _safeAddress
+    ) public {
+        require(controller == msg.sender, "!controller");
         uint8 operation = uint8(0);
         uint256 safeTxGas = uint256(0);
         uint256 baseGas = uint256(0);
@@ -115,7 +135,7 @@ contract SafeTeller {
     }
 
     function bytesToAddress(bytes memory bys)
-        public
+        internal
         pure
         returns (address addr)
     {

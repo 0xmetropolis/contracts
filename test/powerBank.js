@@ -2,8 +2,8 @@ const { expect, use } = require("chai");
 const { waffle, ethers } = require("hardhat");
 
 const OrcaProtocol = require("../artifacts/contracts/OrcaProtocol.sol/OrcaProtocol.json");
-const PowerBank = require("../artifacts/contracts/PowerBank.sol/PowerBank.json");
 const PowerToken = require("../artifacts/contracts/PowerBank.sol/PowerToken.json");
+const PowerBank = require("../artifacts/contracts/PowerBank.sol/PowerBank.json");
 const OrcaToken = require("../artifacts/contracts/OrcaToken.sol/OrcaToken.json");
 const VoteManager = require("../artifacts/contracts/VoteManager.sol/VoteManager.json");
 
@@ -18,7 +18,10 @@ const totalSupply = 10;
 use(solidity);
 
 describe("PowerBank unit tests", () => {
-  const [admin, member1, member2] = provider.getWallets();
+  // IMPORTANT: for some reason using account[0] fails to deploy when running the full test suite
+  // potentially out of gas? or something to do with Alchemy infra, need to revisit.
+  // it seems like there is some state/artifact carryover between tests.
+  const [, admin, member1, member2] = provider.getWallets();
 
   it("should deploy contracts", async () => {
     // podManager = await deployContract(admin, PowerBank);

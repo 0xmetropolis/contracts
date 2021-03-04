@@ -23,7 +23,7 @@ contract VoteManager {
         bool didPass; // did the proposal pass
     }
 
-    address private deployer;
+    address private controller;
 
     uint256 private proposalId = 0;
     mapping(uint256 => PodVoteStrategy) public voteStrategiesByPod;
@@ -60,7 +60,12 @@ contract VoteManager {
     );
 
     constructor() public {
-        deployer = msg.sender;
+        controller = msg.sender;
+    }
+
+    function updateController(address _controller) public {
+        require(controller == msg.sender, "!controller");
+        controller = _controller;
     }
 
     function createProposal(
@@ -69,7 +74,7 @@ contract VoteManager {
         uint256 _proposalType,
         uint256 _executableId
     ) public {
-        // TODO: Check for Pod membership
+        require(controller == msg.sender, "!controller");
         require(
             !proposalByPod[_podId].isOpen,
             "There is currently a proposal pending"
@@ -101,7 +106,7 @@ contract VoteManager {
         uint256 _votingPeriod,
         uint256 _minQuorum
     ) public {
-        // TODO: add auth protection
+        require(controller == msg.sender, "!controller");
         // Only gets call on pod create
         voteStrategiesByPod[_podId] = PodVoteStrategy(
             _votingPeriod,
@@ -114,24 +119,24 @@ contract VoteManager {
         );
     }
 
-    function vote(uint256 _podId, bool _yesOrNo) public {
-        // TODO: add auth (requred msg.sender is in group)
+    function vote(uint256 _podId, bool _yesOrNo, address voter) public {
+        require(controller == msg.sender, "!controller");
         // TODO: repeat vote protection (if membership transferred)
         Proposal storage proposal = proposalByPod[_podId];
         require(proposal.isOpen, "There is no current proposal");
         require(
-            !userHasVotedByProposal[proposal.proposalId][msg.sender],
+            !userHasVotedByProposal[proposal.proposalId][voter],
             "This member has already voted"
         );
 
-        userHasVotedByProposal[proposal.proposalId][msg.sender] = true;
+        userHasVotedByProposal[proposal.proposalId][voter] = true;
         if (_yesOrNo) {
             proposal.approveVotes = proposalByPod[_podId].approveVotes + 1;
         } else {
             proposal.rejectVotes = proposalByPod[_podId].rejectVotes + 1;
         }
 
-        emit CastVote(_podId, proposal.proposalId, msg.sender, _yesOrNo);
+        emit CastVote(_podId, proposal.proposalId, voter, _yesOrNo);
     }
 
     function finalizeProposal(uint256 _podId)
@@ -142,6 +147,8 @@ contract VoteManager {
             uint256
         )
     {
+        require(controller == msg.sender, "!controller");
+        
         Proposal storage proposal = proposalByPod[_podId];
         require(proposal.isOpen, "There is no current proposal");
 

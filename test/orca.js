@@ -62,6 +62,11 @@ describe("Orca Tests", () => {
       ruleManager.address,
       safeTeller.address,
     ]);
+
+    await powerBank.connect(admin).updateController(orcaProtocol.address);
+    await ruleManager.connect(admin).updateController(orcaProtocol.address);
+    await voteManager.connect(admin).updateController(orcaProtocol.address);
+    await safeTeller.connect(admin).updateController(orcaProtocol.address);
   });
 
   it("should create a pod", async () => {
@@ -110,7 +115,7 @@ describe("Orca Tests", () => {
     expect(voteProposal.approveVotes).to.equal(0);
     expect(voteProposal.rejectVotes).to.equal(0);
 
-    await expect(voteManager.connect(host).vote(1, true))
+    await expect(orcaProtocol.connect(host).vote(1, true, { gasLimit: "9500000" }))
       .to.emit(voteManager, "CastVote")
       .withArgs(1, 1, host.address, true);
 
@@ -120,11 +125,11 @@ describe("Orca Tests", () => {
   });
 
   it("should cast a duplicate vote and revert", async () => {
-    await expect(voteManager.connect(host).vote(1, true)).to.be.revertedWith("This member has already voted");
+    await expect(orcaProtocol.connect(host).vote(1, true)).to.be.revertedWith("This member has already voted");
   });
 
   it("should fail to finalize vote due to voting period", async () => {
-    await expect(voteManager.connect(host).finalizeProposal(1, { gasLimit: "9500000" })).to.be.revertedWith(
+    await expect(orcaProtocol.connect(host).finalizeProposal(1, { gasLimit: "9500000" })).to.be.revertedWith(
       "The voting period has not ended",
     );
   });
@@ -174,7 +179,7 @@ describe("Orca Tests", () => {
     expect(voteProposal.approveVotes).to.equal(0);
     expect(voteProposal.rejectVotes).to.equal(0);
 
-    await expect(voteManager.connect(host).vote(1, true))
+    await expect(orcaProtocol.connect(host).vote(1, true))
       .to.emit(voteManager, "CastVote")
       .withArgs(1, 2, host.address, true);
 

@@ -42,6 +42,8 @@ contract PowerBank is ERC1155Holder {
     using SafeMath for uint256;
     using Address for address;
 
+    address controller;
+
     PowerToken public powerToken;
     // Maps podIds to pods
     mapping(uint256 => Pod) pods;
@@ -52,21 +54,16 @@ contract PowerBank is ERC1155Holder {
         uint256 totalSupply;
     }
 
-    // probably a better way to manage  this
-    // dependent on how we are managing contract deployment
-    modifier onlyProtocol {
-        // require(
-        //     // TODO: Should these be the same modifier?
-        //     (msg.sender == deployer) || (msg.sender == votingManager),
-        //     "Only OrcaProtocol can call this function."
-        // );
-        _;
-    }
-
     constructor(address _powerToken) public {
         powerToken = PowerToken(_powerToken);
         // approve admin to transfer tokens on behalf of the powerbank
-        powerToken.setApprovalForAll(msg.sender, true);
+        powerToken.setApprovalForAll(msg.sender,true);
+        controller = msg.sender;
+    }
+
+    function updateController(address _controller) public {
+        require(controller == msg.sender, "!controller");
+        controller = _controller;
     }
 
     /**
@@ -77,6 +74,7 @@ contract PowerBank is ERC1155Holder {
         uint256 _podId,
         uint256 _totalSupply
     ) public {
+        require(controller == msg.sender, "!controller");
         // Using totalSupply to add potential for people to claim "dead" podIds.
         require(pods[_podId].totalSupply == 0, "Pod already exists");
 
@@ -91,11 +89,8 @@ contract PowerBank is ERC1155Holder {
     }
 
     function claimMembership(address _user, uint256 _podId) public {
-        // only protocol
-        require(
-            powerToken.balanceOf(address(this), _podId) >= 1,
-            "No Memberships Availible"
-        );
+        require(controller == msg.sender, "!controller");
+        require(powerToken.balanceOf(address(this), _podId) >= 1, "No Memberships Availible");
 
         require(
             powerToken.balanceOf(_user, _podId) == 0,
@@ -115,9 +110,8 @@ contract PowerBank is ERC1155Holder {
 
     // TODO: We probably need some way for someone to give up their own token.
     // I think this is currently impossible with the way PowerBank is built
-
-    // // add modifier for only OrcaProtocol
     function retractMembership(uint256 _podId, address _member) public {
+        require(controller == msg.sender, "!controller");
         powerToken.safeTransferFrom(
             _member,
             address(this),
