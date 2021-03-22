@@ -29,6 +29,12 @@ contract PowerToken is ERC1155 {
 
 }
 
+/*
+Power Bank - Keeps track of how much power a member has in a certain POD 
+this power is minimally represented by a membership token
+other contracts can call the Power Bank to verify a participant has
+the power to perform a certain action in the context of a pod 
+*/
 contract PowerBank is ERC1155Holder {
     using SafeMath for uint256;
     using Address for address;

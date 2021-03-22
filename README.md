@@ -8,7 +8,7 @@ TODO
 
 The OrcaProtocol contract is the outward facing contract, most, if not all, public facing functions should go through the OrcaProtocol contract, including things like pod creation, the shepherd functions, etc.
 
-When deploying the OrcaProtocol will also need to be linked to all of it's dependancy contracts, which are as follows:
+When deploying the OrcaProtocol will also need to be linked to all of it's dependency contracts, which are as follows:
 
 ### PowerBank
 
