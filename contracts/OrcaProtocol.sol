@@ -31,7 +31,12 @@ contract OrcaProtocol {
 
     mapping(uint256 => address) public safeAddress;
 
-    constructor(address _powerBank, address _voteManager, address _ruleManager, address _safeTeller) public {
+    constructor(
+        address _powerBank,
+        address _voteManager,
+        address _ruleManager,
+        address _safeTeller
+    ) public {
         powerBank = PowerBank(_powerBank);
         voteManager = VoteManager(_voteManager);
         ruleManager = RuleManager(_ruleManager);
@@ -51,11 +56,7 @@ contract OrcaProtocol {
         // add a require to confirm minting was successful otherwise revert
         powerBank.createPod(msg.sender, _podId, _totalSupply);
 
-        voteManager.createVotingStrategy(
-            _podId,
-            _votingPeriod,
-            _minQuorum
-        );
+        voteManager.createVotingStrategy(_podId, _votingPeriod, _minQuorum);
         address podSafe = safeTeller.createSafe(_podId);
 
         safeAddress[_podId] = podSafe;
@@ -70,59 +71,53 @@ contract OrcaProtocol {
         bytes32[5] memory _functionParams,
         uint256 _comparisonLogic,
         uint256 _comparisonValue
-    )public{
-
-        require(powerBank.getPower(msg.sender, _podId) != 0 ,"User lacks power");
-
-        ruleManager.setPodRule(        
-        _podId,
-        _contractAddress,
-        _functionSignature,
-        _functionParams,
-        _comparisonLogic,
-        _comparisonValue);
-
-        voteManager.createProposal(
-            _podId,
-            msg.sender,
-            0,
-            _podId
+    ) public {
+        require(
+            powerBank.getPower(msg.sender, _podId) != 0,
+            "User lacks power"
         );
 
-    }
-
-    function createActionProposal(uint256 _podId, address _to, uint256 _value, bytes memory _data)public{
-
-        require(powerBank.getPower(msg.sender, _podId) != 0 ,"User lacks power");
-
-        safeTeller.createPendingAction(        
-        _podId,
-        _to,
-        _value,
-        _data);
-
-        voteManager.createProposal(
+        ruleManager.setPodRule(
             _podId,
-            msg.sender,
-            1,
-            _podId
+            _contractAddress,
+            _functionSignature,
+            _functionParams,
+            _comparisonLogic,
+            _comparisonValue
         );
 
+        voteManager.createProposal(_podId, msg.sender, 0, _podId);
     }
 
-    function finalizeProposal(uint _podId) public{
+    function createActionProposal(
+        uint256 _podId,
+        address _to,
+        uint256 _value,
+        bytes memory _data
+    ) public {
+        require(
+            powerBank.getPower(msg.sender, _podId) != 0,
+            "User lacks power"
+        );
+
+        safeTeller.createPendingAction(_podId, _to, _value, _data);
+
+        voteManager.createProposal(_podId, msg.sender, 1, _podId);
+    }
+
+    function finalizeProposal(uint256 _podId) public {
         // proposalType 0 = rule, 1 = action
-        (bool didPass, uint256 proposalType, uint256 executableId) = voteManager.finalizeProposal(_podId);
+        (bool didPass, uint256 proposalType, uint256 executableId) =
+            voteManager.finalizeProposal(_podId);
 
-        if (didPass){
-            if (proposalType == 0){
+        if (didPass) {
+            if (proposalType == 0) {
                 ruleManager.finalizeRule(executableId);
             }
-            if (proposalType == 1){
+            if (proposalType == 1) {
                 safeTeller.executeAction(_podId, safeAddress[_podId]);
             }
         }
-
     }
 
     function claimMembership(uint256 _podId) public {
@@ -134,7 +129,10 @@ contract OrcaProtocol {
     }
 
     function retractMembership(uint256 _podId, address _member) public {
-        require(!ruleManager.isRuleCompliant(_podId, _member), "Rule Compliant");
+        require(
+            !ruleManager.isRuleCompliant(_podId, _member),
+            "Rule Compliant"
+        );
 
         powerBank.retractMembership(_podId, _member);
     }

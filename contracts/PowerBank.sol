@@ -19,14 +19,17 @@ import "./RuleManager.sol";
 // only allow for one token per user
 
 contract PowerToken is ERC1155 {
-
     constructor() ERC1155("POD") {}
 
     //TODO only power bank
-    function mint(address _to, uint256 _id, uint256 _amount, bytes memory _data) public {
-        _mint(_to,_id,_amount,_data);
+    function mint(
+        address _to,
+        uint256 _id,
+        uint256 _amount,
+        bytes memory _data
+    ) public {
+        _mint(_to, _id, _amount, _data);
     }
-
 }
 
 /*
@@ -63,7 +66,7 @@ contract PowerBank is ERC1155Holder {
     constructor(address _powerToken) public {
         powerToken = PowerToken(_powerToken);
         // approve admin to transfer tokens on behalf of the powerbank
-        powerToken.setApprovalForAll(msg.sender,true);
+        powerToken.setApprovalForAll(msg.sender, true);
     }
 
     /**
@@ -89,23 +92,24 @@ contract PowerBank is ERC1155Holder {
 
     function claimMembership(address _user, uint256 _podId) public {
         // only protocol
-        require(powerToken.balanceOf(address(this), _podId) >= 1, "No Memberships Availible");
+        require(
+            powerToken.balanceOf(address(this), _podId) >= 1,
+            "No Memberships Availible"
+        );
 
         require(
             powerToken.balanceOf(_user, _podId) == 0,
             "User is already member"
         );
 
-        powerToken.safeTransferFrom(
-            address(this),
-            _user,
-            _podId,
-            1,
-            bytes("")
-        );
+        powerToken.safeTransferFrom(address(this), _user, _podId, 1, bytes(""));
     }
 
-    function getPower(address _user, uint256 _podId) public view returns(uint256){
+    function getPower(address _user, uint256 _podId)
+        public
+        view
+        returns (uint256)
+    {
         return powerToken.balanceOf(_user, _podId);
     }
 
@@ -114,7 +118,6 @@ contract PowerBank is ERC1155Holder {
 
     // // add modifier for only OrcaProtocol
     function retractMembership(uint256 _podId, address _member) public {
-
         powerToken.safeTransferFrom(
             _member,
             address(this),

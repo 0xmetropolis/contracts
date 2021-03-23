@@ -1,11 +1,11 @@
 pragma solidity 0.7.4;
 
 contract SafeTeller {
-
     // safe variables - Orca Governance should be able to update
     address public proxyFactoryAddress =
         0x76E2cFc1F5Fa8F6a5b3fC4c8F4788F0116861F9B;
-    address public gnosisMasterAddress= 0x34CfAC646f301356fAa8B21e94227e3583Fe3F5F;
+    address public gnosisMasterAddress =
+        0x34CfAC646f301356fAa8B21e94227e3583Fe3F5F;
 
     string public functionSigCreateProxy = "createProxy(address,bytes)";
     string public functionSigSetup =
@@ -22,13 +22,15 @@ contract SafeTeller {
     mapping(uint256 => Action) public actionProposalByPod;
 
     event CreateSafe(uint256 indexed podId, address safeAddress);
-    event UpdateAction(uint256 _podId, address _to, uint256 _value, bytes _data);
+    event UpdateAction(
+        uint256 _podId,
+        address _to,
+        uint256 _value,
+        bytes _data
+    );
     event ActionExecuted(bool success, bytes result);
-    
-    function createSafe(uint256 _podId)
-        public
-        returns(address safeAddres)
-    {
+
+    function createSafe(uint256 _podId) public returns (address safeAddress) {
         bytes memory data = "";
         address[] memory ownerArray = new address[](1);
         ownerArray[0] = address(this);
@@ -62,19 +64,21 @@ contract SafeTeller {
         return safeAddress;
     }
 
-    function createPendingAction(uint256 _podId, address _to, uint256 _value, bytes memory _data) public {
+    function createPendingAction(
+        uint256 _podId,
+        address _to,
+        uint256 _value,
+        bytes memory _data
+    ) public {
         actionProposalByPod[_podId] = Action({
-            to : _to,
-            value : _value,
-            data : _data
+            to: _to,
+            value: _value,
+            data: _data
         });
         UpdateAction(_podId, _to, _value, _data);
     }
 
-    function executeAction(
-        uint _podId,
-        address _safeAddress
-    ) public {
+    function executeAction(uint256 _podId, address _safeAddress) public {
         uint8 operation = uint8(0);
         uint256 safeTxGas = uint256(0);
         uint256 baseGas = uint256(0);
@@ -87,9 +91,8 @@ contract SafeTeller {
                 bytes32(uint256(0)),
                 uint8(1)
             );
-        
+
         Action memory executable = actionProposalByPod[_podId];
-        
 
         bytes memory executeTransactionData =
             abi.encodeWithSignature(
@@ -108,7 +111,7 @@ contract SafeTeller {
         (bool success, bytes memory result) =
             _safeAddress.call(executeTransactionData);
 
-        emit ActionExecuted(success,result);
+        emit ActionExecuted(success, result);
     }
 
     function bytesToAddress(bytes memory bys)
@@ -120,5 +123,4 @@ contract SafeTeller {
             addr := mload(add(bys, 32))
         }
     }
-
 }

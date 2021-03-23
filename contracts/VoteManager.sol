@@ -4,7 +4,6 @@ pragma solidity 0.7.4;
 import "hardhat/console.sol";
 import "./RuleManager.sol";
 
-
 contract VoteManager {
     // Vote Strategys
     struct PodVoteStrategy {
@@ -20,7 +19,7 @@ contract VoteManager {
         uint256 rejectVotes; // number of votes against proposal
         bool isOpen; // has the final vote been tallied
         uint256 proposalType; // 0 = rule, 1 = action
-        uint256 executableId; // id of the corrisponding executable in SafeTeller or RuleManager 
+        uint256 executableId; // id of the corrisponding executable in SafeTeller or RuleManager
         bool didPass; // did the proposal pass
     }
 
@@ -77,17 +76,16 @@ contract VoteManager {
         );
         proposalId += 1;
 
-        proposalByPod[_podId] =
-            Proposal({
-                proposalId : proposalId,
-                proposalBlock: block.number,
-                approveVotes: 0,
-                rejectVotes: 0,
-                isOpen: true,
-                proposalType: _proposalType,
-                executableId: _executableId,
-                didPass: false
-            });
+        proposalByPod[_podId] = Proposal({
+            proposalId: proposalId,
+            proposalBlock: block.number,
+            approveVotes: 0,
+            rejectVotes: 0,
+            isOpen: true,
+            proposalType: _proposalType,
+            executableId: _executableId,
+            didPass: false
+        });
 
         emit CreateProposal(
             proposalId,
@@ -136,7 +134,14 @@ contract VoteManager {
         emit CastVote(_podId, proposal.proposalId, msg.sender, _yesOrNo);
     }
 
-    function finalizeProposal(uint256 _podId) public returns(bool, uint256, uint256){
+    function finalizeProposal(uint256 _podId)
+        public
+        returns (
+            bool,
+            uint256,
+            uint256
+        )
+    {
         Proposal storage proposal = proposalByPod[_podId];
         require(proposal.isOpen, "There is no current proposal");
 
@@ -147,20 +152,18 @@ contract VoteManager {
         );
 
         // TODO: allow finalize if voting period has ended
-        require(proposal.approveVotes + proposal.rejectVotes >=
-           voteStrategy.minQuorum, "Minimum Quorum Not Reached");
+        require(
+            proposal.approveVotes + proposal.rejectVotes >=
+                voteStrategy.minQuorum,
+            "Minimum Quorum Not Reached"
+        );
 
         // TODO: safe math
-        proposal.didPass = proposal.approveVotes > voteStrategy.minQuorum / 2 ;
-        proposal.isOpen = false; 
+        proposal.didPass = proposal.approveVotes > voteStrategy.minQuorum / 2;
+        proposal.isOpen = false;
 
-        emit FinalizeProposal(
-            _podId,
-            proposal.proposalId,
-            proposal.didPass
-        );
+        emit FinalizeProposal(_podId, proposal.proposalId, proposal.didPass);
 
         return (proposal.didPass, proposal.proposalType, proposal.executableId);
     }
-
 }
