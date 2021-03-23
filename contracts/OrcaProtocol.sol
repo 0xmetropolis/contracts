@@ -2,10 +2,10 @@ pragma solidity 0.7.4;
 
 /* solhint-disable indent */
 
-import "hardhat/console.sol";
-import "./PodManager.sol";
+import "./PowerBank.sol";
 import "./VoteManager.sol";
 import "./RuleManager.sol";
+import "./SafeTeller.sol";
 
 import "hardhat/console.sol";
 
@@ -20,27 +20,27 @@ import "hardhat/console.sol";
 
 contract OrcaProtocol {
     event RuleManagerAddress(address contractAddress);
-    event PodManagerAddress(address contractAddress);
+    event PowerBankAddress(address contractAddress);
     event VoteManagerAddress(address contractAddress);
     event CreatePod(uint256 podId);
 
-    PodManager podManager;
+    PowerBank powerBank;
     VoteManager voteManager;
-    RuleManager rulemanager;
+    RuleManager ruleManager;
+    SafeTeller safeTeller;
 
-    constructor() public // address PodManagerAddress,
-    // address OrcaVotingManagerAddress,
-    {
-        rulemanager = new RuleManager();
-        emit RuleManagerAddress(address(rulemanager));
+    mapping(uint256 => address) public safeAddress;
 
-        podManager = new PodManager(rulemanager);
-        emit PodManagerAddress(address(podManager));
-
-        voteManager = new VoteManager(rulemanager);
-        emit VoteManagerAddress(address(voteManager));
-
-        podManager.setVoteManager(address(voteManager));
+    constructor(
+        address _powerBank,
+        address _voteManager,
+        address _ruleManager,
+        address _safeTeller
+    ) public {
+        powerBank = PowerBank(_powerBank);
+        voteManager = VoteManager(_voteManager);
+        ruleManager = RuleManager(_ruleManager);
+        safeTeller = SafeTeller(_safeTeller);
     }
 
     /*
@@ -51,18 +51,96 @@ contract OrcaProtocol {
         uint256 _podId,
         uint256 _totalSupply,
         uint256 _votingPeriod,
-        uint256 _minQuorum,
-        address _gnosisMasterContract
+        uint256 _minQuorum
     ) public {
         // add a require to confirm minting was successful otherwise revert
-        podManager.createPod(msg.sender, _podId, _totalSupply);
+        powerBank.createPod(msg.sender, _podId, _totalSupply);
 
-        voteManager.setupPodVotingAndSafe(
-            _podId,
-            _votingPeriod,
-            _minQuorum,
-            _gnosisMasterContract
-        );
+        voteManager.createVotingStrategy(_podId, _votingPeriod, _minQuorum);
+        address podSafe = safeTeller.createSafe(_podId);
+
+        safeAddress[_podId] = podSafe;
+
         emit CreatePod(_podId);
+    }
+
+    function createRuleProposal(
+        uint256 _podId,
+        address _contractAddress,
+        bytes4 _functionSignature,
+        bytes32[5] memory _functionParams,
+        uint256 _comparisonLogic,
+        uint256 _comparisonValue
+    ) public {
+        require(
+            powerBank.getPower(msg.sender, _podId) != 0,
+            "User lacks power"
+        );
+
+        ruleManager.setPodRule(
+            _podId,
+            _contractAddress,
+            _functionSignature,
+            _functionParams,
+            _comparisonLogic,
+            _comparisonValue
+        );
+
+        voteManager.createProposal(_podId, msg.sender, 0, _podId);
+    }
+
+    function createActionProposal(
+        uint256 _podId,
+        address _to,
+        uint256 _value,
+        bytes memory _data
+    ) public {
+        require(
+            powerBank.getPower(msg.sender, _podId) != 0,
+            "User lacks power"
+        );
+
+        safeTeller.createPendingAction(_podId, _to, _value, _data);
+
+        voteManager.createProposal(_podId, msg.sender, 1, _podId);
+    }
+
+    function vote(uint256 _podId, bool _yesOrNo) public {
+        
+        require(powerBank.getPower(msg.sender, _podId) != 0 ,"User lacks power");
+
+        voteManager.vote(_podId, _yesOrNo, msg.sender);
+    }
+
+    function finalizeProposal(uint _podId) public{
+        // proposalType 0 = rule, 1 = action
+        (bool didPass, uint256 proposalType, uint256 executableId) =
+            voteManager.finalizeProposal(_podId);
+
+        if (didPass) {
+            if (proposalType == 0) {
+                ruleManager.finalizeRule(executableId);
+            }
+            if (proposalType == 1) {
+                safeTeller.executeAction(_podId, safeAddress[_podId]);
+            }
+        }
+    }
+
+    function claimMembership(uint256 _podId) public {
+        require(
+            ruleManager.isRuleCompliant(_podId, msg.sender),
+            "Not Rule Compliant"
+        );
+        powerBank.claimMembership(msg.sender, _podId);
+    }
+
+    function retractMembership(uint256 _podId, address _member) public {
+        require(
+            !ruleManager.isRuleCompliant(_podId, _member),
+            "Rule Compliant"
+        );
+
+        powerBank.retractMembership(_podId, _member);
     }
 }

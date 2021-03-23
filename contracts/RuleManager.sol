@@ -3,7 +3,9 @@ pragma solidity 0.7.4;
 /* solhint-disable indent */
 
 // This contract manages the membership rules
-// it is responsible for distributing and retracting memberships
+// it is responsible for storing pod rules, and validating rule compliance
+
+// TODO: ADD STATIC CALLS
 
 contract RuleManager {
     // Rules
@@ -16,16 +18,8 @@ contract RuleManager {
         bool isFinalized;
     }
 
+    address controller;
     mapping(uint256 => Rule) public rulesByPod;
-
-    event CreateRule(
-        uint256 podId,
-        address contractAddress,
-        bytes4 functionSignature,
-        bytes32[5] functionParams,
-        uint256 comparisonLogic,
-        uint256 comparisonValue
-    );
 
     event UpdateRule(
         uint256 podId,
@@ -36,6 +30,15 @@ contract RuleManager {
         uint256 comparisonValue
     );
 
+    constructor () {
+        controller = msg.sender;
+    }
+
+    function updateController(address _controller) public {
+        require(controller == msg.sender, "!controller");
+        controller = _controller;
+    }
+
     function setPodRule(
         uint256 _podId,
         address _contractAddress,
@@ -44,6 +47,7 @@ contract RuleManager {
         uint256 _comparisonLogic,
         uint256 _comparisonValue
     ) public {
+        require(controller == msg.sender, "!controller");
         rulesByPod[_podId] = Rule(
             _contractAddress,
             _functionSignature,
@@ -54,7 +58,8 @@ contract RuleManager {
         );
     }
 
-    function finalizePodRule(uint256 _podId) public {
+    function finalizeRule(uint256 _podId) public {
+        require(controller == msg.sender, "!controller");
         rulesByPod[_podId].isFinalized = true;
 
         emit UpdateRule(
@@ -71,6 +76,7 @@ contract RuleManager {
         public
         returns (bool)
     {
+        require(controller == msg.sender, "!controller");
         Rule memory currentRule = rulesByPod[_podId];
         require(currentRule.contractAddress != address(0), "No rule set");
 

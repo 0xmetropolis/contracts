@@ -23,8 +23,8 @@
     "solhint-plugin-prettier": "0.0.5"
   },
   "scripts": {
-    "lint": "solhint contracts/**/*.sol",
-    "prettier": "prettier --write contracts/**/*.sol",
+    "lint": "solhint contracts/*.sol",
+    "prettier": "prettier --write contracts/*.sol",
     "test": " hardhat test",
     "compile": " hardhat compile"
   },
