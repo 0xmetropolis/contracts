@@ -30,7 +30,7 @@ contract RuleManager {
         uint256 comparisonValue
     );
 
-    constructor () {
+    constructor() {
         controller = msg.sender;
     }
 
