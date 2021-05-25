@@ -114,29 +114,27 @@ contract OrcaProtocol {
     }
 
     function approve(
-        uint256 _podId,
         uint256 _proposalId,
+        uint256 _podId,
         address _voter
     ) public {
         require(msg.sender == _voter, "voter is invalid");
 
         require(powerBank.getPower(_voter, _podId) != 0, "User lacks power");
 
-        voteManager.approveProposal(_podId, _proposalId, _voter);
+        voteManager.approveProposal(_proposalId, _podId, _voter);
     }
 
-    function finalizeProposal(uint256 _podId, uint256 _proposalId) public {
+    function finalizeProposal(uint256 _proposalId, uint256 _podId) public {
         // proposalType 0 = rule, 1 = action
-        (bool didPass, uint256 proposalType, uint256 executableId) =
-            voteManager.finalizeProposal(_podId, _proposalId);
+        (uint256 proposalType, uint256 executableId) =
+            voteManager.passProposal(_proposalId, _podId);
 
-        if (didPass) {
-            if (proposalType == 0) {
-                ruleManager.finalizeRule(executableId);
-            }
-            if (proposalType == 1) {
-                safeTeller.executeAction(_podId, safeAddress[_podId]);
-            }
+        if (proposalType == 0) {
+            ruleManager.finalizeRule(executableId);
+        }
+        if (proposalType == 1) {
+            safeTeller.executeAction(_podId, safeAddress[_podId]);
         }
     }
 

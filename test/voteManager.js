@@ -36,7 +36,7 @@ describe("VoteManager unit tests", () => {
     expect(strategy.maxQuorum).to.equal(maxQuorum);
   });
 
-  const proposalId = 0; // should generate proposal Id
+  const proposalId = 1; // should generate proposal Id
   const proposalType = 1; // 0 == Rule, 1 == Action
   const executableId = 1; // id of executable stored in rule/action book
 
@@ -49,9 +49,8 @@ describe("VoteManager unit tests", () => {
     expect(proposal.proposalId).to.equal(proposalId);
     expect(proposal.proposalType).to.equal(proposalType);
     expect(proposal.executableId).to.equal(executableId);
-    expect(proposal.approvals).to.equal(0);
+    expect(proposal.approvals).to.equal(1);
     expect(proposal.isChallenged).to.equal(false);
-    expect(proposal.isOpen).to.equal(true);
     expect(proposal.didPass).to.equal(false);
   });
 
@@ -63,7 +62,7 @@ describe("VoteManager unit tests", () => {
     expect(await voteManager.userHasVotedByProposal(proposalId, member1.address)).to.equal(true);
 
     const proposal = await voteManager.proposalByPod(podId);
-    expect(proposal.approvals).to.equal(1);
+    expect(proposal.approvals).to.equal(2);
   });
 
   it("should not double approve proposal", async () => {
@@ -73,12 +72,11 @@ describe("VoteManager unit tests", () => {
   });
 
   it("should finalize proposal", async () => {
-    await expect(voteManager.connect(admin).finalizeProposal(podId, proposalId))
-      .to.emit(voteManager, "ProposalFinalized")
-      .withArgs(podId, proposalId, true);
+    await expect(voteManager.connect(admin).passProposal(podId, proposalId))
+      .to.emit(voteManager, "ProposalPassed")
+      .withArgs(podId, proposalId);
 
     const proposal = await voteManager.proposalByPod(podId);
     expect(proposal.didPass).to.equal(true);
-    expect(proposal.isOpen).to.equal(false);
   });
 });

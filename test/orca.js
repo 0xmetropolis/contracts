@@ -50,7 +50,7 @@ describe("Orca Tests", () => {
   const minQuorum = 1;
   const maxQuorum = 1;
 
-  it("should deploy contracts", async () => {
+  before(async () => {
     orcaToken = await deployContract(admin, OrcaToken);
 
     powerToken = await deployContract(admin, PowerToken);
@@ -77,11 +77,7 @@ describe("Orca Tests", () => {
       orcaProtocol
         .connect(host)
         .createPod(podId, minVotingPeriod, maxVotingPeriod, minQuorum, maxQuorum, totalSupply, { gasLimit: "9500000" }),
-    )
-      .to.emit(orcaProtocol, "CreatePod")
-      .withArgs(podId)
-      .to.emit(voteManager, "VoteStrategyUpdated")
-      .to.emit(safeTeller, "CreateSafe");
+    ).to.emit(safeTeller, "CreateSafe");
 
     expect(await powerToken.balanceOf(host.address, 1)).to.equal(1);
 
@@ -97,7 +93,7 @@ describe("Orca Tests", () => {
     await expect(orcaProtocol.connect(member).claimMembership(podId)).to.be.revertedWith("No rule set");
   });
 
-  const ruleProposalId = 0;
+  const ruleProposalId = 1;
 
   it("should create a rule proposal to raise membership min tokens", async () => {
     // can only use changeTokenBalance with ERC20/721
@@ -111,33 +107,26 @@ describe("Orca Tests", () => {
 
     const voteProposal = await voteManager.proposalByPod(podId);
     expect(voteProposal.proposalId).to.equal(ruleProposalId);
-    expect(voteProposal.approvals).to.equal(0);
-    expect(voteProposal.isOpen).to.equal(true);
-  });
-
-  it("should cast a vote on a proposal", async () => {
-    let voteProposal = await voteManager.proposalByPod(podId);
-    expect(voteProposal.approvals).to.equal(0);
-
-    await expect(orcaProtocol.connect(host).approve(podId, ruleProposalId, host.address, { gasLimit: "9500000" }))
-      .to.emit(voteManager, "ProposalApproved")
-      .withArgs(ruleProposalId, podId, host.address);
-
-    voteProposal = await voteManager.proposalByPod(1);
     expect(voteProposal.approvals).to.equal(1);
   });
 
+  it("should not cast a vote without power", async () => {
+    await expect(orcaProtocol.connect(member).approve(ruleProposalId, podId, member.address)).to.be.revertedWith(
+      "User lacks power",
+    );
+  });
+
   it("should cast a duplicate vote and revert", async () => {
-    await expect(orcaProtocol.connect(host).approve(podId, ruleProposalId, host.address)).to.be.revertedWith(
+    await expect(orcaProtocol.connect(host).approve(ruleProposalId, podId, host.address)).to.be.revertedWith(
       "This member has already voted",
     );
   });
 
   it("should finalize rule vote", async () => {
+    // increment block
+    await ethers.provider.send("evm_mine");
     // finalize proposal
-    await expect(orcaProtocol.connect(member).finalizeProposal(podId, ruleProposalId, { gasLimit: "9500000" }))
-      .to.emit(voteManager, "ProposalFinalized")
-      .withArgs(podId, ruleProposalId, true)
+    await expect(orcaProtocol.connect(member).finalizeProposal(ruleProposalId, podId, { gasLimit: "9500000" }))
       .to.emit(ruleManager, "UpdateRule")
       .withArgs(1, orcaToken.address, balanceOfFuncSig, params, comparisonLogic, comparisonValue);
 
@@ -146,8 +135,6 @@ describe("Orca Tests", () => {
     expect(voteProposal.isFinalized).to.equal(true);
     expect(voteProposal.contractAddress).to.equal(orcaToken.address);
     expect(voteProposal.comparisonValue).to.equal(5);
-
-    // add reward
   });
 
   it("should not claim second membership", async () => {
@@ -164,7 +151,7 @@ describe("Orca Tests", () => {
     expect(await powerToken.balanceOf(member.address, 1)).to.equal(1);
   });
 
-  const actionProposalId = 1;
+  const actionProposalId = 2;
 
   it("should create an Action Proposal", async () => {
     const encodedMint = orcaToken.interface.encodeFunctionData("mint");
@@ -175,14 +162,14 @@ describe("Orca Tests", () => {
 
   it("should cast a vote on an Action proposal", async () => {
     let voteProposal = await voteManager.proposalByPod(podId);
-    expect(voteProposal.approvals).to.equal(0);
+    expect(voteProposal.approvals).to.equal(1);
 
-    await expect(orcaProtocol.connect(host).approve(podId, actionProposalId, host.address))
+    await expect(orcaProtocol.connect(member).approve(actionProposalId, podId, member.address))
       .to.emit(voteManager, "ProposalApproved")
-      .withArgs(actionProposalId, podId, host.address);
+      .withArgs(actionProposalId, podId, member.address);
 
     voteProposal = await voteManager.proposalByPod(podId);
-    expect(voteProposal.approvals).to.equal(1);
+    expect(voteProposal.approvals).to.equal(2);
   });
 
   it("should finalize action vote and mint more orcaTokens", async () => {
@@ -190,7 +177,7 @@ describe("Orca Tests", () => {
 
     // finalize proposal
     await expect(
-      orcaProtocol.connect(member).finalizeProposal(podId, actionProposalId, { gasLimit: "9500000" }),
+      orcaProtocol.connect(member).finalizeProposal(actionProposalId, podId, { gasLimit: "9500000" }),
     ).to.emit(safeTeller, "ActionExecuted");
 
     const updatedOrcaTokenSupply = await orcaToken.totalSupply();
