@@ -6,66 +6,93 @@ import "./RuleManager.sol";
 
 contract VoteManager {
     // Vote Strategys
-    struct PodVoteStrategy {
-        uint256 votingPeriod; // number of blocks.
+    struct Strategy {
+        uint256 minVotingPeriod; // min number of blocks for a stage.
+        uint256 maxVotingPeriod; // max number of blocks for a stage.
         uint256 minQuorum; // minimum number of votes needed to ratify.
+        uint256 maxQuorum; // maxiimum number of votes needed to ratify.
     }
 
     // Proposals
     struct Proposal {
         uint256 proposalId;
-        uint256 proposalBlock; // block number of proposal
-        uint256 approveVotes; // number of votes for proposal
-        uint256 rejectVotes; // number of votes against proposal
-        bool isOpen; // has the final vote been tallied
         uint256 proposalType; // 0 = rule, 1 = action
         uint256 executableId; // id of the corrisponding executable in SafeTeller or RuleManager
+        uint256 proposalBlock; // block number of proposal
+        uint256 approvals; // number of approvals for proposal
+        bool isChallenged; // has someone challenged the proposal
         bool didPass; // did the proposal pass
     }
 
     address private controller;
 
     uint256 private proposalId = 0;
-    mapping(uint256 => PodVoteStrategy) public voteStrategiesByPod;
+    mapping(uint256 => Strategy) public voteStrategiesByPod;
     mapping(uint256 => Proposal) public proposalByPod;
 
     // proposalId => address => hasVoted
     mapping(uint256 => mapping(address => bool)) public userHasVotedByProposal;
 
-    event CreateVoteStrategy(
-        uint256 podId,
-        uint256 votingPeriod,
-        uint256 minQuorum
+    event ControllerUpdated(address newController);
+
+    event VoteStrategyUpdated(
+        uint256 indexed podId,
+        uint256 minVotingPeriod, // min number of blocks for a stage.
+        uint256 maxVotingPeriod, // max number of blocks for a stage.
+        uint256 minQuorum, // minimum number of votes needed to ratify.
+        uint256 maxQuorum // maxiimum number of votes needed to ratify.
     );
 
-    event CreateProposal(
-        uint256 proposalId,
-        uint256 podId,
-        address proposer,
+    event ProposalCreated(
+        uint256 indexed proposalId,
+        uint256 indexed podId,
+        address indexed proposer,
         uint256 proposalType,
         uint256 executableId
     );
 
-    event CastVote(
-        uint256 indexed podId,
+    event ProposalApproved(
         uint256 indexed proposalId,
-        address indexed member,
-        bool yesOrNo
+        uint256 indexed podId,
+        address indexed member
     );
 
-    event FinalizeProposal(
-        uint256 indexed podId,
-        uint256 indexed proposalId,
-        bool indexed didPass
-    );
+    event ProposalPassed(uint256 indexed proposalId, uint256 indexed podId);
 
-    constructor() public {
-        controller = msg.sender;
+    constructor(address _controller) public {
+        require(_controller == msg.sender);
+        emit ControllerUpdated(_controller);
+        controller = _controller;
     }
 
     function updateController(address _controller) public {
         require(controller == msg.sender, "!controller");
+        emit ControllerUpdated(_controller);
         controller = _controller;
+    }
+
+    function createVotingStrategy(
+        uint256 _podId,
+        uint256 _minVotingPeriod,
+        uint256 _maxVotingPeriod,
+        uint256 _minQuorum,
+        uint256 _maxQuorum
+    ) public {
+        require(controller == msg.sender, "!controller");
+        emit VoteStrategyUpdated(
+            _podId,
+            _minVotingPeriod,
+            _maxVotingPeriod,
+            _minQuorum,
+            _maxQuorum
+        );
+        // Only gets call on pod create
+        voteStrategiesByPod[_podId] = Strategy(
+            _minVotingPeriod,
+            _maxVotingPeriod,
+            _minQuorum,
+            _maxQuorum
+        );
     }
 
     function createProposal(
@@ -73,104 +100,143 @@ contract VoteManager {
         address _proposer,
         uint256 _proposalType,
         uint256 _executableId
-    ) public {
+    ) public returns (uint256) {
         require(controller == msg.sender, "!controller");
+
+        Proposal memory proposal = proposalByPod[_podId];
+        Strategy memory voteStrategy = voteStrategiesByPod[_podId];
+
         require(
-            !proposalByPod[_podId].isOpen,
+            !_isProposalActive(proposal, voteStrategy),
             "There is currently a proposal pending"
         );
+
         proposalId += 1;
 
-        proposalByPod[_podId] = Proposal({
-            proposalId: proposalId,
-            proposalBlock: block.number,
-            approveVotes: 0,
-            rejectVotes: 0,
-            isOpen: true,
-            proposalType: _proposalType,
-            executableId: _executableId,
-            didPass: false
-        });
-
-        emit CreateProposal(
+        emit ProposalCreated(
             proposalId,
             _podId,
             _proposer,
             _proposalType,
             _executableId
         );
+
+        proposalByPod[_podId] = Proposal({
+            proposalId: proposalId,
+            proposalType: _proposalType,
+            executableId: _executableId,
+            proposalBlock: block.number,
+            approvals: 1,
+            isChallenged: false,
+            didPass: false
+        });
+
+        // User will automatically approve their proposal
+        userHasVotedByProposal[proposalId][_proposer] = true;
+
+        emit ProposalApproved(proposalId, _podId, _proposer);
+
+        return proposalId;
     }
 
-    function createVotingStrategy(
+    function approveProposal(
+        uint256 _proposalId,
         uint256 _podId,
-        uint256 _votingPeriod,
-        uint256 _minQuorum
-    ) public {
-        require(controller == msg.sender, "!controller");
-        // Only gets call on pod create
-        voteStrategiesByPod[_podId] = PodVoteStrategy(
-            _votingPeriod,
-            _minQuorum
-        );
-        emit CreateVoteStrategy(
-            _podId,
-            voteStrategiesByPod[_podId].votingPeriod,
-            voteStrategiesByPod[_podId].minQuorum
-        );
-    }
-
-    function vote(uint256 _podId, bool _yesOrNo, address voter) public {
+        address _voter
+    ) public returns (bool) {
         require(controller == msg.sender, "!controller");
         // TODO: repeat vote protection (if membership transferred)
         Proposal storage proposal = proposalByPod[_podId];
-        require(proposal.isOpen, "There is no current proposal");
+        Strategy memory voteStrategy = voteStrategiesByPod[_podId];
+
+        require(proposal.proposalId > 0, "There is no current proposal");
+        require(proposal.proposalId == _proposalId, "Invalid Proposal Id");
         require(
-            !userHasVotedByProposal[proposal.proposalId][voter],
+            !userHasVotedByProposal[proposal.proposalId][_voter],
             "This member has already voted"
         );
-
-        userHasVotedByProposal[proposal.proposalId][voter] = true;
-        if (_yesOrNo) {
-            proposal.approveVotes = proposalByPod[_podId].approveVotes + 1;
-        } else {
-            proposal.rejectVotes = proposalByPod[_podId].rejectVotes + 1;
-        }
-
-        emit CastVote(_podId, proposal.proposalId, voter, _yesOrNo);
-    }
-
-    function finalizeProposal(uint256 _podId)
-        public
-        returns (
-            bool,
-            uint256,
-            uint256
-        )
-    {
-        require(controller == msg.sender, "!controller");
-        
-        Proposal storage proposal = proposalByPod[_podId];
-        require(proposal.isOpen, "There is no current proposal");
-
-        PodVoteStrategy memory voteStrategy = voteStrategiesByPod[_podId];
         require(
-            block.number > proposal.proposalBlock + voteStrategy.votingPeriod,
-            "The voting period has not ended"
+            _isVotingPeriodActive(proposal, voteStrategy),
+            "Voting Period Not Active"
         );
 
-        // TODO: allow finalize if voting period has ended
+        userHasVotedByProposal[proposal.proposalId][_voter] = true;
+        proposal.approvals = proposalByPod[_podId].approvals + 1;
+
+        emit ProposalApproved(proposal.proposalId, _podId, _voter);
+
+        return true;
+    }
+
+    function passProposal(uint256 _proposalId, uint256 _podId)
+        public
+        returns (uint256, uint256)
+    {
+        require(controller == msg.sender, "!controller");
+
+        Proposal storage proposal = proposalByPod[_podId];
+        Strategy memory voteStrategy = voteStrategiesByPod[_podId];
+
+        // TODO: proposal should pass if it reaches total supply if it's less than min quorum.
         require(
-            proposal.approveVotes + proposal.rejectVotes >=
-                voteStrategy.minQuorum,
+            !_isVotingPeriodActive(proposal, voteStrategy),
+            "Voting Period Still Active"
+        );
+
+        require(
+            _hasReachedQuorum(proposal, voteStrategy),
             "Minimum Quorum Not Reached"
         );
 
-        // TODO: safe math
-        proposal.didPass = proposal.approveVotes > voteStrategy.minQuorum / 2;
-        proposal.isOpen = false;
+        proposal.didPass = true;
 
-        emit FinalizeProposal(_podId, proposal.proposalId, proposal.didPass);
+        emit ProposalPassed(_podId, proposal.proposalId);
 
-        return (proposal.didPass, proposal.proposalType, proposal.executableId);
+        return (proposal.proposalType, proposal.executableId);
+    }
+
+    function _isVotingPeriodActive(
+        Proposal memory _proposal,
+        Strategy memory _voteStrategy
+    ) private returns (bool) {
+        // if proposal doesn't exist
+        if (_proposal.proposalId == 0) return false;
+
+        if (_proposal.isChallenged) {
+            // is the blocktime within the max voting period
+            return (block.number <=
+                _voteStrategy.maxVotingPeriod + _proposal.proposalBlock);
+        } else {
+            // is the blocktime within the min voting period
+            return (block.number <=
+                _voteStrategy.minVotingPeriod + _proposal.proposalBlock);
+        }
+    }
+
+    function _hasReachedQuorum(
+        Proposal memory _proposal,
+        Strategy memory _voteStrategy
+    ) private returns (bool) {
+        if (_proposal.isChallenged) {
+            return (_proposal.approvals >= _voteStrategy.maxQuorum);
+        } else {
+            return (_proposal.approvals >= _voteStrategy.minQuorum);
+        }
+    }
+
+    function _isProposalActive(
+        Proposal memory _proposal,
+        Strategy memory _voteStrategy
+    ) private returns (bool) {
+        // if proposal doesn't exist
+        if (_proposal.proposalId == 0) return false;
+        // if current proposal has been passed
+        if (_proposal.didPass) return false;
+        // if voting period is active, but NOT executed
+        if (_isVotingPeriodActive(_proposal, _voteStrategy)) return true;
+        // if quorum has been reached, but voting period is NOT over, and has NOT been executed
+        if (_hasReachedQuorum(_proposal, _voteStrategy)) return true;
+
+        return false;
     }
 }

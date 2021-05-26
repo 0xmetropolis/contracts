@@ -57,7 +57,7 @@ contract PowerBank is ERC1155Holder {
     constructor(address _powerToken) public {
         powerToken = PowerToken(_powerToken);
         // approve admin to transfer tokens on behalf of the powerbank
-        powerToken.setApprovalForAll(msg.sender,true);
+        powerToken.setApprovalForAll(msg.sender, true);
         controller = msg.sender;
     }
 
@@ -90,7 +90,10 @@ contract PowerBank is ERC1155Holder {
 
     function claimMembership(address _user, uint256 _podId) public {
         require(controller == msg.sender, "!controller");
-        require(powerToken.balanceOf(address(this), _podId) >= 1, "No Memberships Availible");
+        require(
+            powerToken.balanceOf(address(this), _podId) >= 1,
+            "No Memberships Availible"
+        );
 
         require(
             powerToken.balanceOf(_user, _podId) == 0,

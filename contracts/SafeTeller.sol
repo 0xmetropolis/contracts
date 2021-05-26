@@ -40,11 +40,8 @@ contract SafeTeller {
         require(controller == msg.sender, "!controller");
         controller = _controller;
     }
-    
-    function createSafe(uint256 _podId)
-        public
-        returns(address safeAddres)
-    {
+
+    function createSafe(uint256 _podId) public returns (address safeAddres) {
         require(controller == msg.sender, "!controller");
         bytes memory data = "";
         address[] memory ownerArray = new address[](1);
@@ -94,10 +91,7 @@ contract SafeTeller {
         UpdateAction(_podId, _to, _value, _data);
     }
 
-    function executeAction(
-        uint _podId,
-        address _safeAddress
-    ) public {
+    function executeAction(uint256 _podId, address _safeAddress) public {
         require(controller == msg.sender, "!controller");
         uint8 operation = uint8(0);
         uint256 safeTxGas = uint256(0);

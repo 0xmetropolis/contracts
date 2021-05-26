@@ -49,14 +49,22 @@ contract OrcaProtocol {
      */
     function createPod(
         uint256 _podId,
-        uint256 _totalSupply,
-        uint256 _votingPeriod,
-        uint256 _minQuorum
+        uint256 _minVotingPeriod,
+        uint256 _maxVotingPeriod,
+        uint256 _minQuorum,
+        uint256 _maxQuorum,
+        uint256 _totalSupply
     ) public {
         // add a require to confirm minting was successful otherwise revert
         powerBank.createPod(msg.sender, _podId, _totalSupply);
 
-        voteManager.createVotingStrategy(_podId, _votingPeriod, _minQuorum);
+        voteManager.createVotingStrategy(
+            _podId,
+            _minVotingPeriod,
+            _maxVotingPeriod,
+            _minQuorum,
+            _maxQuorum
+        );
         address podSafe = safeTeller.createSafe(_podId);
 
         safeAddress[_podId] = podSafe;
@@ -105,25 +113,28 @@ contract OrcaProtocol {
         voteManager.createProposal(_podId, msg.sender, 1, _podId);
     }
 
-    function vote(uint256 _podId, bool _yesOrNo) public {
-        
-        require(powerBank.getPower(msg.sender, _podId) != 0 ,"User lacks power");
+    function approve(
+        uint256 _proposalId,
+        uint256 _podId,
+        address _voter
+    ) public {
+        require(msg.sender == _voter, "voter is invalid");
 
-        voteManager.vote(_podId, _yesOrNo, msg.sender);
+        require(powerBank.getPower(_voter, _podId) != 0, "User lacks power");
+
+        voteManager.approveProposal(_proposalId, _podId, _voter);
     }
 
-    function finalizeProposal(uint _podId) public{
+    function finalizeProposal(uint256 _proposalId, uint256 _podId) public {
         // proposalType 0 = rule, 1 = action
-        (bool didPass, uint256 proposalType, uint256 executableId) =
-            voteManager.finalizeProposal(_podId);
+        (uint256 proposalType, uint256 executableId) =
+            voteManager.passProposal(_proposalId, _podId);
 
-        if (didPass) {
-            if (proposalType == 0) {
-                ruleManager.finalizeRule(executableId);
-            }
-            if (proposalType == 1) {
-                safeTeller.executeAction(_podId, safeAddress[_podId]);
-            }
+        if (proposalType == 0) {
+            ruleManager.finalizeRule(executableId);
+        }
+        if (proposalType == 1) {
+            safeTeller.executeAction(_podId, safeAddress[_podId]);
         }
     }
 
