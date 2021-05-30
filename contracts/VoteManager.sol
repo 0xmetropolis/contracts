@@ -77,7 +77,7 @@ contract VoteManager {
         uint256 _maxVotingPeriod,
         uint256 _minQuorum,
         uint256 _maxQuorum
-    ) public {
+    ) public returns (bool) {
         require(controller == msg.sender, "!controller");
         emit VoteStrategyUpdated(
             _podId,
@@ -93,6 +93,7 @@ contract VoteManager {
             _minQuorum,
             _maxQuorum
         );
+        return true;
     }
 
     function createProposal(

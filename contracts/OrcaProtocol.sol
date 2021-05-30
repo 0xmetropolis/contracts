@@ -2,7 +2,7 @@ pragma solidity 0.7.4;
 
 /* solhint-disable indent */
 
-import "./PowerBank.sol";
+import "./MemberToken.sol";
 import "./VoteManager.sol";
 import "./RuleManager.sol";
 import "./SafeTeller.sol";
@@ -20,11 +20,11 @@ import "hardhat/console.sol";
 
 contract OrcaProtocol {
     event RuleManagerAddress(address contractAddress);
-    event PowerBankAddress(address contractAddress);
+    event MemberTokenAddress(address contractAddress);
     event VoteManagerAddress(address contractAddress);
     event CreatePod(uint256 podId);
 
-    PowerBank powerBank;
+    address memberToken;
     VoteManager voteManager;
     RuleManager ruleManager;
     SafeTeller safeTeller;
@@ -32,12 +32,12 @@ contract OrcaProtocol {
     mapping(uint256 => address) public safeAddress;
 
     constructor(
-        address _powerBank,
+        address _memberToken,
         address _voteManager,
         address _ruleManager,
         address _safeTeller
     ) public {
-        powerBank = PowerBank(_powerBank);
+        memberToken = _memberToken;
         voteManager = VoteManager(_voteManager);
         ruleManager = RuleManager(_ruleManager);
         safeTeller = SafeTeller(_safeTeller);
@@ -48,15 +48,16 @@ contract OrcaProtocol {
      * and sets the initial rules for that pod.
      */
     function createPod(
+        address _owner,
+        // should auto gen podId
         uint256 _podId,
         uint256 _minVotingPeriod,
         uint256 _maxVotingPeriod,
         uint256 _minQuorum,
-        uint256 _maxQuorum,
-        uint256 _totalSupply
+        uint256 _maxQuorum
     ) public {
-        // add a require to confirm minting was successful otherwise revert
-        powerBank.createPod(msg.sender, _podId, _totalSupply);
+        //Alow for abitrary owners
+        MemberToken(memberToken).mint(_owner, _podId, " ");
 
         voteManager.createVotingStrategy(
             _podId,
@@ -81,7 +82,7 @@ contract OrcaProtocol {
         uint256 _comparisonValue
     ) public {
         require(
-            powerBank.getPower(msg.sender, _podId) != 0,
+            MemberToken(memberToken).balanceOf(msg.sender, _podId) != 0,
             "User lacks power"
         );
 
@@ -104,7 +105,7 @@ contract OrcaProtocol {
         bytes memory _data
     ) public {
         require(
-            powerBank.getPower(msg.sender, _podId) != 0,
+            MemberToken(memberToken).balanceOf(msg.sender, _podId) != 0,
             "User lacks power"
         );
 
@@ -120,7 +121,10 @@ contract OrcaProtocol {
     ) public {
         require(msg.sender == _voter, "voter is invalid");
 
-        require(powerBank.getPower(_voter, _podId) != 0, "User lacks power");
+        require(
+            MemberToken(memberToken).balanceOf(_voter, _podId) != 0,
+            "User lacks power"
+        );
 
         voteManager.approveProposal(_proposalId, _podId, _voter);
     }
@@ -138,12 +142,30 @@ contract OrcaProtocol {
         }
     }
 
+    function beforeTokenTransfer(
+        address operator,
+        address from,
+        address to,
+        uint256[] memory ids,
+        uint256[] memory amounts,
+        bytes memory data
+    ) public {
+        if (operator == memberToken) {
+            for (uint256 i = 0; i < ids.length; i += 1) {
+                require(
+                    ruleManager.isRuleCompliant(ids[i], to),
+                    "Not Rule Compliant"
+                );
+            }
+        }
+    }
+
     function claimMembership(uint256 _podId) public {
         require(
             ruleManager.isRuleCompliant(_podId, msg.sender),
             "Not Rule Compliant"
         );
-        powerBank.claimMembership(msg.sender, _podId);
+        MemberToken(memberToken).mint(msg.sender, _podId, " ");
     }
 
     function retractMembership(uint256 _podId, address _member) public {
@@ -152,6 +174,6 @@ contract OrcaProtocol {
             "Rule Compliant"
         );
 
-        powerBank.retractMembership(_podId, _member);
+        MemberToken(memberToken).burn(_member, _podId);
     }
 }
