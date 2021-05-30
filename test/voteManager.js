@@ -1,5 +1,5 @@
 const { expect, use } = require("chai");
-const { waffle, ethers } = require("hardhat");
+const { waffle } = require("hardhat");
 
 const VoteManager = require("../artifacts/contracts/VoteManager.sol/VoteManager.json");
 
@@ -9,74 +9,185 @@ let voteManager;
 
 use(solidity);
 
-describe("VoteManager unit tests", () => {
+describe("VoteManager", () => {
   const [, admin, member1, member2] = provider.getWallets();
 
-  const podId = 1;
-  const minVotingPeriod = 1;
-  const maxVotingPeriod = 1;
-  const minQuorum = 1;
-  const maxQuorum = 2;
+  const POD_ID = 1;
+  const MIN_VOTING_PERIOD = 1 * 60; // 1 minute
+  const MAX_VOTING_PERIOD = 60 * 60; // 1 hour
+  const MIN_QUORUM = 2;
+  const MAX_QUORUM = 3;
 
-  it("should deploy voteManager", async () => {
-    voteManager = await deployContract(admin, VoteManager, [admin.address]);
+  const PROPOSAL_ID = 1; // should generate proposal Id
+  const PROPOSAL_TYPE = 1; // 0 == Rule, 1 == Action
+  const EXECUTABLE_ID = 1; // id of executable stored in rule/action book
+
+  describe("Happy Path", async () => {
+    before(async () => {
+      voteManager = await deployContract(admin, VoteManager, [admin.address]);
+    });
+
+    it("should create a voting strategy", async () => {
+      await expect(
+        voteManager
+          .connect(admin)
+          .createVotingStrategy(POD_ID, MIN_VOTING_PERIOD, MAX_VOTING_PERIOD, MIN_QUORUM, MAX_QUORUM),
+      )
+        .to.emit(voteManager, "VoteStrategyUpdated")
+        .withArgs(POD_ID, MIN_VOTING_PERIOD, MAX_VOTING_PERIOD, MIN_QUORUM, MAX_QUORUM);
+
+      const strategy = await voteManager.voteStrategiesByPod(POD_ID);
+      expect(strategy.minVotingPeriod).to.equal(MIN_VOTING_PERIOD);
+      expect(strategy.maxVotingPeriod).to.equal(MAX_VOTING_PERIOD);
+      expect(strategy.minQuorum).to.equal(MIN_QUORUM);
+      expect(strategy.maxQuorum).to.equal(MAX_QUORUM);
+    });
+
+    it("should create a new action proposal", async () => {
+      await expect(voteManager.connect(admin).createProposal(POD_ID, admin.address, PROPOSAL_TYPE, EXECUTABLE_ID))
+        .to.emit(voteManager, "ProposalCreated")
+        .withArgs(PROPOSAL_ID, POD_ID, admin.address, PROPOSAL_TYPE, EXECUTABLE_ID);
+
+      const proposal = await voteManager.proposalByPod(POD_ID);
+      expect(proposal.proposalId).to.equal(PROPOSAL_ID);
+      expect(proposal.proposalType).to.equal(PROPOSAL_TYPE);
+      expect(proposal.executableId).to.equal(EXECUTABLE_ID);
+      expect(proposal.approvals).to.equal(1);
+      expect(proposal.isChallenged).to.equal(false);
+      expect(proposal.didPass).to.equal(false);
+    });
+
+    it("should approve proposal", async () => {
+      await expect(voteManager.connect(admin).approveProposal(POD_ID, PROPOSAL_ID, member1.address))
+        .to.emit(voteManager, "ProposalApproved")
+        .withArgs(PROPOSAL_ID, POD_ID, member1.address);
+
+      expect(await voteManager.userHasVotedByProposal(PROPOSAL_ID, member1.address)).to.equal(true);
+
+      const proposal = await voteManager.proposalByPod(POD_ID);
+      expect(proposal.approvals).to.equal(MIN_QUORUM);
+    });
+
+    it("should finalize proposal", async () => {
+      // Fast forward to end of voting period
+      await provider.send("evm_increaseTime", [MIN_VOTING_PERIOD]);
+      await provider.send("evm_mine");
+
+      await expect(voteManager.connect(admin).passProposal(POD_ID, PROPOSAL_ID))
+        .to.emit(voteManager, "ProposalPassed")
+        .withArgs(POD_ID, PROPOSAL_ID);
+
+      const proposal = await voteManager.proposalByPod(POD_ID);
+      expect(proposal.didPass).to.equal(true);
+    });
   });
 
-  it("should create a voting strategy", async () => {
-    await expect(
-      voteManager.connect(admin).createVotingStrategy(podId, minVotingPeriod, maxVotingPeriod, minQuorum, maxQuorum),
-    )
-      .to.emit(voteManager, "VoteStrategyUpdated")
-      .withArgs(podId, minVotingPeriod, maxVotingPeriod, minQuorum, maxQuorum);
+  describe("Edge Cases", async () => {
+    beforeEach(async () => {
+      // Deploy vote manager
+      voteManager = await deployContract(admin, VoteManager, [admin.address]);
+      // Create vote strategy
+      await voteManager
+        .connect(admin)
+        .createVotingStrategy(POD_ID, MIN_VOTING_PERIOD, MAX_VOTING_PERIOD, MIN_QUORUM, MAX_QUORUM);
+      await voteManager.connect(admin).createProposal(POD_ID, admin.address, PROPOSAL_TYPE, EXECUTABLE_ID);
+    });
 
-    const strategy = await voteManager.voteStrategiesByPod(podId);
-    expect(strategy.minVotingPeriod).to.equal(minVotingPeriod);
-    expect(strategy.maxVotingPeriod).to.equal(maxVotingPeriod);
-    expect(strategy.minQuorum).to.equal(minQuorum);
-    expect(strategy.maxQuorum).to.equal(maxQuorum);
-  });
+    it("should fail to finalize proposal early", async () => {
+      await expect(voteManager.connect(admin).passProposal(POD_ID, PROPOSAL_ID)).to.revertedWith(
+        "Voting Period Still Active",
+      );
+    });
 
-  const proposalId = 1; // should generate proposal Id
-  const proposalType = 1; // 0 == Rule, 1 == Action
-  const executableId = 1; // id of executable stored in rule/action book
+    it("should not double approve proposal", async () => {
+      // Fast forward to end of voting period
+      await provider.send("evm_increaseTime", [MIN_VOTING_PERIOD]);
+      await provider.send("evm_mine");
 
-  it("should create a new action proposal", async () => {
-    await expect(voteManager.connect(admin).createProposal(podId, admin.address, proposalType, executableId))
-      .to.emit(voteManager, "ProposalCreated")
-      .withArgs(proposalId, podId, admin.address, proposalType, executableId);
+      await expect(voteManager.connect(admin).approveProposal(POD_ID, PROPOSAL_ID, admin.address)).to.be.revertedWith(
+        "This member has already voted",
+      );
+    });
 
-    const proposal = await voteManager.proposalByPod(podId);
-    expect(proposal.proposalId).to.equal(proposalId);
-    expect(proposal.proposalType).to.equal(proposalType);
-    expect(proposal.executableId).to.equal(executableId);
-    expect(proposal.approvals).to.equal(1);
-    expect(proposal.isChallenged).to.equal(false);
-    expect(proposal.didPass).to.equal(false);
-  });
+    it("should not vote after voting period", async () => {
+      // Fast forward to end of voting period
+      await provider.send("evm_increaseTime", [MIN_VOTING_PERIOD + 10]);
+      await provider.send("evm_mine");
 
-  it("should approve proposal", async () => {
-    await expect(voteManager.connect(admin).approveProposal(podId, proposalId, member1.address))
-      .to.emit(voteManager, "ProposalApproved")
-      .withArgs(proposalId, podId, member1.address);
+      await expect(voteManager.connect(admin).approveProposal(POD_ID, PROPOSAL_ID, member1.address)).to.be.revertedWith(
+        "Voting Period Not Active",
+      );
+    });
 
-    expect(await voteManager.userHasVotedByProposal(proposalId, member1.address)).to.equal(true);
+    describe("Proposal Challenge", async () => {
+      it("should challenge proposal", async () => {
+        await expect(voteManager.connect(admin).challengeProposal(POD_ID, PROPOSAL_ID, member1.address))
+          .to.emit(voteManager, "ProposalChallenged")
+          .withArgs(PROPOSAL_ID, POD_ID, member1.address);
 
-    const proposal = await voteManager.proposalByPod(podId);
-    expect(proposal.approvals).to.equal(2);
-  });
+        const proposal = await voteManager.proposalByPod(POD_ID);
+        expect(proposal.isChallenged).to.equal(true);
+      });
 
-  it("should not double approve proposal", async () => {
-    await expect(voteManager.connect(admin).approveProposal(podId, proposalId, member1.address)).to.be.revertedWith(
-      "This member has already voted",
-    );
-  });
+      it("should pass after challenge", async () => {
+        await voteManager.connect(admin).approveProposal(POD_ID, PROPOSAL_ID, member1.address);
+        await voteManager.connect(admin).challengeProposal(POD_ID, PROPOSAL_ID, member1.address);
+        await voteManager.connect(admin).approveProposal(POD_ID, PROPOSAL_ID, member2.address);
+        // check if min quorum is hit
+        const proposal = await voteManager.proposalByPod(POD_ID);
+        expect(proposal.approvals).to.equal(MAX_QUORUM);
+        expect(proposal.isChallenged).to.equal(true);
+        // Fast forward to end of min voting period
+        await provider.send("evm_increaseTime", [MAX_VOTING_PERIOD + 10]);
+        await provider.send("evm_mine");
 
-  it("should finalize proposal", async () => {
-    await expect(voteManager.connect(admin).passProposal(podId, proposalId))
-      .to.emit(voteManager, "ProposalPassed")
-      .withArgs(podId, proposalId);
+        await expect(voteManager.connect(admin).passProposal(POD_ID, PROPOSAL_ID))
+          .to.emit(voteManager, "ProposalPassed")
+          .withArgs(POD_ID, PROPOSAL_ID);
+      });
 
-    const proposal = await voteManager.proposalByPod(podId);
-    expect(proposal.didPass).to.equal(true);
+      it("should not challenge after voting period", async () => {
+        // Fast forward to end of min voting period
+        await provider.send("evm_increaseTime", [MIN_VOTING_PERIOD + 10]);
+        await provider.send("evm_mine");
+
+        await expect(
+          voteManager.connect(admin).challengeProposal(POD_ID, PROPOSAL_ID, member1.address),
+        ).to.revertedWith("Voting Period Not Active");
+      });
+
+      it("should not pass after min time", async () => {
+        await voteManager.connect(admin).approveProposal(POD_ID, PROPOSAL_ID, member1.address);
+        await voteManager.connect(admin).challengeProposal(POD_ID, PROPOSAL_ID, member1.address);
+        await voteManager.connect(admin).approveProposal(POD_ID, PROPOSAL_ID, member2.address);
+        // check if min quorum is hit
+        const proposal = await voteManager.proposalByPod(POD_ID);
+        expect(proposal.approvals).to.equal(MAX_QUORUM);
+
+        // Fast forward to end of min voting period
+        await provider.send("evm_increaseTime", [MIN_VOTING_PERIOD + 10]);
+        await provider.send("evm_mine");
+
+        await expect(voteManager.connect(admin).passProposal(POD_ID, PROPOSAL_ID)).to.revertedWith(
+          "Voting Period Still Active",
+        );
+      });
+
+      it("should not pass with min votes", async () => {
+        await voteManager.connect(admin).approveProposal(POD_ID, PROPOSAL_ID, member1.address);
+        await voteManager.connect(admin).challengeProposal(POD_ID, PROPOSAL_ID, member1.address);
+        // check if min quorum is hit
+        const proposal = await voteManager.proposalByPod(POD_ID);
+        expect(proposal.approvals).to.equal(MIN_QUORUM);
+        expect(proposal.isChallenged).to.equal(true);
+        // Fast forward to end of min voting period
+        await provider.send("evm_increaseTime", [MAX_VOTING_PERIOD + 10]);
+        await provider.send("evm_mine");
+
+        await expect(voteManager.connect(admin).passProposal(POD_ID, PROPOSAL_ID)).to.revertedWith(
+          "Quorum Not Reached",
+        );
+      });
+    });
   });
 });
