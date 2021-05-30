@@ -13,11 +13,6 @@ import "hardhat/console.sol";
 // this will impact the modifiers that are important for securiy
 // for not deploying supporting contracts as part of main contract
 
-// TODO: custom implementation of erc1155
-// enable defining your own podId
-// enable transfer of the podId token
-// only allow for one token per user
-
 contract OrcaProtocol {
     event RuleManagerAddress(address contractAddress);
     event MemberTokenAddress(address contractAddress);
@@ -117,16 +112,31 @@ contract OrcaProtocol {
     function approve(
         uint256 _proposalId,
         uint256 _podId,
-        address _voter
+        address _account
     ) public {
-        require(msg.sender == _voter, "voter is invalid");
+        require(msg.sender == _account, "voter is invalid");
 
         require(
-            MemberToken(memberToken).balanceOf(_voter, _podId) != 0,
+            MemberToken(memberToken).balanceOf(_account, _podId) != 0,
             "User lacks power"
         );
 
-        voteManager.approveProposal(_proposalId, _podId, _voter);
+        voteManager.approveProposal(_proposalId, _podId, _account);
+    }
+
+    function challenge(
+        uint256 _proposalId,
+        uint256 _podId,
+        address _account
+    ) public {
+        require(msg.sender == _account, "voter is invalid");
+
+        require(
+            MemberToken(memberToken).balanceOf(_account, _podId) != 0,
+            "User lacks power"
+        );
+
+        voteManager.challengeProposal(_proposalId, _podId, _account);
     }
 
     function finalizeProposal(uint256 _proposalId, uint256 _podId) public {

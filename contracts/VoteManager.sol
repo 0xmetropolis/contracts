@@ -18,7 +18,7 @@ contract VoteManager {
         uint256 proposalId;
         uint256 proposalType; // 0 = rule, 1 = action
         uint256 executableId; // id of the corrisponding executable in SafeTeller or RuleManager
-        uint256 proposalBlock; // block number of proposal
+        uint256 proposalTime; // timestamp of proposal
         uint256 approvals; // number of approvals for proposal
         bool isChallenged; // has someone challenged the proposal
         bool didPass; // did the proposal pass
@@ -52,6 +52,12 @@ contract VoteManager {
     );
 
     event ProposalApproved(
+        uint256 indexed proposalId,
+        uint256 indexed podId,
+        address indexed member
+    );
+
+    event ProposalChallenged(
         uint256 indexed proposalId,
         uint256 indexed podId,
         address indexed member
@@ -126,7 +132,7 @@ contract VoteManager {
             proposalId: proposalId,
             proposalType: _proposalType,
             executableId: _executableId,
-            proposalBlock: block.number,
+            proposalTime: block.timestamp,
             approvals: 1,
             isChallenged: false,
             didPass: false
@@ -143,7 +149,7 @@ contract VoteManager {
     function approveProposal(
         uint256 _proposalId,
         uint256 _podId,
-        address _voter
+        address _account
     ) public returns (bool) {
         require(controller == msg.sender, "!controller");
         // TODO: repeat vote protection (if membership transferred)
@@ -153,7 +159,7 @@ contract VoteManager {
         require(proposal.proposalId > 0, "There is no current proposal");
         require(proposal.proposalId == _proposalId, "Invalid Proposal Id");
         require(
-            !userHasVotedByProposal[proposal.proposalId][_voter],
+            !userHasVotedByProposal[proposal.proposalId][_account],
             "This member has already voted"
         );
         require(
@@ -161,10 +167,10 @@ contract VoteManager {
             "Voting Period Not Active"
         );
 
-        userHasVotedByProposal[proposal.proposalId][_voter] = true;
+        userHasVotedByProposal[proposal.proposalId][_account] = true;
         proposal.approvals = proposalByPod[_podId].approvals + 1;
 
-        emit ProposalApproved(proposal.proposalId, _podId, _voter);
+        emit ProposalApproved(proposal.proposalId, _podId, _account);
 
         return true;
     }
@@ -178,6 +184,8 @@ contract VoteManager {
         Proposal storage proposal = proposalByPod[_podId];
         Strategy memory voteStrategy = voteStrategiesByPod[_podId];
 
+        require(proposal.didPass == false, 'Proposal Already Passed');
+
         // TODO: proposal should pass if it reaches total supply if it's less than min quorum.
         require(
             !_isVotingPeriodActive(proposal, voteStrategy),
@@ -186,7 +194,7 @@ contract VoteManager {
 
         require(
             _hasReachedQuorum(proposal, voteStrategy),
-            "Minimum Quorum Not Reached"
+            "Quorum Not Reached"
         );
 
         proposal.didPass = true;
@@ -194,6 +202,29 @@ contract VoteManager {
         emit ProposalPassed(_podId, proposal.proposalId);
 
         return (proposal.proposalType, proposal.executableId);
+    }
+
+    function challengeProposal(uint256 _proposalId, uint256 _podId, address _account)
+        public
+        returns (bool)
+    {
+        require(controller == msg.sender, "!controller");
+
+        Proposal storage proposal = proposalByPod[_podId];
+        Strategy memory voteStrategy = voteStrategiesByPod[_podId];
+
+        require(proposal.didPass == false, 'Proposal Already Passed');
+
+        require(
+            _isVotingPeriodActive(proposal, voteStrategy),
+            "Voting Period Not Active"
+        );
+
+        proposal.isChallenged = true;
+
+        emit ProposalChallenged(proposal.proposalId, _podId, _account);
+
+        return true;
     }
 
     function _isVotingPeriodActive(
@@ -205,12 +236,12 @@ contract VoteManager {
 
         if (_proposal.isChallenged) {
             // is the blocktime within the max voting period
-            return (block.number <=
-                _voteStrategy.maxVotingPeriod + _proposal.proposalBlock);
+            return (block.timestamp <=
+                _voteStrategy.maxVotingPeriod + _proposal.proposalTime);
         } else {
             // is the blocktime within the min voting period
-            return (block.number <=
-                _voteStrategy.minVotingPeriod + _proposal.proposalBlock);
+            return (block.timestamp <=
+                _voteStrategy.minVotingPeriod + _proposal.proposalTime);
         }
     }
 
