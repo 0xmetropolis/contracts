@@ -54,13 +54,16 @@ contract OrcaProtocol {
         //Alow for abitrary owners
         MemberToken(memberToken).mint(_owner, _podId, " ");
 
-        voteManager.createVotingStrategy(
-            _podId,
-            _minVotingPeriod,
-            _maxVotingPeriod,
-            _minQuorum,
-            _maxQuorum
-        );
+        uint256 strategyId =
+            voteManager.createVotingStrategy(
+                _minVotingPeriod,
+                _maxVotingPeriod,
+                _minQuorum,
+                _maxQuorum
+            );
+
+        voteManager.finalizeVotingStrategy(_podId, strategyId);
+
         address podSafe = safeTeller.createSafe(_podId);
 
         safeAddress[_podId] = podSafe;
@@ -76,6 +79,8 @@ contract OrcaProtocol {
         uint256 _comparisonLogic,
         uint256 _comparisonValue
     ) public {
+        //TODO: executable id
+        uint256 fakeExeId = 99;
         require(
             MemberToken(memberToken).balanceOf(msg.sender, _podId) != 0,
             "User lacks power"
@@ -90,7 +95,7 @@ contract OrcaProtocol {
             _comparisonValue
         );
 
-        voteManager.createProposal(_podId, msg.sender, 0, _podId);
+        voteManager.createProposal(_podId, msg.sender, 0, fakeExeId);
     }
 
     function createActionProposal(
@@ -99,6 +104,8 @@ contract OrcaProtocol {
         uint256 _value,
         bytes memory _data
     ) public {
+        //TODO: executable id
+        uint256 fakeExeId = 99;
         require(
             MemberToken(memberToken).balanceOf(msg.sender, _podId) != 0,
             "User lacks power"
@@ -106,7 +113,30 @@ contract OrcaProtocol {
 
         safeTeller.createPendingAction(_podId, _to, _value, _data);
 
-        voteManager.createProposal(_podId, msg.sender, 1, _podId);
+        voteManager.createProposal(_podId, msg.sender, 1, fakeExeId);
+    }
+
+    function createStrategyProposal(
+        uint256 _podId,
+        uint256 _minVotingPeriod,
+        uint256 _maxVotingPeriod,
+        uint256 _minQuorum,
+        uint256 _maxQuorum
+    ) public {
+        require(
+            MemberToken(memberToken).balanceOf(msg.sender, _podId) != 0,
+            "User lacks power"
+        );
+
+        uint256 strategyId =
+            voteManager.createVotingStrategy(
+                _minVotingPeriod,
+                _maxVotingPeriod,
+                _minQuorum,
+                _maxQuorum
+            );
+
+        voteManager.createProposal(_podId, msg.sender, 2, strategyId);
     }
 
     function approve(
@@ -140,15 +170,19 @@ contract OrcaProtocol {
     }
 
     function finalizeProposal(uint256 _proposalId, uint256 _podId) public {
-        // proposalType 0 = rule, 1 = action
+        // proposalType 0 = rule, 1 = action, 2 = strategy
         (uint256 proposalType, uint256 executableId) =
             voteManager.passProposal(_proposalId, _podId);
 
         if (proposalType == 0) {
-            ruleManager.finalizeRule(executableId);
+            ruleManager.finalizeRule(_podId);
         }
         if (proposalType == 1) {
+            //TODO: finalize, but don't execute
             safeTeller.executeAction(_podId, safeAddress[_podId]);
+        }
+        if (proposalType == 2) {
+            voteManager.finalizeVotingStrategy(_podId, executableId);
         }
     }
 
