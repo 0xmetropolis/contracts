@@ -48,7 +48,8 @@ describe("Member Token Tests", () => {
 
   it("should mint a membership on pod creation", async () => {
     await safeTeller.mock.createSafe.returns(AddressZero);
-    await voteManager.mock.createVotingStrategy.returns(true);
+    await voteManager.mock.createVotingStrategy.returns(1);
+    await voteManager.mock.finalizeVotingStrategy.returns(true);
 
     await expect(
       orcaProtocol

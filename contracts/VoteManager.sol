@@ -17,6 +17,7 @@ contract VoteManager {
     struct Proposal {
         uint256 proposalId;
         uint256 proposalType; // 0 = rule, 1 = action
+        //TODO: excutable hash would allow re-use
         uint256 executableId; // id of the corrisponding executable in SafeTeller or RuleManager
         uint256 proposalTime; // timestamp of proposal
         uint256 approvals; // number of approvals for proposal
@@ -30,10 +31,22 @@ contract VoteManager {
     mapping(uint256 => Strategy) public voteStrategiesByPod;
     mapping(uint256 => Proposal) public proposalByPod;
 
+    // only used for as a strategy update buffer
+    uint256 private strategyId = 0;
+    mapping(uint256 => Strategy) public strategyById;
+
     // proposalId => address => hasVoted
     mapping(uint256 => mapping(address => bool)) public userHasVotedByProposal;
 
     event ControllerUpdated(address newController);
+
+    event VoteStrategyCreated(
+        uint256 strategyId,
+        uint256 minVotingPeriod, // min number of blocks for a stage.
+        uint256 maxVotingPeriod, // max number of blocks for a stage.
+        uint256 minQuorum, // minimum number of votes needed to ratify.
+        uint256 maxQuorum // maxiimum number of votes needed to ratify.
+    );
 
     event VoteStrategyUpdated(
         uint256 indexed podId,
@@ -78,27 +91,50 @@ contract VoteManager {
     }
 
     function createVotingStrategy(
-        uint256 _podId,
         uint256 _minVotingPeriod,
         uint256 _maxVotingPeriod,
         uint256 _minQuorum,
         uint256 _maxQuorum
-    ) public returns (bool) {
+    ) public returns (uint256) {
         require(controller == msg.sender, "!controller");
+
+        strategyId += 1;
+
+        emit VoteStrategyCreated(
+            strategyId,
+            _minVotingPeriod,
+            _maxVotingPeriod,
+            _minQuorum,
+            _maxQuorum
+        );
+
+        strategyById[strategyId] = Strategy(
+            _minVotingPeriod,
+            _maxVotingPeriod,
+            _minQuorum,
+            _maxQuorum
+        );
+
+        return strategyId;
+    }
+
+    function finalizeVotingStrategy(uint256 _podId, uint256 _strategyId)
+        public
+        returns (bool)
+    {
+        require(controller == msg.sender, "!controller");
+
+        Strategy memory voteStrategy = strategyById[_strategyId];
+
         emit VoteStrategyUpdated(
             _podId,
-            _minVotingPeriod,
-            _maxVotingPeriod,
-            _minQuorum,
-            _maxQuorum
+            voteStrategy.minVotingPeriod,
+            voteStrategy.maxVotingPeriod,
+            voteStrategy.minQuorum,
+            voteStrategy.maxQuorum
         );
-        // Only gets call on pod create
-        voteStrategiesByPod[_podId] = Strategy(
-            _minVotingPeriod,
-            _maxVotingPeriod,
-            _minQuorum,
-            _maxQuorum
-        );
+
+        voteStrategiesByPod[_podId] = voteStrategy;
         return true;
     }
 
@@ -184,7 +220,7 @@ contract VoteManager {
         Proposal storage proposal = proposalByPod[_podId];
         Strategy memory voteStrategy = voteStrategiesByPod[_podId];
 
-        require(proposal.didPass == false, 'Proposal Already Passed');
+        require(proposal.didPass == false, "Proposal Already Passed");
 
         // TODO: proposal should pass if it reaches total supply if it's less than min quorum.
         require(
@@ -204,16 +240,17 @@ contract VoteManager {
         return (proposal.proposalType, proposal.executableId);
     }
 
-    function challengeProposal(uint256 _proposalId, uint256 _podId, address _account)
-        public
-        returns (bool)
-    {
+    function challengeProposal(
+        uint256 _proposalId,
+        uint256 _podId,
+        address _account
+    ) public returns (bool) {
         require(controller == msg.sender, "!controller");
 
         Proposal storage proposal = proposalByPod[_podId];
         Strategy memory voteStrategy = voteStrategiesByPod[_podId];
 
-        require(proposal.didPass == false, 'Proposal Already Passed');
+        require(proposal.didPass == false, "Proposal Already Passed");
 
         require(
             _isVotingPeriodActive(proposal, voteStrategy),

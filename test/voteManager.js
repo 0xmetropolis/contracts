@@ -19,20 +19,24 @@ describe("VoteManager", () => {
   const MAX_QUORUM = 3;
 
   const PROPOSAL_ID = 1; // should generate proposal Id
-  const PROPOSAL_TYPE = 1; // 0 == Rule, 1 == Action
+  const PROPOSAL_TYPE = 1; // 0 == Rule, 1 == Action, 2 == Strategy
   const EXECUTABLE_ID = 1; // id of executable stored in rule/action book
 
-  describe("Happy Path", async () => {
+  const VOTE_STRATEGY_ID = 1;
+
+  describe("Proposal Creation", async () => {
     before(async () => {
       voteManager = await deployContract(admin, VoteManager, [admin.address]);
     });
 
     it("should create a voting strategy", async () => {
       await expect(
-        voteManager
-          .connect(admin)
-          .createVotingStrategy(POD_ID, MIN_VOTING_PERIOD, MAX_VOTING_PERIOD, MIN_QUORUM, MAX_QUORUM),
+        voteManager.connect(admin).createVotingStrategy(MIN_VOTING_PERIOD, MAX_VOTING_PERIOD, MIN_QUORUM, MAX_QUORUM),
       )
+        .to.emit(voteManager, "VoteStrategyCreated")
+        .withArgs(VOTE_STRATEGY_ID, MIN_VOTING_PERIOD, MAX_VOTING_PERIOD, MIN_QUORUM, MAX_QUORUM);
+
+      await expect(voteManager.connect(admin).finalizeVotingStrategy(POD_ID, VOTE_STRATEGY_ID))
         .to.emit(voteManager, "VoteStrategyUpdated")
         .withArgs(POD_ID, MIN_VOTING_PERIOD, MAX_VOTING_PERIOD, MIN_QUORUM, MAX_QUORUM);
 
@@ -87,9 +91,15 @@ describe("VoteManager", () => {
       // Deploy vote manager
       voteManager = await deployContract(admin, VoteManager, [admin.address]);
       // Create vote strategy
-      await voteManager
+      const res = await voteManager
         .connect(admin)
-        .createVotingStrategy(POD_ID, MIN_VOTING_PERIOD, MAX_VOTING_PERIOD, MIN_QUORUM, MAX_QUORUM);
+        .createVotingStrategy(MIN_VOTING_PERIOD, MAX_VOTING_PERIOD, MIN_QUORUM, MAX_QUORUM);
+      // Get vote strategy id
+      const { events } = await res.wait();
+      const { args } = events.find(({ event }) => event === "VoteStrategyCreated");
+      const voteStrategyId = args.strategyId.toNumber();
+      await voteManager.connect(admin).finalizeVotingStrategy(POD_ID, voteStrategyId);
+      // Create Proposal
       await voteManager.connect(admin).createProposal(POD_ID, admin.address, PROPOSAL_TYPE, EXECUTABLE_ID);
     });
 

@@ -65,7 +65,7 @@ contract MemberToken is ERC1155 {
     ) internal override {
         // if the operator is not controller and is a transfer event
         if (operator != controller && from != address(0) && to != address(0)) {
-            // check if recipient is already member 
+            // check if recipient is already member
             _isMember(to, ids);
 
             // perform orca token transfer validations

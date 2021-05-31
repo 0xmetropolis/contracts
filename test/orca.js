@@ -43,12 +43,11 @@ describe("Orca Tests", () => {
   const comparisonValue = 5;
 
   // create pod args
-  const podId = 1;
-  const totalSupply = 10;
-  const minVotingPeriod = 1;
-  const maxVotingPeriod = 1;
-  const minQuorum = 1;
-  const maxQuorum = 1;
+  const POD_ID = 1;
+  const MIN_VOTING_PERIOD = 1;
+  const MAX_VOTING_PERIOD = 1;
+  const MIN_QUORUM = 1;
+  const MAX_QUORUM = 1;
 
   before(async () => {
     orcaToken = await deployContract(admin, OrcaToken);
@@ -75,13 +74,13 @@ describe("Orca Tests", () => {
     await expect(
       orcaProtocol
         .connect(owner)
-        .createPod(owner.address, podId, minVotingPeriod, maxVotingPeriod, minQuorum, maxQuorum),
+        .createPod(owner.address, POD_ID, MIN_VOTING_PERIOD, MAX_VOTING_PERIOD, MIN_QUORUM, MAX_QUORUM),
     ).to.emit(safeTeller, "CreateSafe");
 
     expect(await memberToken.balanceOf(owner.address, 1)).to.equal(1);
 
     // query the new gnosis safe and confirm the voteManager is the only owner
-    const safeAddress = await orcaProtocol.safeAddress(podId);
+    const safeAddress = await orcaProtocol.safeAddress(POD_ID);
     podSafe = new ethers.Contract(safeAddress, GnosisSafeAbi, admin);
     const podSafeOwners = await podSafe.getOwners();
     expect(podSafeOwners.length).to.be.equal(1);
@@ -89,10 +88,10 @@ describe("Orca Tests", () => {
   });
 
   it("should not claim membership without rule", async () => {
-    await expect(orcaProtocol.connect(member).claimMembership(podId)).to.be.revertedWith("No rule set");
+    await expect(orcaProtocol.connect(member).claimMembership(POD_ID)).to.be.revertedWith("No rule set");
   });
 
-  const ruleProposalId = 1;
+  const RULE_PROPOSAL_ID = 1;
 
   it("should create a rule proposal to raise membership min tokens", async () => {
     // can only use changeTokenBalance with ERC20/721
@@ -101,22 +100,22 @@ describe("Orca Tests", () => {
     await expect(
       orcaProtocol
         .connect(owner)
-        .createRuleProposal(podId, orcaToken.address, balanceOfFuncSig, params, comparisonLogic, 5),
+        .createRuleProposal(POD_ID, orcaToken.address, balanceOfFuncSig, params, comparisonLogic, 5),
     ).to.emit(voteManager, "ProposalCreated");
 
-    const voteProposal = await voteManager.proposalByPod(podId);
-    expect(voteProposal.proposalId).to.equal(ruleProposalId);
+    const voteProposal = await voteManager.proposalByPod(POD_ID);
+    expect(voteProposal.proposalId).to.equal(RULE_PROPOSAL_ID);
     expect(voteProposal.approvals).to.equal(1);
   });
 
   it("should not cast a vote without power", async () => {
-    await expect(orcaProtocol.connect(member).approve(ruleProposalId, podId, member.address)).to.be.revertedWith(
+    await expect(orcaProtocol.connect(member).approve(RULE_PROPOSAL_ID, POD_ID, member.address)).to.be.revertedWith(
       "User lacks power",
     );
   });
 
   it("should cast a duplicate vote and revert", async () => {
-    await expect(orcaProtocol.connect(owner).approve(ruleProposalId, podId, owner.address)).to.be.revertedWith(
+    await expect(orcaProtocol.connect(owner).approve(RULE_PROPOSAL_ID, POD_ID, owner.address)).to.be.revertedWith(
       "This member has already voted",
     );
   });
@@ -125,12 +124,12 @@ describe("Orca Tests", () => {
     // increment block
     await ethers.provider.send("evm_mine");
     // finalize proposal
-    await expect(orcaProtocol.connect(member).finalizeProposal(ruleProposalId, podId))
+    await expect(orcaProtocol.connect(member).finalizeProposal(RULE_PROPOSAL_ID, POD_ID))
       .to.emit(ruleManager, "UpdateRule")
       .withArgs(1, orcaToken.address, balanceOfFuncSig, params, comparisonLogic, comparisonValue);
 
     // confirm proposal no longer pending
-    const voteProposal = await ruleManager.rulesByPod(podId);
+    const voteProposal = await ruleManager.rulesByPod(POD_ID);
     expect(voteProposal.isFinalized).to.equal(true);
     expect(voteProposal.contractAddress).to.equal(orcaToken.address);
     expect(voteProposal.comparisonValue).to.equal(5);
@@ -143,31 +142,32 @@ describe("Orca Tests", () => {
   it("should claim membership with min tokens", async () => {
     await expect(() => orcaToken.connect(member).mint()).to.changeTokenBalance(orcaToken, member, 6);
 
-    await expect(orcaProtocol.connect(member).claimMembership(podId))
+    await expect(orcaProtocol.connect(member).claimMembership(POD_ID))
       .to.emit(memberToken, "TransferSingle")
       .withArgs(orcaProtocol.address, AddressZero, member.address, 1, 1);
 
     expect(await memberToken.balanceOf(member.address, 1)).to.equal(1);
   });
 
-  const actionProposalId = 2;
+  const TYPE_ACTION = 1;
+  const ACTION_PROPOSAL_ID = 2;
 
   it("should create an Action Proposal", async () => {
     const encodedMint = orcaToken.interface.encodeFunctionData("mint");
-    await expect(orcaProtocol.connect(owner).createActionProposal(podId, orcaToken.address, 0, encodedMint))
+    await expect(orcaProtocol.connect(owner).createActionProposal(POD_ID, orcaToken.address, 0, encodedMint))
       .to.emit(voteManager, "ProposalCreated")
-      .withArgs(actionProposalId, podId, owner.address, 1, 1);
+      .withArgs(ACTION_PROPOSAL_ID, POD_ID, owner.address, TYPE_ACTION, 99);
   });
 
   it("should cast a vote on an Action proposal", async () => {
-    let voteProposal = await voteManager.proposalByPod(podId);
+    let voteProposal = await voteManager.proposalByPod(POD_ID);
     expect(voteProposal.approvals).to.equal(1);
 
-    await expect(orcaProtocol.connect(member).approve(actionProposalId, podId, member.address))
+    await expect(orcaProtocol.connect(member).approve(ACTION_PROPOSAL_ID, POD_ID, member.address))
       .to.emit(voteManager, "ProposalApproved")
-      .withArgs(actionProposalId, podId, member.address);
+      .withArgs(ACTION_PROPOSAL_ID, POD_ID, member.address);
 
-    voteProposal = await voteManager.proposalByPod(podId);
+    voteProposal = await voteManager.proposalByPod(POD_ID);
     expect(voteProposal.approvals).to.equal(2);
   });
 
@@ -176,7 +176,7 @@ describe("Orca Tests", () => {
 
     // finalize proposal
     await expect(
-      orcaProtocol.connect(member).finalizeProposal(actionProposalId, podId, { gasLimit: "9500000" }),
+      orcaProtocol.connect(member).finalizeProposal(ACTION_PROPOSAL_ID, POD_ID, { gasLimit: "9500000" }),
     ).to.emit(safeTeller, "ActionExecuted");
 
     const updatedOrcaTokenSupply = await orcaToken.totalSupply();
@@ -184,10 +184,36 @@ describe("Orca Tests", () => {
     await expect(updatedOrcaTokenSupply.sub(initialOrcaTokenSupply)).to.equal(6);
   });
 
-  // TODO: Good luck Steven
-  // it("should not revoke a valid membership", async () => {
-  //   await expect(memberToken.connect(shephard).retractMembership(1, owner.address)).to.be.revertedWith(
-  //     "Rule Compliant",
-  //   );
-  // });
+  const TYPE_STRATEGY = 2;
+  const STRATEGY_PROPOSAL_ID = 3;
+  const STRATEGY_ID = 2;
+
+  it("should create a Strategy Proposal ", async () => {
+    await expect(
+      orcaProtocol
+        .connect(owner)
+        .createStrategyProposal(POD_ID, MIN_VOTING_PERIOD + 1, MAX_VOTING_PERIOD, MIN_QUORUM + 1, MAX_QUORUM),
+    )
+      .to.emit(voteManager, "ProposalCreated")
+      .withArgs(STRATEGY_PROPOSAL_ID, POD_ID, owner.address, TYPE_STRATEGY, STRATEGY_ID);
+  });
+
+  it("should finalize strategy Proposal", async () => {
+    // increment block
+    await ethers.provider.send("evm_mine");
+    // finalize proposal
+    await expect(
+      orcaProtocol.connect(member).finalizeProposal(STRATEGY_PROPOSAL_ID, POD_ID, { gasLimit: "9500000" }),
+    ).to.emit(voteManager, "VoteStrategyUpdated");
+
+    const strategy = await voteManager.voteStrategiesByPod(POD_ID);
+    expect(strategy.minVotingPeriod).to.equal(MIN_VOTING_PERIOD + 1);
+    expect(strategy.maxVotingPeriod).to.equal(MAX_VOTING_PERIOD);
+    expect(strategy.minQuorum).to.equal(MIN_QUORUM + 1);
+    expect(strategy.maxQuorum).to.equal(MAX_QUORUM);
+  });
+
+  it("should not revoke a valid membership", async () => {
+    await expect(orcaProtocol.connect(owner).retractMembership(1, owner.address)).to.be.revertedWith("Rule Compliant");
+  });
 });
