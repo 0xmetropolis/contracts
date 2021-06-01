@@ -114,15 +114,7 @@ describe("Orca Tests", () => {
     );
   });
 
-  it("should cast a duplicate vote and revert", async () => {
-    await expect(orcaProtocol.connect(owner).approve(RULE_PROPOSAL_ID, POD_ID, owner.address)).to.be.revertedWith(
-      "This member has already voted",
-    );
-  });
-
   it("should finalize rule vote", async () => {
-    // increment block
-    await ethers.provider.send("evm_mine");
     // finalize proposal
     await expect(orcaProtocol.connect(member).finalizeProposal(RULE_PROPOSAL_ID, POD_ID))
       .to.emit(ruleManager, "UpdateRule")
@@ -159,17 +151,17 @@ describe("Orca Tests", () => {
       .withArgs(ACTION_PROPOSAL_ID, POD_ID, owner.address, TYPE_ACTION, 99);
   });
 
-  it("should cast a vote on an Action proposal", async () => {
-    let voteProposal = await voteManager.proposalByPod(POD_ID);
-    expect(voteProposal.approvals).to.equal(1);
+  // it("should cast a vote on an Action proposal", async () => {
+  //   let voteProposal = await voteManager.proposalByPod(POD_ID);
+  //   expect(voteProposal.approvals).to.equal(1);
 
-    await expect(orcaProtocol.connect(member).approve(ACTION_PROPOSAL_ID, POD_ID, member.address))
-      .to.emit(voteManager, "ProposalApproved")
-      .withArgs(ACTION_PROPOSAL_ID, POD_ID, member.address);
+  //   await expect(orcaProtocol.connect(member).approve(ACTION_PROPOSAL_ID, POD_ID, member.address))
+  //     .to.emit(voteManager, "ProposalApproved")
+  //     .withArgs(ACTION_PROPOSAL_ID, POD_ID, member.address);
 
-    voteProposal = await voteManager.proposalByPod(POD_ID);
-    expect(voteProposal.approvals).to.equal(2);
-  });
+  //   voteProposal = await voteManager.proposalByPod(POD_ID);
+  //   expect(voteProposal.approvals).to.equal(2);
+  // });
 
   it("should finalize action vote and mint more orcaTokens", async () => {
     const initialOrcaTokenSupply = await orcaToken.totalSupply();
@@ -199,8 +191,6 @@ describe("Orca Tests", () => {
   });
 
   it("should finalize strategy Proposal", async () => {
-    // increment block
-    await ethers.provider.send("evm_mine");
     // finalize proposal
     await expect(
       orcaProtocol.connect(member).finalizeProposal(STRATEGY_PROPOSAL_ID, POD_ID, { gasLimit: "9500000" }),

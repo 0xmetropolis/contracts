@@ -105,15 +105,11 @@ describe("VoteManager", () => {
 
     it("should fail to finalize proposal early", async () => {
       await expect(voteManager.connect(admin).passProposal(POD_ID, PROPOSAL_ID)).to.revertedWith(
-        "Voting Period Still Active",
+        "Proposal Not Succeeded",
       );
     });
 
     it("should not double approve proposal", async () => {
-      // Fast forward to end of voting period
-      await provider.send("evm_increaseTime", [MIN_VOTING_PERIOD]);
-      await provider.send("evm_mine");
-
       await expect(voteManager.connect(admin).approveProposal(POD_ID, PROPOSAL_ID, admin.address)).to.be.revertedWith(
         "This member has already voted",
       );
@@ -163,7 +159,7 @@ describe("VoteManager", () => {
 
         await expect(
           voteManager.connect(admin).challengeProposal(POD_ID, PROPOSAL_ID, member1.address),
-        ).to.revertedWith("Voting Period Not Active");
+        ).to.revertedWith("Proposal Not Active");
       });
 
       it("should not pass after min time", async () => {
@@ -179,7 +175,7 @@ describe("VoteManager", () => {
         await provider.send("evm_mine");
 
         await expect(voteManager.connect(admin).passProposal(POD_ID, PROPOSAL_ID)).to.revertedWith(
-          "Voting Period Still Active",
+          "Proposal Not Succeeded",
         );
       });
 
@@ -195,7 +191,7 @@ describe("VoteManager", () => {
         await provider.send("evm_mine");
 
         await expect(voteManager.connect(admin).passProposal(POD_ID, PROPOSAL_ID)).to.revertedWith(
-          "Quorum Not Reached",
+          "Proposal Not Succeeded",
         );
       });
     });
