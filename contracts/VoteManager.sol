@@ -25,6 +25,8 @@ contract VoteManager {
         bool didPass; // did the proposal pass
     }
 
+    enum ProposalState {Active, Failed, Succeeded, Passed}
+
     address private controller;
 
     uint256 private proposalId = 0;
@@ -146,13 +148,17 @@ contract VoteManager {
     ) public returns (uint256) {
         require(controller == msg.sender, "!controller");
 
-        Proposal memory proposal = proposalByPod[_podId];
-        Strategy memory voteStrategy = voteStrategiesByPod[_podId];
-
+        ProposalState currentState = state(_podId);
         require(
-            !_isProposalActive(proposal, voteStrategy),
+            currentState != ProposalState.Active,
             "There is currently a proposal pending"
         );
+        require(
+            currentState != ProposalState.Succeeded,
+            "There is currently a proposal pending"
+        );
+
+        Proposal memory proposal = proposalByPod[_podId];
 
         proposalId += 1;
 
@@ -189,22 +195,20 @@ contract VoteManager {
     ) public returns (bool) {
         require(controller == msg.sender, "!controller");
         // TODO: repeat vote protection (if membership transferred)
-        Proposal storage proposal = proposalByPod[_podId];
-        Strategy memory voteStrategy = voteStrategiesByPod[_podId];
+        require(
+            state(_podId) == ProposalState.Active,
+            "Voting Period Not Active"
+        );
 
-        require(proposal.proposalId > 0, "There is no current proposal");
-        require(proposal.proposalId == _proposalId, "Invalid Proposal Id");
+        Proposal storage proposal = proposalByPod[_podId];
+
         require(
             !userHasVotedByProposal[proposal.proposalId][_account],
             "This member has already voted"
         );
-        require(
-            _isVotingPeriodActive(proposal, voteStrategy),
-            "Voting Period Not Active"
-        );
 
         userHasVotedByProposal[proposal.proposalId][_account] = true;
-        proposal.approvals = proposalByPod[_podId].approvals + 1;
+        proposal.approvals += 1;
 
         emit ProposalApproved(proposal.proposalId, _podId, _account);
 
@@ -216,23 +220,12 @@ contract VoteManager {
         returns (uint256, uint256)
     {
         require(controller == msg.sender, "!controller");
+        require(
+            state(_podId) == ProposalState.Succeeded,
+            "Proposal Not Succeeded"
+        );
 
         Proposal storage proposal = proposalByPod[_podId];
-        Strategy memory voteStrategy = voteStrategiesByPod[_podId];
-
-        require(proposal.didPass == false, "Proposal Already Passed");
-
-        // TODO: proposal should pass if it reaches total supply if it's less than min quorum.
-        require(
-            !_isVotingPeriodActive(proposal, voteStrategy),
-            "Voting Period Still Active"
-        );
-
-        require(
-            _hasReachedQuorum(proposal, voteStrategy),
-            "Quorum Not Reached"
-        );
-
         proposal.didPass = true;
 
         emit ProposalPassed(_podId, proposal.proposalId);
@@ -246,17 +239,9 @@ contract VoteManager {
         address _account
     ) public returns (bool) {
         require(controller == msg.sender, "!controller");
+        require(state(_podId) == ProposalState.Active, "Proposal Not Active");
 
         Proposal storage proposal = proposalByPod[_podId];
-        Strategy memory voteStrategy = voteStrategiesByPod[_podId];
-
-        require(proposal.didPass == false, "Proposal Already Passed");
-
-        require(
-            _isVotingPeriodActive(proposal, voteStrategy),
-            "Voting Period Not Active"
-        );
-
         proposal.isChallenged = true;
 
         emit ProposalChallenged(proposal.proposalId, _podId, _account);
@@ -264,48 +249,31 @@ contract VoteManager {
         return true;
     }
 
-    function _isVotingPeriodActive(
-        Proposal memory _proposal,
-        Strategy memory _voteStrategy
-    ) private returns (bool) {
-        // if proposal doesn't exist
-        if (_proposal.proposalId == 0) return false;
+    function state(uint256 _podId) public view returns (ProposalState) {
+        Proposal memory proposal = proposalByPod[_podId];
+        Strategy memory strategy = voteStrategiesByPod[_podId];
 
-        if (_proposal.isChallenged) {
-            // is the blocktime within the max voting period
-            return (block.timestamp <=
-                _voteStrategy.maxVotingPeriod + _proposal.proposalTime);
+        if (proposal.proposalId == 0) {
+            return ProposalState.Failed;
+        } else if (proposal.didPass) {
+            return ProposalState.Passed;
+        } else if (
+            block.timestamp <
+            proposal.proposalTime +
+                (
+                    proposal.isChallenged
+                        ? strategy.maxVotingPeriod
+                        : strategy.minVotingPeriod
+                )
+        ) {
+            return ProposalState.Active;
+        } else if (
+            proposal.approvals >=
+            (proposal.isChallenged ? strategy.maxQuorum : strategy.minQuorum)
+        ) {
+            return ProposalState.Succeeded;
         } else {
-            // is the blocktime within the min voting period
-            return (block.timestamp <=
-                _voteStrategy.minVotingPeriod + _proposal.proposalTime);
+            return ProposalState.Failed;
         }
-    }
-
-    function _hasReachedQuorum(
-        Proposal memory _proposal,
-        Strategy memory _voteStrategy
-    ) private returns (bool) {
-        if (_proposal.isChallenged) {
-            return (_proposal.approvals >= _voteStrategy.maxQuorum);
-        } else {
-            return (_proposal.approvals >= _voteStrategy.minQuorum);
-        }
-    }
-
-    function _isProposalActive(
-        Proposal memory _proposal,
-        Strategy memory _voteStrategy
-    ) private returns (bool) {
-        // if proposal doesn't exist
-        if (_proposal.proposalId == 0) return false;
-        // if current proposal has been passed
-        if (_proposal.didPass) return false;
-        // if voting period is active, but NOT executed
-        if (_isVotingPeriodActive(_proposal, _voteStrategy)) return true;
-        // if quorum has been reached, but voting period is NOT over, and has NOT been executed
-        if (_hasReachedQuorum(_proposal, _voteStrategy)) return true;
-
-        return false;
     }
 }
