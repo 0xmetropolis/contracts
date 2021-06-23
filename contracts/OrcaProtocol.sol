@@ -3,6 +3,7 @@ pragma solidity 0.7.4;
 /* solhint-disable indent */
 
 import "./MemberToken.sol";
+import "./OwnerToken.sol";
 import "./VoteManager.sol";
 import "./RuleManager.sol";
 import "./SafeTeller.sol";
@@ -23,6 +24,7 @@ contract OrcaProtocol {
     VoteManager voteManager;
     RuleManager ruleManager;
     SafeTeller safeTeller;
+    OwnerToken ownerToken;
 
     mapping(uint256 => address) public safeAddress;
 
@@ -30,12 +32,14 @@ contract OrcaProtocol {
         address _memberToken,
         address _voteManager,
         address _ruleManager,
-        address _safeTeller
+        address _safeTeller,
+        address _ownerToken
     ) public {
         memberToken = _memberToken;
         voteManager = VoteManager(_voteManager);
         ruleManager = RuleManager(_ruleManager);
         safeTeller = SafeTeller(_safeTeller);
+        ownerToken = OwnerToken(_ownerToken);
     }
 
     /*
@@ -52,7 +56,7 @@ contract OrcaProtocol {
         uint256 _maxQuorum
     ) public {
         //Alow for abitrary owners
-        MemberToken(memberToken).mint(_owner, _podId, " ");
+        ownerToken.mint(_owner, _podId);
 
         uint256 strategyId =
             voteManager.createVotingStrategy(
@@ -69,6 +73,24 @@ contract OrcaProtocol {
         safeAddress[_podId] = podSafe;
 
         emit CreatePod(_podId);
+    }
+
+    function createActionProposal(
+        uint256 _podId,
+        address _to,
+        uint256 _value,
+        bytes memory _data
+    ) public {
+        //TODO: executable id
+        uint256 fakeExeId = 99;
+        require(
+            MemberToken(memberToken).balanceOf(msg.sender, _podId) != 0,
+            "User lacks power"
+        );
+
+        safeTeller.createPendingAction(_podId, _to, _value, _data);
+
+        voteManager.createProposal(_podId, msg.sender, 1, fakeExeId);
     }
 
     function createRuleProposal(
@@ -98,22 +120,28 @@ contract OrcaProtocol {
         voteManager.createProposal(_podId, msg.sender, 0, fakeExeId);
     }
 
-    function createActionProposal(
+    function createRule(
         uint256 _podId,
-        address _to,
-        uint256 _value,
-        bytes memory _data
+        address _contractAddress,
+        bytes4 _functionSignature,
+        bytes32[5] memory _functionParams,
+        uint256 _comparisonLogic,
+        uint256 _comparisonValue
     ) public {
         //TODO: executable id
         uint256 fakeExeId = 99;
-        require(
-            MemberToken(memberToken).balanceOf(msg.sender, _podId) != 0,
-            "User lacks power"
+        require(ownerToken.ownerOf(_podId) == msg.sender, "User is not owner");
+
+        ruleManager.setPodRule(
+            _podId,
+            _contractAddress,
+            _functionSignature,
+            _functionParams,
+            _comparisonLogic,
+            _comparisonValue
         );
 
-        safeTeller.createPendingAction(_podId, _to, _value, _data);
-
-        voteManager.createProposal(_podId, msg.sender, 1, fakeExeId);
+        ruleManager.finalizeRule(_podId);
     }
 
     function createStrategyProposal(
@@ -137,6 +165,26 @@ contract OrcaProtocol {
             );
 
         voteManager.createProposal(_podId, msg.sender, 2, strategyId);
+    }
+
+    function createStrategy(
+        uint256 _podId,
+        uint256 _minVotingPeriod,
+        uint256 _maxVotingPeriod,
+        uint256 _minQuorum,
+        uint256 _maxQuorum
+    ) public {
+        require(ownerToken.ownerOf(_podId) == msg.sender, "User is not owner");
+
+        uint256 strategyId =
+            voteManager.createVotingStrategy(
+                _minVotingPeriod,
+                _maxVotingPeriod,
+                _minQuorum,
+                _maxQuorum
+            );
+
+        voteManager.finalizeVotingStrategy(_podId, strategyId);
     }
 
     function approve(
@@ -168,6 +216,8 @@ contract OrcaProtocol {
 
         voteManager.challengeProposal(_proposalId, _podId, _account);
     }
+
+    //TODO: Break this function in half seeps to be expensive
 
     function finalizeProposal(uint256 _proposalId, uint256 _podId) public {
         // proposalType 0 = rule, 1 = action, 2 = strategy
