@@ -81,7 +81,7 @@ contract SafeTeller {
         address _to,
         uint256 _value,
         bytes memory _data
-    ) public {
+    ) public returns (bool) {
         require(controller == msg.sender, "!controller");
         actionProposalByPod[_podId] = Action({
             to: _to,
@@ -89,9 +89,13 @@ contract SafeTeller {
             data: _data
         });
         UpdateAction(_podId, _to, _value, _data);
+        return true;
     }
 
-    function executeAction(uint256 _podId, address _safeAddress) public {
+    function executeAction(uint256 _podId, address _safeAddress)
+        public
+        returns (bool)
+    {
         require(controller == msg.sender, "!controller");
         uint8 operation = uint8(0);
         uint256 safeTxGas = uint256(0);
@@ -126,6 +130,7 @@ contract SafeTeller {
             _safeAddress.call(executeTransactionData);
 
         emit ActionExecuted(success, result);
+        return true;
     }
 
     function bytesToAddress(bytes memory bys)

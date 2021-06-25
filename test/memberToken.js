@@ -6,6 +6,7 @@ const MemberToken = require("../artifacts/contracts/MemberToken.sol/MemberToken.
 const VoteManager = require("../artifacts/contracts/VoteManager.sol/VoteManager.json");
 const RuleManager = require("../artifacts/contracts/RuleManager.sol/RuleManager.json");
 const SafeTeller = require("../artifacts/contracts/SafeTeller.sol/SafeTeller.json");
+const OwnerToken = require("../artifacts/contracts/OwnerToken.sol/OwnerToken.json");
 
 const { deployContract, deployMockContract, solidity, provider } = waffle;
 
@@ -21,6 +22,7 @@ describe("Member Token Tests", () => {
   let voteManager;
   let ruleManager;
   let safeTeller;
+  let ownerToken;
 
   // create pod args
   const podId = 1;
@@ -35,29 +37,17 @@ describe("Member Token Tests", () => {
     safeTeller = await deployMockContract(admin, SafeTeller.abi);
 
     memberToken = await deployContract(admin, MemberToken);
+    ownerToken = await deployContract(admin, OwnerToken);
 
     orcaProtocol = await deployContract(admin, OrcaProtocol, [
       memberToken.address,
       voteManager.address,
       ruleManager.address,
       safeTeller.address,
+      ownerToken.address,
     ]);
 
     await memberToken.connect(admin).updateController(orcaProtocol.address);
-  });
-
-  it("should mint a membership on pod creation", async () => {
-    await safeTeller.mock.createSafe.returns(AddressZero);
-    await voteManager.mock.createVotingStrategy.returns(1);
-    await voteManager.mock.finalizeVotingStrategy.returns(true);
-
-    await expect(
-      orcaProtocol
-        .connect(owner)
-        .createPod(owner.address, podId, minVotingPeriod, maxVotingPeriod, minQuorum, maxQuorum),
-    ).to.emit(memberToken, "TransferSingle");
-
-    expect(await memberToken.balanceOf(owner.address, 1)).to.equal(1);
   });
 
   it("should not be able to mint to a user", async () => {
