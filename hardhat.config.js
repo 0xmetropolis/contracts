@@ -1,5 +1,6 @@
 require("@nomiclabs/hardhat-waffle");
 require("hardhat-gas-reporter");
+require("hardhat-watcher");
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -30,6 +31,16 @@ module.exports = {
       blockGasLimit: 0xbebc20,
       allowUnlimitedContractSize: true,
       timeout: 1800000000,
+    },
+    local: {
+      url: "http://127.0.0.1:8545",
+    },
+  },
+  watcher: {
+    test: {
+      tasks: [{ command: "test", params: { testFiles: ["{path}"] } }],
+      files: ["./test/**/*"],
+      verbose: true,
     },
   },
 };
