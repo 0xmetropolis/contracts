@@ -3,7 +3,6 @@ const { waffle, ethers } = require("hardhat");
 
 const OrcaProtocol = require("../artifacts/contracts/OrcaProtocol.sol/OrcaProtocol.json");
 const MemberToken = require("../artifacts/contracts/MemberToken.sol/MemberToken.json");
-const VoteManager = require("../artifacts/contracts/VoteManager.sol/VoteManager.json");
 const RuleManager = require("../artifacts/contracts/RuleManager.sol/RuleManager.json");
 const SafeTeller = require("../artifacts/contracts/SafeTeller.sol/SafeTeller.json");
 const OwnerToken = require("../artifacts/contracts/OwnerToken.sol/OwnerToken.json");
@@ -19,21 +18,15 @@ describe("Member Token Tests", () => {
 
   let orcaProtocol;
   let memberToken;
-  let voteManager;
   let ruleManager;
   let safeTeller;
   let ownerToken;
 
   // create pod args
   const podId = 1;
-  const minVotingPeriod = 1;
-  const maxVotingPeriod = 1;
-  const minQuorum = 1;
-  const maxQuorum = 1;
 
   before(async () => {
     ruleManager = await deployMockContract(admin, RuleManager.abi);
-    voteManager = await deployMockContract(admin, VoteManager.abi);
     safeTeller = await deployMockContract(admin, SafeTeller.abi);
 
     memberToken = await deployContract(admin, MemberToken);
@@ -41,7 +34,6 @@ describe("Member Token Tests", () => {
 
     orcaProtocol = await deployContract(admin, OrcaProtocol, [
       memberToken.address,
-      voteManager.address,
       ruleManager.address,
       safeTeller.address,
       ownerToken.address,
@@ -55,19 +47,29 @@ describe("Member Token Tests", () => {
   });
 
   it("should be able to claim a membership", async () => {
+    await ruleManager.mock.hasRules.returns(true);
     await ruleManager.mock.isRuleCompliant.returns(true);
 
-    await expect(orcaProtocol.connect(alice).claimMembership(podId)).to.emit(memberToken, "TransferSingle");
+    await safeTeller.mock.onMint.returns();
+
+    await expect(orcaProtocol.connect(alice).claimMembership(podId, alice.address)).to.emit(
+      memberToken,
+      "TransferSingle",
+    );
   });
 
   it("shouldn't claim a second membership", async () => {
-    await ruleManager.mock.isRuleCompliant.returns(true);
-
-    await expect(orcaProtocol.connect(alice).claimMembership(podId)).to.be.revertedWith("User is already member");
+    await expect(orcaProtocol.connect(alice).claimMembership(podId, alice.address)).to.be.revertedWith(
+      "User is already member",
+    );
   });
 
   it("should be able to transfer membership to a rule compliant user", async () => {
+    await ruleManager.mock.hasRules.returns(true);
     await ruleManager.mock.isRuleCompliant.returns(true);
+
+    await safeTeller.mock.onTransfer.returns();
+
     await expect(memberToken.connect(alice).safeTransferFrom(alice.address, bob.address, podId, 1, HashZero)).to.emit(
       memberToken,
       "TransferSingle",
@@ -75,13 +77,16 @@ describe("Member Token Tests", () => {
   });
 
   it("should not be able to transfer membership to a non compliant user", async () => {
+    await ruleManager.mock.hasRules.returns(true);
     await ruleManager.mock.isRuleCompliant.returns(false);
+
     await expect(
       memberToken.connect(bob).safeTransferFrom(bob.address, charlie.address, podId, 1, HashZero),
     ).to.be.revertedWith("Not Rule Compliant");
   });
 
   it("shouldn't burn a compliant user", async () => {
+    await ruleManager.mock.hasRules.returns(true);
     await ruleManager.mock.isRuleCompliant.returns(true);
 
     await expect(orcaProtocol.connect(owner).retractMembership(podId, bob.address)).to.be.revertedWith(
@@ -90,7 +95,10 @@ describe("Member Token Tests", () => {
   });
 
   it("should burn a non-compliant user", async () => {
+    await ruleManager.mock.hasRules.returns(true);
     await ruleManager.mock.isRuleCompliant.returns(false);
+
+    await safeTeller.mock.onBurn.returns();
 
     await expect(orcaProtocol.connect(owner).retractMembership(podId, bob.address))
       .to.emit(memberToken, "TransferSingle")

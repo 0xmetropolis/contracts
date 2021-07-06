@@ -43,7 +43,7 @@ describe("Safe Module Owner Test", () => {
   };
 
   it("should set up safe", async () => {
-    // // Deploy the master safe contract and multisend
+    // Deploy the master safe contract and multisend
     multiSend = await deployContract(admin, MultiSend);
     const gnosisSafeMaster = await deployContract(admin, GnosisSafe);
     const gnosisSafeProxyFactory = await deployContract(admin, GnosisSafeProxyFactory);
