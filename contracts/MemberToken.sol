@@ -102,8 +102,6 @@ contract MemberToken is ERC1155Supply {
         uint256 _id,
         bytes memory data
     ) public {
-        require(controller == msg.sender, "!controller");
-
         require(balanceOf(_account, _id) == 0, "User is already member");
 
         _mint(_account, _id, 1, data);
@@ -127,8 +125,6 @@ contract MemberToken is ERC1155Supply {
     }
 
     function burn(address _account, uint256 _id) public {
-        require(controller == msg.sender, "!controller");
-
         require(balanceOf(_account, _id) == 1, "User is not a member");
 
         _burn(_account, _id, 1);

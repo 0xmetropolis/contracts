@@ -103,48 +103,59 @@ contract OrcaProtocol {
         uint256[] memory amounts,
         bytes memory data
     ) public {
-        // only transfer event
-        if (from != address(0) && to != address(0)) {
-            for (uint256 i = 0; i < ids.length; i += 1) {
-                uint256 indexId = ids[i];
+        for (uint256 i = 0; i < ids.length; i += 1) {
+            uint256 podId = ids[i];
+            address safe = safeAddress[podId];
+            address owner = ownerToken.ownerOf(podId);
 
+            // mint event
+            if (from == address(0)) {
+                // if there are rules recipient must be rule compliant
+                if (ruleManager.hasRules(podId)) {
+                    require(
+                        ruleManager.isRuleCompliant(podId, to),
+                        "Not Rule Compliant"
+                    );
+                    // if there are no rules operator must be owner, safe or controller
+                } else {
+                    require(
+                        operator == safe ||
+                            operator == owner ||
+                            operator == address(this),
+                        "No Rules Set"
+                    );
+                }
+                safeTeller.onMint(to, safe);
+
+                // burn event
+            } else if (to == address(0)) {
+                // if there are rules terminee must not be rule compliant
+                if (ruleManager.hasRules(podId)) {
+                    require(
+                        ruleManager.isRuleCompliant(podId, from) == false,
+                        "Rule Compliant"
+                    );
+                    // if there are no rules operator must be owner, safe or controller
+                } else {
+                    require(
+                        operator == safe ||
+                            operator == owner ||
+                            operator == address(this),
+                        "No Rules Set"
+                    );
+                }
+
+                safeTeller.onBurn(from, safe);
+
+                // transfer event
+            } else {
                 require(
-                    ruleManager.isRuleCompliant(indexId, to),
+                    ruleManager.isRuleCompliant(podId, to),
                     "Not Rule Compliant"
                 );
 
-                safeTeller.onTransfer(operator, from, to, safeAddress[indexId]);
+                safeTeller.onTransfer(operator, from, to, safe);
             }
         }
-    }
-
-    function claimMembership(uint256 _podId, address _member) public {
-        address safe = safeAddress[_podId];
-        // if pod vote or owner
-        if (msg.sender != safe) {
-            require(ruleManager.hasRules(_podId), "No Rules Set");
-        }
-
-        require(
-            ruleManager.isRuleCompliant(_podId, _member),
-            "Not Rule Compliant"
-        );
-        MemberToken(memberToken).mint(_member, _podId, " ");
-        safeTeller.onMint(_member, safe);
-    }
-
-    function retractMembership(uint256 _podId, address _member) public {
-        address safe = safeAddress[_podId];
-        // if pod vote or owner
-        if (msg.sender != safe) {
-            require(ruleManager.hasRules(_podId), "No Rules Set");
-            require(
-                false == ruleManager.isRuleCompliant(_podId, _member),
-                "Rule Compliant"
-            );
-        }
-
-        MemberToken(memberToken).burn(_member, _podId);
-        safeTeller.onBurn(_member, safe);
     }
 }
