@@ -102,16 +102,29 @@ contract MemberToken is ERC1155Supply {
         uint256 _id,
         bytes memory data
     ) public {
-        require(controller == msg.sender, "!controller");
-
         require(balanceOf(_account, _id) == 0, "User is already member");
 
         _mint(_account, _id, 1, data);
     }
 
-    function burn(address _account, uint256 _id) public {
+    function mintSingleBatch(
+        address[] memory _accounts,
+        uint256 _id,
+        bytes memory data
+    ) public {
         require(controller == msg.sender, "!controller");
 
+        for (uint256 index = 0; index < _accounts.length; index++) {
+            require(
+                balanceOf(_accounts[index], _id) == 0,
+                "User is already member"
+            );
+
+            _mint(_accounts[index], _id, 1, data);
+        }
+    }
+
+    function burn(address _account, uint256 _id) public {
         require(balanceOf(_account, _id) == 1, "User is not a member");
 
         _burn(_account, _id, 1);
@@ -135,23 +148,20 @@ contract MemberToken is ERC1155Supply {
         uint256[] memory amounts,
         bytes memory data
     ) internal override {
-        // if the operator is not controller and is a transfer event
-        if (operator != controller && from != address(0) && to != address(0)) {
-            // check if recipient is already member
-            _isMember(to, ids);
+        // check if recipient is already member
+        if (to != address(0)) _isMember(to, ids);
 
-            // perform orca token transfer validations
-            controller.functionCall(
-                abi.encodeWithSignature(
-                    beforeTokenTransferSig,
-                    address(this),
-                    from,
-                    to,
-                    ids,
-                    amounts,
-                    data
-                )
-            );
-        }
+        // perform orca token transfer validations
+        controller.functionCall(
+            abi.encodeWithSignature(
+                beforeTokenTransferSig,
+                operator,
+                from,
+                to,
+                ids,
+                amounts,
+                data
+            )
+        );
     }
 }

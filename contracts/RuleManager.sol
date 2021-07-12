@@ -72,13 +72,20 @@ contract RuleManager {
         );
     }
 
+    function hasRules(uint256 _podId) public returns (bool) {
+        Rule memory currentRule = rulesByPod[_podId];
+        return (currentRule.contractAddress != address(0));
+    }
+
     function isRuleCompliant(uint256 _podId, address _user)
         public
         returns (bool)
     {
         require(controller == msg.sender, "!controller");
         Rule memory currentRule = rulesByPod[_podId];
-        require(currentRule.contractAddress != address(0), "No rule set");
+
+        // if there are no rules return true
+        if (currentRule.contractAddress != address(0)) return true;
 
         // check function params for keywords
         for (uint256 i = 0; i < currentRule.functionParams.length; i++) {
