@@ -4,15 +4,15 @@ TODO
 
 ## Contracts
 
-### OrcaProtocol
+### Controller
 
-The OrcaProtocol contract is the outward facing contract, most, if not all, public facing functions should go through the OrcaProtocol contract, including things like pod creation, the shepherd functions, etc.
+The Controller contract is the outward facing contract, most, if not all, public facing functions should go through the Controller contract, including things like pod creation, the shepherd functions, etc.
 
-When deploying the OrcaProtocol will also need to be linked to all of it's dependency contracts, which are as follows:
+When deploying the Controller will also need to be linked to all of it's dependency contracts, which are as follows:
 
 ### PowerBank
 
-This is called ONLY through `OrcaProtocol`
+This is called ONLY through `Controller`
 
 This contract handles logic around claiming and retracting membership based on rules defined in `RuleManager`. The membership status itself is represented by 1155 tokens as defined in `PowerBank`.
 
