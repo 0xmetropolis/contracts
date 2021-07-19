@@ -1,7 +1,7 @@
 const { expect, use } = require("chai");
 const { waffle, ethers } = require("hardhat");
 
-const OrcaProtocol = require("../artifacts/contracts/OrcaProtocol.sol/OrcaProtocol.json");
+const Controller = require("../artifacts/contracts/Controller.sol/Controller.json");
 const MemberToken = require("../artifacts/contracts/MemberToken.sol/MemberToken.json");
 const RuleManager = require("../artifacts/contracts/RuleManager.sol/RuleManager.json");
 const SafeTeller = require("../artifacts/contracts/SafeTeller.sol/SafeTeller.json");
@@ -13,7 +13,7 @@ const { AddressZero, HashZero } = ethers.constants;
 
 use(solidity);
 
-describe("OrcaProtocol beforeTokenTransfer Test", () => {
+describe("Controller beforeTokenTransfer Test", () => {
   const [admin, owner, safe, alice, bob, charlie] = provider.getWallets();
 
   const TX_OPTIONS = { gasLimit: 4000000 };
@@ -22,7 +22,7 @@ describe("OrcaProtocol beforeTokenTransfer Test", () => {
   const POD_ID = 1;
   const MEMBERS = [alice.address, bob.address];
 
-  let orcaProtocol;
+  let controller;
   let ownerToken;
   let safeTeller;
   let ruleManager;
@@ -35,7 +35,7 @@ describe("OrcaProtocol beforeTokenTransfer Test", () => {
 
     await safeTeller.mock.createSafe.returns(safe.address);
     const threshold = 1;
-    await orcaProtocol.createPod(POD_ID, members, threshold, ownerAddress, TX_OPTIONS);
+    await controller.createPod(POD_ID, members, threshold, ownerAddress, TX_OPTIONS);
   };
 
   const setup = async () => {
@@ -45,14 +45,14 @@ describe("OrcaProtocol beforeTokenTransfer Test", () => {
     memberToken = await deployContract(admin, MemberToken);
     ownerToken = await deployContract(admin, OwnerToken);
 
-    orcaProtocol = await deployContract(admin, OrcaProtocol, [
+    controller = await deployContract(admin, Controller, [
       memberToken.address,
       ruleManager.address,
       safeTeller.address,
       ownerToken.address,
     ]);
 
-    await memberToken.connect(admin).updateController(orcaProtocol.address, TX_OPTIONS);
+    await memberToken.connect(admin).updateController(controller.address, TX_OPTIONS);
     await safeTeller.mock.onMint.returns();
     await safeTeller.mock.onTransfer.returns();
     await safeTeller.mock.onBurn.returns();

@@ -7,7 +7,7 @@ const GnosisSafe = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/
 const GnosisSafeProxyFactory = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/proxies/GnosisSafeProxyFactory.sol/GnosisSafeProxyFactory.json");
 const MultiSend = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/libraries/MultiSend.sol/MultiSend.json");
 
-const OrcaProtocol = require("../artifacts/contracts/OrcaProtocol.sol/OrcaProtocol.json");
+const Controller = require("../artifacts/contracts/Controller.sol/Controller.json");
 const MemberToken = require("../artifacts/contracts/MemberToken.sol/MemberToken.json");
 const RuleManager = require("../artifacts/contracts/RuleManager.sol/RuleManager.json");
 const SafeTeller = require("../artifacts/contracts/SafeTeller.sol/SafeTeller.json");
@@ -17,11 +17,11 @@ const { deployContract, deployMockContract, provider, solidity } = waffle;
 
 use(solidity);
 
-describe("OrcaProtocol safe integration test", () => {
+describe("Controller safe integration test", () => {
   const [admin, owner, alice, bob, charlie] = provider.getWallets();
 
   let multiSend;
-  let orcaProtocol;
+  let controller;
 
   const TX_OPTIONS = { gasLimit: 4000000 };
 
@@ -44,9 +44,9 @@ describe("OrcaProtocol safe integration test", () => {
   };
 
   const createPodSafe = async () => {
-    await orcaProtocol.connect(owner).createPod(POD_ID, MEMBERS, THRESHOLD, owner.address, TX_OPTIONS);
+    await controller.connect(owner).createPod(POD_ID, MEMBERS, THRESHOLD, owner.address, TX_OPTIONS);
     // query the new gnosis safe
-    const safeAddress = await orcaProtocol.safeAddress(POD_ID);
+    const safeAddress = await controller.safeAddress(POD_ID);
     return new ethers.Contract(safeAddress, GnosisSafe.abi, owner);
   };
 
@@ -65,15 +65,15 @@ describe("OrcaProtocol safe integration test", () => {
     // user is compliant if there are no rules
     await ruleManager.mock.isRuleCompliant.returns(true);
 
-    orcaProtocol = await deployContract(admin, OrcaProtocol, [
+    controller = await deployContract(admin, Controller, [
       memberToken.address,
       ruleManager.address,
       safeTeller.address,
       ownerToken.address,
     ]);
 
-    await memberToken.connect(admin).updateController(orcaProtocol.address);
-    await safeTeller.connect(admin).updateController(orcaProtocol.address);
+    await memberToken.connect(admin).updateController(controller.address);
+    await safeTeller.connect(admin).updateController(controller.address);
 
     await safeTeller
       .connect(admin)

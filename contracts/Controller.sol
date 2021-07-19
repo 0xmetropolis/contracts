@@ -13,7 +13,7 @@ import "hardhat/console.sol";
 // this will impact the modifiers that are important for securiy
 // for not deploying supporting contracts as part of main contract
 
-contract OrcaProtocol {
+contract Controller {
     event RuleManagerAddress(address contractAddress);
     event MemberTokenAddress(address contractAddress);
     event CreatePod(uint256 podId);
