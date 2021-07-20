@@ -22,6 +22,8 @@ describe("Controller safe integration test", () => {
   let multiSend;
   let controller;
 
+  const { HashZero } = ethers.constants;
+
   const TX_OPTIONS = { gasLimit: 4000000 };
 
   const THRESHOLD = 2;
@@ -69,7 +71,7 @@ describe("Controller safe integration test", () => {
       safeTeller.address,
     ]);
 
-    await memberToken.connect(admin).updateController(controller.address);
+    await memberToken.connect(admin).registerController(controller.address);
     await safeTeller.connect(admin).updateController(controller.address);
 
     await safeTeller
@@ -130,7 +132,7 @@ describe("Controller safe integration test", () => {
     });
 
     it("should be able to mint memberships", async () => {
-      await memberToken.connect(admin).mint(charlie.address, POD_ID, "0x");
+      await memberToken.connect(admin).mint(charlie.address, POD_ID, HashZero);
       // check token balance
       expect(await memberToken.balanceOf(charlie.address, POD_ID)).to.equal(1);
       // check safe owners

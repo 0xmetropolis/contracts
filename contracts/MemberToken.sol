@@ -4,6 +4,7 @@ pragma solidity 0.7.4;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 
 string constant beforeTokenTransferSig = "beforeTokenTransfer(address,address,address,uint256[],uint256[],bytes)";
 
@@ -79,22 +80,27 @@ abstract contract ERC1155Supply is ERC1155 {
     }
 }
 
-contract MemberToken is ERC1155Supply {
+contract MemberToken is ERC1155Supply, Ownable {
     using Address for address;
 
-    address controller;
+    mapping(uint256 => address) public memberController;
+    mapping(address => bool) public controllerRegistry;
 
-    event ControllerUpdated(address newController);
+    uint8 CREATE_EVENT = 0x01;
 
-    constructor() public ERC1155("POD") {
-        emit ControllerUpdated(msg.sender);
-        controller = msg.sender;
+    event ControllerRegister(address newController);
+    event ControllerRemove(address newController);
+
+    constructor() public ERC1155("POD") {}
+
+    function registerController(address _controller) public onlyOwner {
+        emit ControllerRegister(_controller);
+        controllerRegistry[_controller] = true;
     }
 
-    function updateController(address _controller) public {
-        require(controller == msg.sender, "!controller");
-        emit ControllerUpdated(controller);
-        controller = _controller;
+    function removeController(address _controller) public onlyOwner {
+        emit ControllerRemove(_controller);
+        controllerRegistry[_controller] = false;
     }
 
     function mint(
@@ -102,7 +108,17 @@ contract MemberToken is ERC1155Supply {
         uint256 _id,
         bytes memory data
     ) public {
-        require(balanceOf(_account, _id) == 0, "User is already member");
+        bool isCreating = uint8(data[0]) == CREATE_EVENT;
+
+        require(exists(_id) != isCreating, "Invalid creation flag");
+
+        if (isCreating) {
+            require(
+                controllerRegistry[msg.sender] == true,
+                "Controller not registered"
+            );
+            memberController[_id] = msg.sender;
+        }
 
         _mint(_account, _id, 1, data);
     }
@@ -112,14 +128,19 @@ contract MemberToken is ERC1155Supply {
         uint256 _id,
         bytes memory data
     ) public {
-        require(controller == msg.sender, "!controller");
+        bool isCreating = uint8(data[0]) == CREATE_EVENT;
+
+        require(exists(_id) != isCreating, "Invalid creation flag");
+
+        if (isCreating) {
+            require(
+                controllerRegistry[msg.sender] == true,
+                "Controller not registered"
+            );
+            memberController[_id] = msg.sender;
+        }
 
         for (uint256 index = 0; index < _accounts.length; index++) {
-            require(
-                balanceOf(_accounts[index], _id) == 0,
-                "User is already member"
-            );
-
             _mint(_accounts[index], _id, 1, data);
         }
     }
@@ -128,15 +149,6 @@ contract MemberToken is ERC1155Supply {
         require(balanceOf(_account, _id) == 1, "User is not a member");
 
         _burn(_account, _id, 1);
-    }
-
-    function _isMember(address _account, uint256[] memory _ids) private {
-        for (uint256 i = 0; i < _ids.length; i += 1) {
-            require(
-                balanceOf(_account, _ids[i]) == 0,
-                "User is already member"
-            );
-        }
     }
 
     // this hook gets called before every token event including mint and burn
@@ -148,8 +160,20 @@ contract MemberToken is ERC1155Supply {
         uint256[] memory amounts,
         bytes memory data
     ) internal override {
-        // check if recipient is already member
-        if (to != address(0)) _isMember(to, ids);
+        // use first id to lookup controller
+        address controller = memberController[ids[0]];
+
+        for (uint256 i = 0; i < ids.length; i += 1) {
+            // check if recipient is already member
+            if (to != address(0)) {
+                require(balanceOf(to, ids[i]) == 0, "User is already member");
+            }
+            // verify all ids use same controller
+            require(
+                memberController[ids[i]] == controller,
+                "Ids have different controllers"
+            );
+        }
 
         // perform orca token transfer validations
         controller.functionCall(

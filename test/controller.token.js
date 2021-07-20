@@ -48,7 +48,7 @@ describe("Controller beforeTokenTransfer Test", () => {
       safeTeller.address,
     ]);
 
-    await memberToken.connect(admin).updateController(controller.address, TX_OPTIONS);
+    await memberToken.connect(admin).registerController(controller.address, TX_OPTIONS);
     await safeTeller.mock.onMint.returns();
     await safeTeller.mock.onTransfer.returns();
     await safeTeller.mock.onBurn.returns();
