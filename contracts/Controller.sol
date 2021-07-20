@@ -3,7 +3,6 @@ pragma solidity 0.7.4;
 /* solhint-disable indent */
 
 import "./MemberToken.sol";
-import "./OwnerToken.sol";
 import "./RuleManager.sol";
 import "./SafeTeller.sol";
 
@@ -21,20 +20,18 @@ contract Controller {
     address memberToken;
     RuleManager ruleManager;
     SafeTeller safeTeller;
-    OwnerToken ownerToken;
 
     mapping(uint256 => address) public safeAddress;
+    mapping(uint256 => address) public podAdmin;
 
     constructor(
         address _memberToken,
         address _ruleManager,
-        address _safeTeller,
-        address _ownerToken
+        address _safeTeller
     ) public {
         memberToken = _memberToken;
         ruleManager = RuleManager(_ruleManager);
         safeTeller = SafeTeller(_safeTeller);
-        ownerToken = OwnerToken(_ownerToken);
     }
 
     /*
@@ -45,11 +42,15 @@ contract Controller {
         uint256 _podId,
         address[] memory _members,
         uint256 threshold,
-        address _owner
+        address _admin
     ) public {
-        if (_owner != address(0)) {
-            ownerToken.mint(_owner, _podId);
-        }
+        require(
+            MemberToken(memberToken).exists(_podId) == false,
+            "pod already exists"
+        );
+
+        if (_admin != address(0)) podAdmin[_podId] = _admin;
+
         safeAddress[_podId] = safeTeller.createSafe(
             _podId,
             _members,
@@ -78,8 +79,7 @@ contract Controller {
         //TODO: executable id
         uint256 fakeExeId = 99;
         require(
-            msg.sender == ownerToken.ownerOf(_podId) ||
-                msg.sender == safeAddress[_podId],
+            msg.sender == podAdmin[_podId] || msg.sender == safeAddress[_podId],
             "User not authorized"
         );
 
@@ -106,7 +106,7 @@ contract Controller {
         for (uint256 i = 0; i < ids.length; i += 1) {
             uint256 podId = ids[i];
             address safe = safeAddress[podId];
-            address owner = ownerToken.ownerOf(podId);
+            address admin = podAdmin[podId];
 
             // mint event
             if (from == address(0)) {
@@ -116,11 +116,11 @@ contract Controller {
                         ruleManager.isRuleCompliant(podId, to),
                         "Not Rule Compliant"
                     );
-                    // if there are no rules operator must be owner, safe or controller
+                    // if there are no rules operator must be admin, safe or controller
                 } else {
                     require(
                         operator == safe ||
-                            operator == owner ||
+                            operator == admin ||
                             operator == address(this),
                         "No Rules Set"
                     );
@@ -135,11 +135,11 @@ contract Controller {
                         ruleManager.isRuleCompliant(podId, from) == false,
                         "Rule Compliant"
                     );
-                    // if there are no rules operator must be owner, safe or controller
+                    // if there are no rules operator must be admin, safe or controller
                 } else {
                     require(
                         operator == safe ||
-                            operator == owner ||
+                            operator == admin ||
                             operator == address(this),
                         "No Rules Set"
                     );

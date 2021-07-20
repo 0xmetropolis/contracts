@@ -11,14 +11,13 @@ const Controller = require("../artifacts/contracts/Controller.sol/Controller.jso
 const MemberToken = require("../artifacts/contracts/MemberToken.sol/MemberToken.json");
 const RuleManager = require("../artifacts/contracts/RuleManager.sol/RuleManager.json");
 const SafeTeller = require("../artifacts/contracts/SafeTeller.sol/SafeTeller.json");
-const OwnerToken = require("../artifacts/contracts/OwnerToken.sol/OwnerToken.json");
 
 const { deployContract, deployMockContract, provider, solidity } = waffle;
 
 use(solidity);
 
 describe("Controller safe integration test", () => {
-  const [admin, owner, alice, bob, charlie] = provider.getWallets();
+  const [admin, alice, bob, charlie] = provider.getWallets();
 
   let multiSend;
   let controller;
@@ -44,10 +43,10 @@ describe("Controller safe integration test", () => {
   };
 
   const createPodSafe = async () => {
-    await controller.connect(owner).createPod(POD_ID, MEMBERS, THRESHOLD, owner.address, TX_OPTIONS);
+    await controller.connect(admin).createPod(POD_ID, MEMBERS, THRESHOLD, admin.address, TX_OPTIONS);
     // query the new gnosis safe
     const safeAddress = await controller.safeAddress(POD_ID);
-    return new ethers.Contract(safeAddress, GnosisSafe.abi, owner);
+    return new ethers.Contract(safeAddress, GnosisSafe.abi, admin);
   };
 
   const setup = async () => {
@@ -58,7 +57,6 @@ describe("Controller safe integration test", () => {
 
     const memberToken = await deployContract(admin, MemberToken);
     const safeTeller = await deployContract(admin, SafeTeller);
-    const ownerToken = await deployContract(admin, OwnerToken);
 
     const ruleManager = await deployMockContract(admin, RuleManager.abi);
     await ruleManager.mock.hasRules.returns(false);
@@ -69,7 +67,6 @@ describe("Controller safe integration test", () => {
       memberToken.address,
       ruleManager.address,
       safeTeller.address,
-      ownerToken.address,
     ]);
 
     await memberToken.connect(admin).updateController(controller.address);
@@ -82,7 +79,7 @@ describe("Controller safe integration test", () => {
     const podSafe = await createPodSafe();
     const ethersSafe = await createSafeSigner(podSafe, admin);
 
-    return { memberToken, ownerToken, ethersSafe, safeTeller };
+    return { memberToken, ethersSafe, safeTeller };
   };
 
   describe("new pod creation with safe deployment", () => {
@@ -96,11 +93,11 @@ describe("Controller safe integration test", () => {
       expect(await ethersSafe.isModuleEnabled(safeTeller.address)).to.equal(true);
     });
 
-    it("should distribute member and owner tokens", async () => {
-      const { ownerToken, memberToken } = await setup();
+    it("should distribute member tokens and set admin", async () => {
+      const { memberToken } = await setup();
 
-      // should mint owner token
-      expect(await ownerToken.balanceOf(owner.address)).to.equal(1);
+      // should set admin
+      expect(await controller.podAdmin(POD_ID)).to.equal(admin.address);
       // should mint member tokens
       expect(await memberToken.balanceOf(alice.address, POD_ID)).to.equal(1);
       expect(await memberToken.balanceOf(bob.address, POD_ID)).to.equal(1);
@@ -125,7 +122,7 @@ describe("Controller safe integration test", () => {
     });
 
     it("should be able to burn memberships", async () => {
-      await memberToken.connect(owner).burn(alice.address, POD_ID);
+      await memberToken.connect(admin).burn(alice.address, POD_ID);
       // check token balance
       expect(await memberToken.balanceOf(alice.address, POD_ID)).to.equal(0);
       // check safe owners
@@ -133,7 +130,7 @@ describe("Controller safe integration test", () => {
     });
 
     it("should be able to mint memberships", async () => {
-      await memberToken.connect(owner).mint(charlie.address, POD_ID, "0x");
+      await memberToken.connect(admin).mint(charlie.address, POD_ID, "0x");
       // check token balance
       expect(await memberToken.balanceOf(charlie.address, POD_ID)).to.equal(1);
       // check safe owners
