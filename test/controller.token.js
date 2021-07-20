@@ -5,7 +5,6 @@ const Controller = require("../artifacts/contracts/Controller.sol/Controller.jso
 const MemberToken = require("../artifacts/contracts/MemberToken.sol/MemberToken.json");
 const RuleManager = require("../artifacts/contracts/RuleManager.sol/RuleManager.json");
 const SafeTeller = require("../artifacts/contracts/SafeTeller.sol/SafeTeller.json");
-const OwnerToken = require("../artifacts/contracts/OwnerToken.sol/OwnerToken.json");
 
 const { deployContract, deployMockContract, solidity, provider } = waffle;
 
@@ -14,7 +13,7 @@ const { AddressZero, HashZero } = ethers.constants;
 use(solidity);
 
 describe("Controller beforeTokenTransfer Test", () => {
-  const [admin, owner, safe, alice, bob, charlie] = provider.getWallets();
+  const [admin, safe, alice, bob, charlie] = provider.getWallets();
 
   const TX_OPTIONS = { gasLimit: 4000000 };
 
@@ -23,19 +22,18 @@ describe("Controller beforeTokenTransfer Test", () => {
   const MEMBERS = [alice.address, bob.address];
 
   let controller;
-  let ownerToken;
   let safeTeller;
   let ruleManager;
   let memberToken;
 
-  const createPod = async (members, ownerAddress = AddressZero) => {
+  const createPod = async (members, adminAddress = AddressZero) => {
     await ruleManager.mock.hasRules.returns(false);
     // user is compliant if there are no rules
     await ruleManager.mock.isRuleCompliant.returns(true);
 
     await safeTeller.mock.createSafe.returns(safe.address);
     const threshold = 1;
-    await controller.createPod(POD_ID, members, threshold, ownerAddress, TX_OPTIONS);
+    await controller.createPod(POD_ID, members, threshold, adminAddress, TX_OPTIONS);
   };
 
   const setup = async () => {
@@ -43,20 +41,18 @@ describe("Controller beforeTokenTransfer Test", () => {
     safeTeller = await deployMockContract(admin, SafeTeller.abi);
 
     memberToken = await deployContract(admin, MemberToken);
-    ownerToken = await deployContract(admin, OwnerToken);
 
     controller = await deployContract(admin, Controller, [
       memberToken.address,
       ruleManager.address,
       safeTeller.address,
-      ownerToken.address,
     ]);
 
     await memberToken.connect(admin).updateController(controller.address, TX_OPTIONS);
     await safeTeller.mock.onMint.returns();
     await safeTeller.mock.onTransfer.returns();
     await safeTeller.mock.onBurn.returns();
-    await createPod(MEMBERS, owner.address);
+    await createPod(MEMBERS, admin.address);
   };
 
   describe("minting membership tokens without rules", () => {
@@ -64,10 +60,10 @@ describe("Controller beforeTokenTransfer Test", () => {
       await setup();
     });
 
-    it("should allow owner to mint membership token with no rules", async () => {
-      await expect(memberToken.connect(owner).mint(charlie.address, POD_ID, HashZero, TX_OPTIONS))
+    it("should allow admin to mint membership token with no rules", async () => {
+      await expect(memberToken.connect(admin).mint(charlie.address, POD_ID, HashZero, TX_OPTIONS))
         .to.emit(memberToken, "TransferSingle")
-        .withArgs(owner.address, AddressZero, charlie.address, POD_ID, 1);
+        .withArgs(admin.address, AddressZero, charlie.address, POD_ID, 1);
     });
 
     it("should allow pod to mint membership token with no rules", async () => {
@@ -88,10 +84,10 @@ describe("Controller beforeTokenTransfer Test", () => {
       await setup();
     });
 
-    it("should allow owner to burn membership token with no rules", async () => {
-      await expect(memberToken.connect(owner).burn(bob.address, POD_ID, TX_OPTIONS))
+    it("should allow admin to burn membership token with no rules", async () => {
+      await expect(memberToken.connect(admin).burn(bob.address, POD_ID, TX_OPTIONS))
         .to.emit(memberToken, "TransferSingle")
-        .withArgs(owner.address, bob.address, AddressZero, POD_ID, 1);
+        .withArgs(admin.address, bob.address, AddressZero, POD_ID, 1);
     });
 
     it("should allow pod to burn membership token with no rules", async () => {
