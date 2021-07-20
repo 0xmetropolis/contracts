@@ -1,16 +1,6 @@
 require("@nomiclabs/hardhat-waffle");
 require("hardhat-gas-reporter");
 
-// This is a sample Hardhat task. To learn how to create your own go to
-// https://hardhat.org/guides/create-task.html
-task("accounts", "Prints the list of accounts", async () => {
-  const accounts = await ethers.getSigners();
-
-  for (const account of accounts) {
-    console.log(account.address);
-  }
-});
-
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
 
@@ -30,6 +20,11 @@ module.exports = {
       blockGasLimit: 0xbebc20,
       allowUnlimitedContractSize: true,
       timeout: 1800000000,
+    },
+    rinkeby: {
+      url: `https://rinkeby.infura.io/v3/69ecf3b10bc24c6a972972666fe950c8`,
+      // Add private key to this array as a string.
+      accounts: [],
     },
   },
 };

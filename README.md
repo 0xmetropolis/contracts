@@ -43,3 +43,9 @@ Stores rules that a pod must be in compliance with, as well as logic for amendin
 ### OrcaToken
 
 TODO
+
+## Deployment
+
+You can run `npx hardhat run scripts/deploy.js --network rinkeby` to deploy contracts to the testnet. This will deploy all our contracts and connect them to the official Gnosis Safe contracts.
+
+You must add your private key to `hardhat.config.js` beforehand.
