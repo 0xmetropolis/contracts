@@ -1,5 +1,7 @@
 require("@nomiclabs/hardhat-waffle");
 require("hardhat-gas-reporter");
+// ethKeys should export an object with private keys as strings
+const ethKeys = require("./ethKeys");
 
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
@@ -23,8 +25,7 @@ module.exports = {
     },
     rinkeby: {
       url: `https://rinkeby.infura.io/v3/69ecf3b10bc24c6a972972666fe950c8`,
-      // Add private key to this array as a string.
-      accounts: [],
+      accounts: [ethKeys.account1],
     },
   },
 };

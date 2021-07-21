@@ -48,4 +48,11 @@ TODO
 
 You can run `npx hardhat run scripts/deploy.js --network rinkeby` to deploy contracts to the testnet. This will deploy all our contracts and connect them to the official Gnosis Safe contracts.
 
-You must add your private key to `hardhat.config.js` beforehand.
+You must create `ethKeys.json` in the product root, and it should look like this:
+
+```json
+// This should be your private key
+{
+  "account1": "0x112345..."
+}
+```

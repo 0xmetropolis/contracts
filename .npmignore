@@ -9,3 +9,5 @@ artifacts/contracts/test
 
 test
 abis
+.github
+ethKeys.json
