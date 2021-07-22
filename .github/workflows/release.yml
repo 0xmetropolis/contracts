@@ -24,6 +24,7 @@ jobs:
 
       - name: Lint, test and compile
         run: |
+          npm ci
           npm run prettier
           npm run lint
           npm run test
