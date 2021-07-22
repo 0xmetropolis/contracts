@@ -58,7 +58,10 @@ describe("Controller safe integration test", () => {
     const gnosisSafeProxyFactory = await deployContract(admin, GnosisSafeProxyFactory);
 
     const memberToken = await deployContract(admin, MemberToken);
-    const safeTeller = await deployContract(admin, SafeTeller);
+    const safeTeller = await deployContract(admin, SafeTeller, [
+      gnosisSafeProxyFactory.address,
+      gnosisSafeMaster.address,
+    ]);
 
     const ruleManager = await deployMockContract(admin, RuleManager.abi);
     await ruleManager.mock.hasRules.returns(false);
@@ -73,10 +76,6 @@ describe("Controller safe integration test", () => {
 
     await memberToken.connect(admin).registerController(controller.address);
     await safeTeller.connect(admin).updateController(controller.address);
-
-    await safeTeller
-      .connect(admin)
-      .updateSafeAddresses(gnosisSafeProxyFactory.address, gnosisSafeMaster.address, TX_OPTIONS);
 
     const podSafe = await createPodSafe();
     const ethersSafe = await createSafeSigner(podSafe, admin);
@@ -115,7 +114,9 @@ describe("Controller safe integration test", () => {
     });
 
     it("should be able to transfer memberships", async () => {
-      await memberToken.connect(alice).safeTransferFrom(alice.address, charlie.address, POD_ID, 1, "0x");
+      await memberToken
+        .connect(alice)
+        .safeTransferFrom(alice.address, charlie.address, POD_ID, 1, HashZero, TX_OPTIONS);
       // check token balance
       expect(await memberToken.balanceOf(alice.address, POD_ID)).to.equal(0);
       expect(await memberToken.balanceOf(charlie.address, POD_ID)).to.equal(1);
@@ -124,7 +125,7 @@ describe("Controller safe integration test", () => {
     });
 
     it("should be able to burn memberships", async () => {
-      await memberToken.connect(admin).burn(alice.address, POD_ID);
+      await memberToken.connect(admin).burn(alice.address, POD_ID, TX_OPTIONS);
       // check token balance
       expect(await memberToken.balanceOf(alice.address, POD_ID)).to.equal(0);
       // check safe owners

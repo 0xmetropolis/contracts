@@ -105,6 +105,10 @@ contract Controller {
         uint256[] memory amounts,
         bytes memory data
     ) public {
+        // if create even than side effects have been pre-handled
+        // no data field on burn
+        if (to != address(0) && uint8(data[0]) == CREATE_EVENT) return;
+
         for (uint256 i = 0; i < ids.length; i += 1) {
             uint256 podId = ids[i];
             address safe = safeAddress[podId];
@@ -156,7 +160,7 @@ contract Controller {
                     "Not Rule Compliant"
                 );
 
-                safeTeller.onTransfer(operator, from, to, safe);
+                safeTeller.onTransfer(from, to, safe);
             }
         }
     }
