@@ -3,3 +3,6 @@ node_modules
 #Hardhat files
 cache
 artifacts
+
+# Private keys
+ethKeys.json
