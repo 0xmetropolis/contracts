@@ -36,6 +36,8 @@ jobs:
           npm run compile
         env:
           CI: true
+          ALCHEMY_TOKEN: ${{ secrets.ALCHEMY_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Semantic Release
         uses: docker://ghcr.io/codfish/semantic-release-action@sha256:43a9e5ce88fc0460c22f3f3c45e39ac99e1cefff2ffd76c6e8c34306c8ccec91
