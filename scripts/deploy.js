@@ -15,14 +15,16 @@ const setup = async () => {
   const SafeTeller = await ethers.getContractFactory("SafeTeller", signer);
   const RuleManager = await ethers.getContractFactory("RuleManager", signer);
   const Controller = await ethers.getContractFactory("Controller", signer);
+  const ControllerRegistry = await ethers.getContractFactory("ControllerRegistry", signer);
 
-  const memberToken = await MemberToken.deploy();
+  const controllerRegistry = await ControllerRegistry.deploy();
+  const memberToken = await MemberToken.deploy(controllerRegistry.address);
   const safeTeller = await SafeTeller.deploy(proxyFactoryAddress, gnosisSafeAddress);
   const ruleManager = await RuleManager.deploy();
 
   const controller = await Controller.deploy(memberToken.address, ruleManager.address, safeTeller.address);
 
-  await memberToken.updateController(controller.address);
+  await controllerRegistry.registerController(controller.address);
   await safeTeller.updateController(controller.address);
 
   return { memberToken, safeTeller, ruleManager, controller };

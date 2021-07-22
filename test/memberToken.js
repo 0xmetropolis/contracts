@@ -1,6 +1,7 @@
 const { expect, use } = require("chai");
 const { waffle, ethers } = require("hardhat");
 
+const ControllerRegistry = require("../artifacts/contracts/ControllerRegistry.sol/ControllerRegistry.json");
 const MemberToken = require("../artifacts/contracts/MemberToken.sol/MemberToken.json");
 const Controller = require("../artifacts/contracts/Controller.sol/Controller.json");
 const RuleManager = require("../artifacts/contracts/RuleManager.sol/RuleManager.json");
@@ -21,7 +22,10 @@ describe("Member Token Test", () => {
   const TX_OPTIONS = { gasLimit: 4000000 };
 
   const setup = async () => {
-    const memberToken = await deployContract(admin, MemberToken);
+    const controllerRegistry = await deployMockContract(admin, ControllerRegistry.abi);
+    await controllerRegistry.mock.isRegistered.returns(true);
+
+    const memberToken = await deployContract(admin, MemberToken, [controllerRegistry.address]);
 
     const ruleManager = await deployMockContract(admin, RuleManager.abi);
     const safeTeller = await deployMockContract(admin, SafeTeller.abi);
@@ -30,6 +34,7 @@ describe("Member Token Test", () => {
       memberToken.address,
       ruleManager.address,
       safeTeller.address,
+      controllerRegistry.address,
     ]);
 
     await safeTeller.mock.createSafe.returns(safe.address);
@@ -39,19 +44,14 @@ describe("Member Token Test", () => {
     await ruleManager.mock.hasRules.returns(false);
     await ruleManager.mock.isRuleCompliant.returns(true);
 
-    await memberToken.connect(admin).registerController(controller.address, TX_OPTIONS);
-
-    return { memberToken, controller, ruleManager, safeTeller };
+    return { memberToken, controller, ruleManager, safeTeller, controllerRegistry };
   };
 
   it("should deploy and register Member Token with controller", async () => {
-    const memberToken = await deployContract(admin, MemberToken);
-    const controller = await deployMockContract(admin, Controller.abi);
-
-    await memberToken.connect(admin).registerController(controller.address, TX_OPTIONS);
+    const { controllerRegistry } = await setup();
+    const memberToken = await deployContract(admin, MemberToken, [controllerRegistry.address]);
 
     expect(await memberToken.owner()).to.equal(admin.address);
-    expect(await memberToken.controllerRegistry(controller.address)).to.equal(true);
   });
 
   describe("minting and creation", () => {
@@ -66,7 +66,11 @@ describe("Member Token Test", () => {
     });
 
     it("should NOT allow token creation from unregistered controller", async () => {
-      const { memberToken } = await setup();
+      await setup();
+      const controllerRegistry = await deployMockContract(admin, ControllerRegistry.abi);
+      await controllerRegistry.mock.isRegistered.returns(false);
+
+      const memberToken = await deployContract(admin, MemberToken, [controllerRegistry.address]);
 
       await expect(memberToken.connect(admin).mint(admin.address, POD_ID, CREATE_FLAG)).to.be.revertedWith(
         "Controller not registered",
@@ -95,14 +99,6 @@ describe("Member Token Test", () => {
   });
 
   describe("upgrading controller", () => {
-    it("should remove a controller", async () => {
-      const { memberToken, controller } = await setup();
-
-      await memberToken.connect(admin).removeController(controller.address, TX_OPTIONS);
-
-      expect(await memberToken.controllerRegistry(controller.address, TX_OPTIONS)).to.equal(false);
-    });
-
     it("should transfer different memberships with the same controller", async () => {
       const { memberToken, controller } = await setup();
 
@@ -118,15 +114,14 @@ describe("Member Token Test", () => {
     });
 
     it("should NOT be able to create the same pod from multiple controllers", async () => {
-      const { memberToken, controller, ruleManager, safeTeller } = await setup();
+      const { memberToken, controller, ruleManager, safeTeller, controllerRegistry } = await setup();
 
       const controllerV2 = await deployContract(admin, Controller, [
         memberToken.address,
         ruleManager.address,
         safeTeller.address,
+        controllerRegistry.address,
       ]);
-
-      await memberToken.connect(admin).registerController(controllerV2.address, TX_OPTIONS);
 
       // create 2 pods from different controllers
       await controller.connect(admin).createPod(POD_ID, [admin.address], THRESHOLD, admin.address, TX_OPTIONS);
@@ -136,15 +131,14 @@ describe("Member Token Test", () => {
     });
 
     it("should NOT be able to transfer memberships associate with different controllers", async () => {
-      const { memberToken, controller, ruleManager, safeTeller } = await setup();
+      const { memberToken, controller, ruleManager, safeTeller, controllerRegistry } = await setup();
 
       const controllerV2 = await deployContract(admin, Controller, [
         memberToken.address,
         ruleManager.address,
         safeTeller.address,
+        controllerRegistry.address,
       ]);
-
-      await memberToken.connect(admin).registerController(controllerV2.address, TX_OPTIONS);
 
       // create 2 pods from different controllers
       await controller.connect(admin).createPod(POD_ID, [admin.address], THRESHOLD, admin.address, TX_OPTIONS);

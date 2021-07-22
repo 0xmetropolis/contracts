@@ -5,6 +5,7 @@ pragma solidity 0.7.4;
 import "./MemberToken.sol";
 import "./RuleManager.sol";
 import "./SafeTeller.sol";
+import "./ControllerRegistry.sol";
 
 import "hardhat/console.sol";
 
@@ -20,6 +21,7 @@ contract Controller {
     address memberToken;
     RuleManager ruleManager;
     SafeTeller safeTeller;
+    ControllerRegistry controllerRegistry;
 
     mapping(uint256 => address) public safeAddress;
     mapping(uint256 => address) public podAdmin;
@@ -29,11 +31,13 @@ contract Controller {
     constructor(
         address _memberToken,
         address _ruleManager,
-        address _safeTeller
+        address _safeTeller,
+        address _controllerRegistry
     ) public {
         memberToken = _memberToken;
         ruleManager = RuleManager(_ruleManager);
         safeTeller = SafeTeller(_safeTeller);
+        controllerRegistry = ControllerRegistry(_controllerRegistry);
     }
 
     /*
