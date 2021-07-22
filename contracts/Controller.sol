@@ -24,6 +24,8 @@ contract Controller {
     mapping(uint256 => address) public safeAddress;
     mapping(uint256 => address) public podAdmin;
 
+    uint8 CREATE_EVENT = 0x01;
+
     constructor(
         address _memberToken,
         address _ruleManager,
@@ -58,11 +60,11 @@ contract Controller {
         );
 
         if (_members.length != 0) {
-            MemberToken(memberToken).mintSingleBatch(
-                _members,
-                _podId,
-                bytes("0x1")
-            );
+            // add create event flag to token data
+            bytes memory data = new bytes(1);
+            data[0] = bytes1(uint8(CREATE_EVENT));
+
+            MemberToken(memberToken).mintSingleBatch(_members, _podId, data);
         }
 
         emit CreatePod(_podId);
