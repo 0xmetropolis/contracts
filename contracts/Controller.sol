@@ -18,7 +18,7 @@ contract Controller {
     event MemberTokenAddress(address contractAddress);
     event CreatePod(uint256 podId);
 
-    address memberToken;
+    MemberToken memberToken;
     RuleManager ruleManager;
     SafeTeller safeTeller;
     ControllerRegistry controllerRegistry;
@@ -34,7 +34,7 @@ contract Controller {
         address _safeTeller,
         address _controllerRegistry
     ) public {
-        memberToken = _memberToken;
+        memberToken = MemberToken(_memberToken);
         ruleManager = RuleManager(_ruleManager);
         safeTeller = SafeTeller(_safeTeller);
         controllerRegistry = ControllerRegistry(_controllerRegistry);
@@ -50,10 +50,7 @@ contract Controller {
         uint256 threshold,
         address _admin
     ) public {
-        require(
-            MemberToken(memberToken).exists(_podId) == false,
-            "pod already exists"
-        );
+        require(memberToken.exists(_podId) == false, "pod already exists");
 
         if (_admin != address(0)) podAdmin[_podId] = _admin;
 
@@ -68,7 +65,7 @@ contract Controller {
             bytes memory data = new bytes(1);
             data[0] = bytes1(uint8(CREATE_EVENT));
 
-            MemberToken(memberToken).mintSingleBatch(_members, _podId, data);
+            memberToken.mintSingleBatch(_members, _podId, data);
         }
 
         emit CreatePod(_podId);
@@ -99,6 +96,49 @@ contract Controller {
         );
 
         ruleManager.finalizeRule(_podId);
+    }
+
+    function getSafeTeller() public view returns (address) {
+        return address(safeTeller);
+    }
+
+    function migratePodController(uint256 _podId, address _newController)
+        public
+    {
+        require(
+            controllerRegistry.isRegistered(_newController),
+            "Controller not registered"
+        );
+
+        address admin = podAdmin[_podId];
+        address safe = safeAddress[_podId];
+
+        require(
+            msg.sender == admin || msg.sender == safe,
+            "User not authorized"
+        );
+
+        Controller newController = Controller(_newController);
+
+        memberToken.migrateMemberController(_podId, _newController);
+        safeTeller.migrateSafeTeller(safe, newController.getSafeTeller());
+        newController.updatePodState(_podId, admin, safe);
+
+        podAdmin[_podId] = address(0);
+        safeAddress[_podId] = address(0);
+    }
+
+    function updatePodState(
+        uint256 _podId,
+        address _podAdmin,
+        address _safeAddress
+    ) public {
+        require(
+            controllerRegistry.isRegistered(msg.sender),
+            "Controller not registered"
+        );
+        podAdmin[_podId] = _podAdmin;
+        safeAddress[_podId] = _safeAddress;
     }
 
     function beforeTokenTransfer(

@@ -166,9 +166,17 @@ describe("SafeTeller test", () => {
     it("should migrate to a new version of the safeTeller", async () => {
       const { safeTeller, ethersSafe, safe } = await setup();
 
-      await safeTeller.migrateSafeTeller(safe.address, mockSafeTeller.address, TX_OPTIONS);
+      await safeTeller.connect(mockController).migrateSafeTeller(safe.address, mockSafeTeller.address, TX_OPTIONS);
       expect(await ethersSafe.isModuleEnabled(mockSafeTeller.address)).to.equal(true);
       expect(await ethersSafe.isModuleEnabled(safeTeller.address)).to.equal(false);
+    });
+
+    it("should throw error if user tries to migrate safeTeller", async () => {
+      const { safeTeller, safe } = await setup();
+
+      await expect(
+        safeTeller.connect(alice).migrateSafeTeller(safe.address, mockSafeTeller.address, TX_OPTIONS),
+      ).to.be.revertedWith("!controller");
     });
 
     it("should migrate to a new version of the safeTeller with multiple modules", async () => {
@@ -188,7 +196,7 @@ describe("SafeTeller test", () => {
       await txRes.wait();
       expect(await ethersSafe.isModuleEnabled(mockModule.address)).to.equal(true);
 
-      await safeTeller.migrateSafeTeller(safe.address, mockSafeTeller.address, TX_OPTIONS);
+      await safeTeller.connect(mockController).migrateSafeTeller(safe.address, mockSafeTeller.address, TX_OPTIONS);
       expect(await ethersSafe.isModuleEnabled(mockSafeTeller.address)).to.equal(true);
       expect(await ethersSafe.isModuleEnabled(safeTeller.address)).to.equal(false);
     });
