@@ -7,6 +7,7 @@ const GnosisSafe = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/
 const GnosisSafeProxyFactory = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/proxies/GnosisSafeProxyFactory.sol/GnosisSafeProxyFactory.json");
 const MultiSend = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/libraries/MultiSend.sol/MultiSend.json");
 
+const ControllerRegistry = require("../artifacts/contracts/ControllerRegistry.sol/ControllerRegistry.json");
 const Controller = require("../artifacts/contracts/Controller.sol/Controller.json");
 const MemberToken = require("../artifacts/contracts/MemberToken.sol/MemberToken.json");
 const RuleManager = require("../artifacts/contracts/RuleManager.sol/RuleManager.json");
@@ -57,7 +58,10 @@ describe("Controller safe integration test", () => {
     const gnosisSafeMaster = await deployContract(admin, GnosisSafe);
     const gnosisSafeProxyFactory = await deployContract(admin, GnosisSafeProxyFactory);
 
-    const memberToken = await deployContract(admin, MemberToken);
+    const controllerRegistry = await deployMockContract(admin, ControllerRegistry.abi);
+    await controllerRegistry.mock.isRegistered.returns(true);
+
+    const memberToken = await deployContract(admin, MemberToken, [controllerRegistry.address]);
     const safeTeller = await deployContract(admin, SafeTeller, [
       gnosisSafeProxyFactory.address,
       gnosisSafeMaster.address,
@@ -72,9 +76,9 @@ describe("Controller safe integration test", () => {
       memberToken.address,
       ruleManager.address,
       safeTeller.address,
+      controllerRegistry.address,
     ]);
 
-    await memberToken.connect(admin).registerController(controller.address);
     await safeTeller.connect(admin).updateController(controller.address);
 
     const podSafe = await createPodSafe();

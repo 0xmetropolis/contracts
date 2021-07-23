@@ -1,6 +1,7 @@
 const { expect, use } = require("chai");
 const { waffle, ethers } = require("hardhat");
 
+const ControllerRegistry = require("../artifacts/contracts/ControllerRegistry.sol/ControllerRegistry.json");
 const Controller = require("../artifacts/contracts/Controller.sol/Controller.json");
 const MemberToken = require("../artifacts/contracts/MemberToken.sol/MemberToken.json");
 const RuleManager = require("../artifacts/contracts/RuleManager.sol/RuleManager.json");
@@ -37,18 +38,21 @@ describe("Controller beforeTokenTransfer Test", () => {
   };
 
   const setup = async () => {
+    const controllerRegistry = await deployMockContract(admin, ControllerRegistry.abi);
+    await controllerRegistry.mock.isRegistered.returns(true);
+
     ruleManager = await deployMockContract(admin, RuleManager.abi);
     safeTeller = await deployMockContract(admin, SafeTeller.abi);
 
-    memberToken = await deployContract(admin, MemberToken);
+    memberToken = await deployContract(admin, MemberToken, [controllerRegistry.address]);
 
     controller = await deployContract(admin, Controller, [
       memberToken.address,
       ruleManager.address,
       safeTeller.address,
+      controllerRegistry.address,
     ]);
 
-    await memberToken.connect(admin).registerController(controller.address, TX_OPTIONS);
     await safeTeller.mock.onMint.returns();
     await safeTeller.mock.onTransfer.returns();
     await safeTeller.mock.onBurn.returns();

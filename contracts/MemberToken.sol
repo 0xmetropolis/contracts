@@ -4,7 +4,7 @@ pragma solidity 0.7.4;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "./ControllerRegistry.sol";
 
 string constant beforeTokenTransferSig = "beforeTokenTransfer(address,address,address,uint256[],uint256[],bytes)";
 
@@ -83,24 +83,32 @@ abstract contract ERC1155Supply is ERC1155 {
 contract MemberToken is ERC1155Supply, Ownable {
     using Address for address;
 
+    ControllerRegistry controllerRegistry;
+
     mapping(uint256 => address) public memberController;
-    mapping(address => bool) public controllerRegistry;
 
     uint8 CREATE_EVENT = 0x01;
 
-    event ControllerRegister(address newController);
-    event ControllerRemove(address newController);
+    event MigrateMemberController(uint256 podId, address newController);
 
-    constructor() public ERC1155("POD") {}
-
-    function registerController(address _controller) public onlyOwner {
-        emit ControllerRegister(_controller);
-        controllerRegistry[_controller] = true;
+    constructor(address _controllerRegistry) public ERC1155("POD") {
+        controllerRegistry = ControllerRegistry(_controllerRegistry);
     }
 
-    function removeController(address _controller) public onlyOwner {
-        emit ControllerRemove(_controller);
-        controllerRegistry[_controller] = false;
+    function migrateMemberController(uint256 _podId, address _newController)
+        public
+    {
+        require(
+            msg.sender == memberController[_podId],
+            "Invalid migrate controller"
+        );
+        require(
+            controllerRegistry.isRegistered(_newController),
+            "Controller not registered"
+        );
+
+        memberController[_podId] = _newController;
+        emit MigrateMemberController(_podId, _newController);
     }
 
     function mint(
@@ -114,7 +122,7 @@ contract MemberToken is ERC1155Supply, Ownable {
 
         if (isCreating) {
             require(
-                controllerRegistry[msg.sender] == true,
+                controllerRegistry.isRegistered(msg.sender),
                 "Controller not registered"
             );
             memberController[_id] = msg.sender;
@@ -134,7 +142,7 @@ contract MemberToken is ERC1155Supply, Ownable {
 
         if (isCreating) {
             require(
-                controllerRegistry[msg.sender] == true,
+                controllerRegistry.isRegistered(msg.sender),
                 "Controller not registered"
             );
             memberController[_id] = msg.sender;
