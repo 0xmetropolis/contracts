@@ -78,10 +78,9 @@ contract RuleManager {
     }
 
     function isRuleCompliant(uint256 _podId, address _user)
-        public
+        public view
         returns (bool)
     {
-        require(controller == msg.sender, "!controller");
         Rule memory currentRule = rulesByPod[_podId];
 
         // if there are no rules return true
@@ -95,7 +94,7 @@ contract RuleManager {
         }
 
         (bool success, bytes memory result) =
-            currentRule.contractAddress.call(
+            currentRule.contractAddress.staticcall(
                 abi.encodePacked(
                     currentRule.functionSignature,
                     currentRule.functionParams[0],

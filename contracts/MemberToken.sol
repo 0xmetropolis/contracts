@@ -4,7 +4,8 @@ pragma solidity 0.7.4;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "./ControllerRegistry.sol";
+import "./interfaces/IControllerRegistry.sol";
+import "./interfaces/IController.sol";
 
 string constant beforeTokenTransferSig = "beforeTokenTransfer(address,address,address,uint256[],uint256[],bytes)";
 
@@ -80,10 +81,10 @@ abstract contract ERC1155Supply is ERC1155 {
     }
 }
 
-contract MemberToken is ERC1155Supply, Ownable {
+contract MemberToken is ERC1155Supply {
     using Address for address;
 
-    ControllerRegistry controllerRegistry;
+    IControllerRegistry controllerRegistry;
 
     mapping(uint256 => address) public memberController;
 
@@ -92,7 +93,7 @@ contract MemberToken is ERC1155Supply, Ownable {
     event MigrateMemberController(uint256 podId, address newController);
 
     constructor(address _controllerRegistry) public ERC1155("POD") {
-        controllerRegistry = ControllerRegistry(_controllerRegistry);
+        controllerRegistry = IControllerRegistry(_controllerRegistry);
     }
 
     function migrateMemberController(uint256 _podId, address _newController)

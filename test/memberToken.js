@@ -48,13 +48,6 @@ describe("Member Token Test", () => {
     return { memberToken, controller, ruleManager, safeTeller, controllerRegistry };
   };
 
-  it("should deploy and register Member Token with controller", async () => {
-    const { controllerRegistry } = await setup();
-    const memberToken = await deployContract(admin, MemberToken, [controllerRegistry.address]);
-
-    expect(await memberToken.owner()).to.equal(admin.address);
-  });
-
   describe("minting and creation", () => {
     it("should NOT allow token creation without the create flag", async () => {
       const { memberToken } = await setup();

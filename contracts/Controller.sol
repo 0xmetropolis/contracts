@@ -2,12 +2,10 @@ pragma solidity 0.7.4;
 
 /* solhint-disable indent */
 
-import "./MemberToken.sol";
+import "./interfaces/IMemberToken.sol";
 import "./RuleManager.sol";
 import "./SafeTeller.sol";
-import "./ControllerRegistry.sol";
-
-import "hardhat/console.sol";
+import "./interfaces/IControllerRegistry.sol";
 
 // TODO: consider  order of contract  deployment. May not want to deploy all together
 // this will impact the modifiers that are important for securiy
@@ -18,10 +16,10 @@ contract Controller {
     event MemberTokenAddress(address contractAddress);
     event CreatePod(uint256 podId);
 
-    MemberToken memberToken;
+    IMemberToken memberToken;
     RuleManager ruleManager;
     SafeTeller safeTeller;
-    ControllerRegistry controllerRegistry;
+    IControllerRegistry controllerRegistry;
 
     mapping(uint256 => address) public safeAddress;
     mapping(uint256 => address) public podAdmin;
@@ -34,10 +32,10 @@ contract Controller {
         address _safeTeller,
         address _controllerRegistry
     ) public {
-        memberToken = MemberToken(_memberToken);
+        memberToken = IMemberToken(_memberToken);
         ruleManager = RuleManager(_ruleManager);
         safeTeller = SafeTeller(_safeTeller);
-        controllerRegistry = ControllerRegistry(_controllerRegistry);
+        controllerRegistry = IControllerRegistry(_controllerRegistry);
     }
 
     /*

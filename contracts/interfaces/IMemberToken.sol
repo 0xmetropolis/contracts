@@ -12,4 +12,19 @@ interface IMemberToken is IERC1155 {
      * @dev Indicates weither any token exist with a given id, or not.
      */
     function exists(uint256 id) external view returns (bool);
+
+    function migrateMemberController(uint256 _podId, address _newController)
+        external;
+
+    function mint(
+        address _account,
+        uint256 _id,
+        bytes memory data
+    ) external;
+
+    function mintSingleBatch(
+        address[] memory _accounts,
+        uint256 _id,
+        bytes memory data
+    ) external;
 }
