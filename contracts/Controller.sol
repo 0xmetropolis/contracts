@@ -31,7 +31,7 @@ contract Controller {
         address _ruleManager,
         address _safeTeller,
         address _controllerRegistry
-    ) public {
+    ) {
         memberToken = IMemberToken(_memberToken);
         ruleManager = RuleManager(_ruleManager);
         safeTeller = SafeTeller(_safeTeller);
@@ -78,7 +78,6 @@ contract Controller {
         uint256 _comparisonValue
     ) public {
         //TODO: executable id
-        uint256 fakeExeId = 99;
         require(
             msg.sender == podAdmin[_podId] || msg.sender == safeAddress[_podId],
             "User not authorized"
@@ -118,12 +117,12 @@ contract Controller {
 
         Controller newController = Controller(_newController);
 
+        podAdmin[_podId] = address(0);
+        safeAddress[_podId] = address(0);
+
         memberToken.migrateMemberController(_podId, _newController);
         safeTeller.migrateSafeTeller(safe, newController.getSafeTeller());
         newController.updatePodState(_podId, admin, safe);
-
-        podAdmin[_podId] = address(0);
-        safeAddress[_podId] = address(0);
     }
 
     function updatePodState(
@@ -144,7 +143,7 @@ contract Controller {
         address from,
         address to,
         uint256[] memory ids,
-        uint256[] memory amounts,
+        uint256[] memory amounts, //unused
         bytes memory data
     ) public {
         // if create even than side effects have been pre-handled

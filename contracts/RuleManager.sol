@@ -72,13 +72,14 @@ contract RuleManager {
         );
     }
 
-    function hasRules(uint256 _podId) public returns (bool) {
+    function hasRules(uint256 _podId) public view returns (bool) {
         Rule memory currentRule = rulesByPod[_podId];
         return (currentRule.contractAddress != address(0));
     }
 
     function isRuleCompliant(uint256 _podId, address _user)
-        public view
+        public
+        view
         returns (bool)
     {
         Rule memory currentRule = rulesByPod[_podId];

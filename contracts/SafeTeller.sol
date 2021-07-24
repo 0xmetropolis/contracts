@@ -117,9 +117,9 @@ contract SafeTeller {
                 gnosisMasterAddress,
                 setupData
             )
-        returns (address safeAddress) {
-            emit CreateSafe(_podId, safeAddress);
-            return safeAddress;
+        returns (address newSafeAddress) {
+            emit CreateSafe(_podId, newSafeAddress);
+            return newSafeAddress;
         } catch (bytes memory) {
             revert("Create Proxy With Data Failed");
         }
@@ -221,9 +221,10 @@ contract SafeTeller {
         require(success, "Module Transaction Failed");
     }
 
+    // TODO: move to library
     // Used in a delegate call to enable module add on setup
     function enableModule(address module) public {
-        revert();
+        require(module == address(0));
     }
 
     function delegateSetup(address _context) public {

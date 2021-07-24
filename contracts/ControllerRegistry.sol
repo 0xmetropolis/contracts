@@ -8,7 +8,7 @@ contract ControllerRegistry is Ownable {
     event ControllerRegister(address newController);
     event ControllerRemove(address newController);
 
-    constructor() public {}
+    constructor() {}
 
     function registerController(address _controller) public onlyOwner {
         emit ControllerRegister(_controller);
