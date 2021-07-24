@@ -40,6 +40,7 @@ describe("Member Token Test", () => {
     await safeTeller.mock.createSafe.returns(safe.address);
     await safeTeller.mock.onMint.returns();
     await safeTeller.mock.onTransfer.returns();
+    await safeTeller.mock.migrateSafeTeller.returns();
 
     await ruleManager.mock.hasRules.returns(false);
     await ruleManager.mock.isRuleCompliant.returns(true);
@@ -111,6 +112,38 @@ describe("Member Token Test", () => {
           .connect(admin)
           .safeBatchTransferFrom(admin.address, alice.address, [POD_ID, POD_ID + 1], [1, 1], HashZero),
       ).to.emit(memberToken, "TransferBatch");
+    });
+
+    it("should NOT let user call migrate function directly", async () => {
+      const { memberToken, ruleManager, safeTeller, controllerRegistry } = await setup();
+
+      const controllerV2 = await deployContract(admin, Controller, [
+        memberToken.address,
+        ruleManager.address,
+        safeTeller.address,
+        controllerRegistry.address,
+      ]);
+
+      await expect(memberToken.connect(admin).migrateMemberController(POD_ID, controllerV2.address)).to.revertedWith(
+        "Invalid migrate controller",
+      );
+    });
+
+    it("should not migrate to an unregistered controller version", async () => {
+      const { memberToken, controller, ruleManager, safeTeller, controllerRegistry } = await setup();
+
+      const controllerV2 = await deployContract(admin, Controller, [
+        memberToken.address,
+        ruleManager.address,
+        safeTeller.address,
+        controllerRegistry.address,
+      ]);
+      await controller.connect(admin).createPod(POD_ID, [admin.address], THRESHOLD, admin.address, TX_OPTIONS);
+
+      await controllerRegistry.mock.isRegistered.returns(false);
+      await expect(controller.connect(admin).migratePodController(POD_ID, controllerV2.address)).to.revertedWith(
+        "Controller not registered",
+      );
     });
 
     it("should NOT be able to create the same pod from multiple controllers", async () => {

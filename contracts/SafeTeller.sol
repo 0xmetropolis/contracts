@@ -81,7 +81,7 @@ contract SafeTeller {
     }
 
     function migrateSafeTeller(address safe, address _newSafeTeller) public {
-        // enable newSafeTeller
+        require(controller == msg.sender, "!controller");
         bytes memory enableData =
             abi.encodeWithSignature("enableModule(address)", _newSafeTeller);
 
