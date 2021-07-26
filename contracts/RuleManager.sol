@@ -5,8 +5,6 @@ pragma solidity 0.7.4;
 // This contract manages the membership rules
 // it is responsible for storing pod rules, and validating rule compliance
 
-// TODO: ADD STATIC CALLS
-
 contract RuleManager {
     // Rules
     struct Rule {
@@ -35,6 +33,7 @@ contract RuleManager {
     }
 
     function updateController(address _controller) public {
+        require(_controller != address(0), "Invalid gnosisMaster address");
         require(controller == msg.sender, "!controller");
         controller = _controller;
     }

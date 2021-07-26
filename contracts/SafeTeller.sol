@@ -28,6 +28,14 @@ contract SafeTeller {
     event CreateSafe(uint256 indexed podId, address safeAddress);
 
     constructor(address _proxyFactoryAddress, address _gnosisMasterAddress) {
+        require(
+            _proxyFactoryAddress != address(0),
+            "Invalid proxyFactory address"
+        );
+        require(
+            _gnosisMasterAddress != address(0),
+            "Invalid gnosisMaster address"
+        );
         controller = msg.sender;
         proxyFactoryAddress = _proxyFactoryAddress;
         gnosisMasterAddress = _gnosisMasterAddress;
@@ -35,6 +43,7 @@ contract SafeTeller {
     }
 
     function updateController(address _controller) public {
+        require(_controller != address(0), "Invalid controller address");
         require(controller == msg.sender, "!controller");
         controller = _controller;
     }
@@ -56,7 +65,7 @@ contract SafeTeller {
         // find current safe teller in module array
         uint256 pageSize = 10;
         address index = SENTINEL;
-        address prevModule;
+        address prevModule = address(0);
 
         while (prevModule == address(0)) {
             (address[] memory moduleBuffer, address next) =
@@ -154,7 +163,7 @@ contract SafeTeller {
         address[] memory owners = IGnosisSafe(safe).getOwners();
 
         //look for the address pointing to address from
-        address prevFrom;
+        address prevFrom = address(0);
         for (uint256 i = 0; i < owners.length; i++) {
             if (owners[i] == from) {
                 if (i == 0) {
