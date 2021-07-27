@@ -1,49 +1,8 @@
 pragma solidity 0.7.4;
 
-import "hardhat/console.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-
-interface GnosisSafe {
-    /// @dev Allows a Module to execute a Safe transaction without any further confirmations.
-    /// @param to Destination address of module transaction.
-    /// @param value Ether value of module transaction.
-    /// @param data Data payload of module transaction.
-    /// @param operation Operation type of module transaction.
-    function execTransactionFromModule(
-        address to,
-        uint256 value,
-        bytes calldata data,
-        Enum.Operation operation
-    ) external returns (bool success);
-
-    /// @dev Returns array of owners.
-    /// @return Array of Safe owners.
-    function getOwners() external returns (address[] memory);
-
-    function getThreshold() external returns (uint256);
-
-    /// @dev Returns array of modules.
-    /// @param start Start of the page.
-    /// @param pageSize Maximum number of modules that should be returned.
-    /// @return array Array of modules.
-    /// @return next Start of the next page.
-    function getModulesPaginated(address start, uint256 pageSize)
-        external
-        returns (address[] memory array, address next);
-}
-
-interface GnosisSafeProxyFactory {
-    /// @dev Allows to create new proxy contact and execute a message call to the new proxy within one transaction.
-    /// @param singleton Address of singleton contract.
-    /// @param data Payload for message call sent to new proxy contract.
-    function createProxy(address singleton, bytes memory data)
-        external
-        returns (address);
-}
-
-contract Enum {
-    enum Operation {Call, DelegateCall}
-}
+import "./interfaces/IGnosisSafe.sol";
+import "./interfaces/IGnosisSafeProxyFactory.sol";
 
 contract SafeTeller {
     using Address for address;
@@ -69,39 +28,48 @@ contract SafeTeller {
     event CreateSafe(uint256 indexed podId, address safeAddress);
 
     constructor(address _proxyFactoryAddress, address _gnosisMasterAddress) {
+        require(
+            _proxyFactoryAddress != address(0),
+            "Invalid proxyFactory address"
+        );
+        require(
+            _gnosisMasterAddress != address(0),
+            "Invalid gnosisMaster address"
+        );
         controller = msg.sender;
         proxyFactoryAddress = _proxyFactoryAddress;
         gnosisMasterAddress = _gnosisMasterAddress;
         context = address(this);
     }
 
-    function updateController(address _controller) public {
+    function updateController(address _controller) external {
+        require(_controller != address(0), "Invalid controller address");
         require(controller == msg.sender, "!controller");
         controller = _controller;
     }
 
-    function migrateSafeTeller(address safe, address _newSafeTeller) public {
+    function migrateSafeTeller(address safe, address _newSafeTeller) external {
         require(controller == msg.sender, "!controller");
         bytes memory enableData =
             abi.encodeWithSignature("enableModule(address)", _newSafeTeller);
 
         bool enableSuccess =
-            GnosisSafe(safe).execTransactionFromModule(
+            IGnosisSafe(safe).execTransactionFromModule(
                 safe,
                 0,
                 enableData,
-                Enum.Operation.Call
+                IGnosisSafe.Operation.Call
             );
         require(enableSuccess, "Migration failed on enable");
 
         // find current safe teller in module array
         uint256 pageSize = 10;
         address index = SENTINEL;
-        address prevModule;
+        address prevModule = address(0);
 
         while (prevModule == address(0)) {
             (address[] memory moduleBuffer, address next) =
-                GnosisSafe(safe).getModulesPaginated(index, pageSize);
+                IGnosisSafe(safe).getModulesPaginated(index, pageSize);
             require(moduleBuffer[0] != address(0), "module not found");
             index = next;
 
@@ -120,11 +88,11 @@ contract SafeTeller {
             );
 
         bool disableSuccess =
-            GnosisSafe(safe).execTransactionFromModule(
+            IGnosisSafe(safe).execTransactionFromModule(
                 safe,
                 0,
                 disableData,
-                Enum.Operation.Call
+                IGnosisSafe.Operation.Call
             );
         require(disableSuccess, "Migration failed on disable");
     }
@@ -133,7 +101,7 @@ contract SafeTeller {
         uint256 _podId,
         address[] memory _owners,
         uint256 _threshold
-    ) public returns (address safeAddress) {
+    ) external returns (address safeAddress) {
         require(controller == msg.sender, "!controller");
         bytes memory data =
             abi.encodeWithSignature(FUNCTION_SIG_ENABLE, context);
@@ -154,22 +122,22 @@ contract SafeTeller {
             );
 
         try
-            GnosisSafeProxyFactory(proxyFactoryAddress).createProxy(
+            IGnosisSafeProxyFactory(proxyFactoryAddress).createProxy(
                 gnosisMasterAddress,
                 setupData
             )
-        returns (address safeAddress) {
-            emit CreateSafe(_podId, safeAddress);
-            return safeAddress;
+        returns (address newSafeAddress) {
+            emit CreateSafe(_podId, newSafeAddress);
+            return newSafeAddress;
         } catch (bytes memory) {
             revert("Create Proxy With Data Failed");
         }
     }
 
     //TODO: could probably do all this as a delegate call
-    function onMint(address to, address safe) public {
+    function onMint(address to, address safe) external {
         require(controller == msg.sender, "!controller");
-        uint256 threshold = GnosisSafe(safe).getThreshold();
+        uint256 threshold = IGnosisSafe(safe).getThreshold();
 
         bytes memory data =
             abi.encodeWithSignature(
@@ -179,23 +147,23 @@ contract SafeTeller {
             );
 
         bool success =
-            GnosisSafe(safe).execTransactionFromModule(
+            IGnosisSafe(safe).execTransactionFromModule(
                 safe,
                 0,
                 data,
-                Enum.Operation.Call
+                IGnosisSafe.Operation.Call
             );
 
         require(success, "Module Transaction Failed");
     }
 
-    function onBurn(address from, address safe) public {
+    function onBurn(address from, address safe) external {
         require(controller == msg.sender, "!controller");
-        uint256 threshold = GnosisSafe(safe).getThreshold();
-        address[] memory owners = GnosisSafe(safe).getOwners();
+        uint256 threshold = IGnosisSafe(safe).getThreshold();
+        address[] memory owners = IGnosisSafe(safe).getOwners();
 
         //look for the address pointing to address from
-        address prevFrom;
+        address prevFrom = address(0);
         for (uint256 i = 0; i < owners.length; i++) {
             if (owners[i] == from) {
                 if (i == 0) {
@@ -215,11 +183,11 @@ contract SafeTeller {
             );
 
         bool success =
-            GnosisSafe(safe).execTransactionFromModule(
+            IGnosisSafe(safe).execTransactionFromModule(
                 safe,
                 0,
                 data,
-                Enum.Operation.Call
+                IGnosisSafe.Operation.Call
             );
         require(success, "Module Transaction Failed");
     }
@@ -228,9 +196,9 @@ contract SafeTeller {
         address from,
         address to,
         address safe
-    ) public {
+    ) external {
         require(controller == msg.sender, "!controller");
-        address[] memory owners = GnosisSafe(safe).getOwners();
+        address[] memory owners = IGnosisSafe(safe).getOwners();
 
         //look for the address pointing to address from
         address prevFrom;
@@ -253,21 +221,22 @@ contract SafeTeller {
             );
 
         bool success =
-            GnosisSafe(safe).execTransactionFromModule(
+            IGnosisSafe(safe).execTransactionFromModule(
                 safe,
                 0,
                 data,
-                Enum.Operation.Call
+                IGnosisSafe.Operation.Call
             );
         require(success, "Module Transaction Failed");
     }
 
+    // TODO: move to library
     // Used in a delegate call to enable module add on setup
-    function enableModule(address module) public {
-        revert();
+    function enableModule(address module) external {
+        require(module == address(0));
     }
 
-    function delegateSetup(address _context) public {
+    function delegateSetup(address _context) external {
         this.enableModule(_context);
     }
 }

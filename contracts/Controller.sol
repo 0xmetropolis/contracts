@@ -2,42 +2,41 @@ pragma solidity 0.7.4;
 
 /* solhint-disable indent */
 
-import "./MemberToken.sol";
+import "./interfaces/IController.sol";
+import "./interfaces/IMemberToken.sol";
 import "./RuleManager.sol";
 import "./SafeTeller.sol";
-import "./ControllerRegistry.sol";
-
-import "hardhat/console.sol";
+import "./interfaces/IControllerRegistry.sol";
 
 // TODO: consider  order of contract  deployment. May not want to deploy all together
 // this will impact the modifiers that are important for securiy
 // for not deploying supporting contracts as part of main contract
 
-contract Controller {
+contract Controller is IController {
     event RuleManagerAddress(address contractAddress);
     event MemberTokenAddress(address contractAddress);
     event CreatePod(uint256 podId);
 
-    MemberToken memberToken;
-    RuleManager ruleManager;
-    SafeTeller safeTeller;
-    ControllerRegistry controllerRegistry;
+    IMemberToken public memberToken;
+    RuleManager public ruleManager;
+    SafeTeller public safeTeller;
+    IControllerRegistry public controllerRegistry;
 
     mapping(uint256 => address) public safeAddress;
     mapping(uint256 => address) public podAdmin;
 
-    uint8 CREATE_EVENT = 0x01;
+    uint8 internal constant CREATE_EVENT = 0x01;
 
     constructor(
         address _memberToken,
         address _ruleManager,
         address _safeTeller,
         address _controllerRegistry
-    ) public {
-        memberToken = MemberToken(_memberToken);
+    ) {
+        memberToken = IMemberToken(_memberToken);
         ruleManager = RuleManager(_ruleManager);
         safeTeller = SafeTeller(_safeTeller);
-        controllerRegistry = ControllerRegistry(_controllerRegistry);
+        controllerRegistry = IControllerRegistry(_controllerRegistry);
     }
 
     /*
@@ -49,10 +48,12 @@ contract Controller {
         address[] memory _members,
         uint256 threshold,
         address _admin
-    ) public {
+    ) external {
         require(memberToken.exists(_podId) == false, "pod already exists");
 
         if (_admin != address(0)) podAdmin[_podId] = _admin;
+
+        emit CreatePod(_podId);
 
         safeAddress[_podId] = safeTeller.createSafe(
             _podId,
@@ -67,8 +68,6 @@ contract Controller {
 
             memberToken.mintSingleBatch(_members, _podId, data);
         }
-
-        emit CreatePod(_podId);
     }
 
     function createRule(
@@ -78,9 +77,8 @@ contract Controller {
         bytes32[5] memory _functionParams,
         uint256 _comparisonLogic,
         uint256 _comparisonValue
-    ) public {
+    ) external {
         //TODO: executable id
-        uint256 fakeExeId = 99;
         require(
             msg.sender == podAdmin[_podId] || msg.sender == safeAddress[_podId],
             "User not authorized"
@@ -98,12 +96,12 @@ contract Controller {
         ruleManager.finalizeRule(_podId);
     }
 
-    function getSafeTeller() public view returns (address) {
+    function getSafeTeller() external view returns (address) {
         return address(safeTeller);
     }
 
     function migratePodController(uint256 _podId, address _newController)
-        public
+        external
     {
         require(
             controllerRegistry.isRegistered(_newController),
@@ -120,19 +118,19 @@ contract Controller {
 
         Controller newController = Controller(_newController);
 
+        podAdmin[_podId] = address(0);
+        safeAddress[_podId] = address(0);
+
         memberToken.migrateMemberController(_podId, _newController);
         safeTeller.migrateSafeTeller(safe, newController.getSafeTeller());
         newController.updatePodState(_podId, admin, safe);
-
-        podAdmin[_podId] = address(0);
-        safeAddress[_podId] = address(0);
     }
 
     function updatePodState(
         uint256 _podId,
         address _podAdmin,
         address _safeAddress
-    ) public {
+    ) external {
         require(
             controllerRegistry.isRegistered(msg.sender),
             "Controller not registered"
@@ -146,9 +144,9 @@ contract Controller {
         address from,
         address to,
         uint256[] memory ids,
-        uint256[] memory amounts,
+        uint256[] memory,
         bytes memory data
-    ) public {
+    ) external override {
         // if create even than side effects have been pre-handled
         // no data field on burn
         if (to != address(0) && uint8(data[0]) == CREATE_EVENT) return;

@@ -4,7 +4,8 @@ pragma solidity 0.7.4;
 
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import "./ControllerRegistry.sol";
+import "./interfaces/IControllerRegistry.sol";
+import "./interfaces/IController.sol";
 
 string constant beforeTokenTransferSig = "beforeTokenTransfer(address,address,address,uint256[],uint256[],bytes)";
 
@@ -80,23 +81,23 @@ abstract contract ERC1155Supply is ERC1155 {
     }
 }
 
-contract MemberToken is ERC1155Supply, Ownable {
+contract MemberToken is ERC1155Supply {
     using Address for address;
 
-    ControllerRegistry controllerRegistry;
+    IControllerRegistry public controllerRegistry;
 
     mapping(uint256 => address) public memberController;
 
-    uint8 CREATE_EVENT = 0x01;
+    uint8 internal constant CREATE_EVENT = 0x01;
 
     event MigrateMemberController(uint256 podId, address newController);
 
-    constructor(address _controllerRegistry) public ERC1155("POD") {
-        controllerRegistry = ControllerRegistry(_controllerRegistry);
+    constructor(address _controllerRegistry) ERC1155("POD") {
+        controllerRegistry = IControllerRegistry(_controllerRegistry);
     }
 
     function migrateMemberController(uint256 _podId, address _newController)
-        public
+        external
     {
         require(
             msg.sender == memberController[_podId],
@@ -115,7 +116,7 @@ contract MemberToken is ERC1155Supply, Ownable {
         address _account,
         uint256 _id,
         bytes memory data
-    ) public {
+    ) external {
         bool isCreating = uint8(data[0]) == CREATE_EVENT;
 
         require(exists(_id) != isCreating, "Invalid creation flag");
@@ -135,7 +136,7 @@ contract MemberToken is ERC1155Supply, Ownable {
         address[] memory _accounts,
         uint256 _id,
         bytes memory data
-    ) public {
+    ) external {
         bool isCreating = uint8(data[0]) == CREATE_EVENT;
 
         require(exists(_id) != isCreating, "Invalid creation flag");
@@ -153,7 +154,7 @@ contract MemberToken is ERC1155Supply, Ownable {
         }
     }
 
-    function burn(address _account, uint256 _id) public {
+    function burn(address _account, uint256 _id) external {
         require(balanceOf(_account, _id) == 1, "User is not a member");
 
         _burn(_account, _id, 1);
