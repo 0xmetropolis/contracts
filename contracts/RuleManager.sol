@@ -32,7 +32,7 @@ contract RuleManager {
         controller = msg.sender;
     }
 
-    function updateController(address _controller) public {
+    function updateController(address _controller) external {
         require(_controller != address(0), "Invalid gnosisMaster address");
         require(controller == msg.sender, "!controller");
         controller = _controller;
@@ -45,7 +45,7 @@ contract RuleManager {
         bytes32[5] memory _functionParams,
         uint256 _comparisonLogic,
         uint256 _comparisonValue
-    ) public {
+    ) external {
         require(controller == msg.sender, "!controller");
         rulesByPod[_podId] = Rule(
             _contractAddress,
@@ -57,7 +57,7 @@ contract RuleManager {
         );
     }
 
-    function finalizeRule(uint256 _podId) public {
+    function finalizeRule(uint256 _podId) external {
         require(controller == msg.sender, "!controller");
         rulesByPod[_podId].isFinalized = true;
 
@@ -71,13 +71,13 @@ contract RuleManager {
         );
     }
 
-    function hasRules(uint256 _podId) public view returns (bool) {
+    function hasRules(uint256 _podId) external view returns (bool) {
         Rule memory currentRule = rulesByPod[_podId];
         return (currentRule.contractAddress != address(0));
     }
 
     function isRuleCompliant(uint256 _podId, address _user)
-        public
+        external
         view
         returns (bool)
     {
@@ -104,7 +104,7 @@ contract RuleManager {
                     currentRule.functionParams[4]
                 )
             );
-        require(success == true, "Rule Transaction Failed");
+        require(success, "Rule Transaction Failed");
 
         if (currentRule.comparisonLogic == 0) {
             return toUint256(result) == currentRule.comparisonValue;

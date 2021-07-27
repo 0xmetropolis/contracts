@@ -42,13 +42,13 @@ contract SafeTeller {
         context = address(this);
     }
 
-    function updateController(address _controller) public {
+    function updateController(address _controller) external {
         require(_controller != address(0), "Invalid controller address");
         require(controller == msg.sender, "!controller");
         controller = _controller;
     }
 
-    function migrateSafeTeller(address safe, address _newSafeTeller) public {
+    function migrateSafeTeller(address safe, address _newSafeTeller) external {
         require(controller == msg.sender, "!controller");
         bytes memory enableData =
             abi.encodeWithSignature("enableModule(address)", _newSafeTeller);
@@ -101,7 +101,7 @@ contract SafeTeller {
         uint256 _podId,
         address[] memory _owners,
         uint256 _threshold
-    ) public returns (address safeAddress) {
+    ) external returns (address safeAddress) {
         require(controller == msg.sender, "!controller");
         bytes memory data =
             abi.encodeWithSignature(FUNCTION_SIG_ENABLE, context);
@@ -135,7 +135,7 @@ contract SafeTeller {
     }
 
     //TODO: could probably do all this as a delegate call
-    function onMint(address to, address safe) public {
+    function onMint(address to, address safe) external {
         require(controller == msg.sender, "!controller");
         uint256 threshold = IGnosisSafe(safe).getThreshold();
 
@@ -157,7 +157,7 @@ contract SafeTeller {
         require(success, "Module Transaction Failed");
     }
 
-    function onBurn(address from, address safe) public {
+    function onBurn(address from, address safe) external {
         require(controller == msg.sender, "!controller");
         uint256 threshold = IGnosisSafe(safe).getThreshold();
         address[] memory owners = IGnosisSafe(safe).getOwners();
@@ -196,7 +196,7 @@ contract SafeTeller {
         address from,
         address to,
         address safe
-    ) public {
+    ) external {
         require(controller == msg.sender, "!controller");
         address[] memory owners = IGnosisSafe(safe).getOwners();
 
@@ -232,11 +232,11 @@ contract SafeTeller {
 
     // TODO: move to library
     // Used in a delegate call to enable module add on setup
-    function enableModule(address module) public {
+    function enableModule(address module) external {
         require(module == address(0));
     }
 
-    function delegateSetup(address _context) public {
+    function delegateSetup(address _context) external {
         this.enableModule(_context);
     }
 }
