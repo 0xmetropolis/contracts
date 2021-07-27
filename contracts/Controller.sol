@@ -147,7 +147,9 @@ contract Controller is IController {
         uint256[] memory,
         bytes memory data
     ) external override {
-        // if create even than side effects have been pre-handled
+        require(msg.sender == address(memberToken), "Not Authorized");
+
+        // if create event than side effects have been pre-handled
         // no data field on burn
         if (to != address(0) && uint8(data[0]) == CREATE_EVENT) return;
 
