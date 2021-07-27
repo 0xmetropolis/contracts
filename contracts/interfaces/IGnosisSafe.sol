@@ -30,4 +30,8 @@ interface IGnosisSafe {
     function getModulesPaginated(address start, uint256 pageSize)
         external
         returns (address[] memory array, address next);
+
+    /// @dev Returns if an module is enabled
+    /// @return True if the module is enabled
+    function isModuleEnabled(address module) external view returns (bool);
 }
