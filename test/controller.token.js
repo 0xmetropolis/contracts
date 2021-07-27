@@ -59,6 +59,13 @@ describe("Controller beforeTokenTransfer Test", () => {
     await createPod(MEMBERS, admin.address);
   };
 
+  it("should not let a user call beforeTokenTransfer function", async () => {
+    await setup();
+    await expect(
+      controller.beforeTokenTransfer(admin.address, admin.address, alice.address, [POD_ID], [1], HashZero),
+    ).to.be.revertedWith("Not Authorized");
+  });
+
   describe("minting membership tokens without rules", () => {
     beforeEach(async () => {
       await setup();
