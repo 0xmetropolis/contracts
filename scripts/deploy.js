@@ -22,7 +22,12 @@ const setup = async () => {
   const safeTeller = await SafeTeller.deploy(proxyFactoryAddress, gnosisSafeAddress);
   const ruleManager = await RuleManager.deploy();
 
-  const controller = await Controller.deploy(memberToken.address, ruleManager.address, safeTeller.address);
+  const controller = await Controller.deploy(
+    memberToken.address,
+    ruleManager.address,
+    safeTeller.address,
+    controllerRegistry.address,
+  );
 
   await controllerRegistry.registerController(controller.address);
   await safeTeller.updateController(controller.address);
@@ -31,10 +36,9 @@ const setup = async () => {
 };
 
 async function main() {
-  const { memberToken, safeTeller, ownerToken, ruleManager, controller } = await setup();
+  const { memberToken, safeTeller, ruleManager, controller } = await setup();
   console.log("memberToken.address", memberToken.address);
   console.log("safeTeller.address", safeTeller.address);
-  console.log("ownerToken.address", ownerToken.address);
   console.log("ruleManager.address", ruleManager.address);
   console.log("controller.address", controller.address);
 }
