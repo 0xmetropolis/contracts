@@ -50,16 +50,17 @@ contract SafeTeller {
 
     function migrateSafeTeller(address safe, address _newSafeTeller) external {
         require(controller == msg.sender, "!controller");
-        bytes memory enableData =
-            abi.encodeWithSignature("enableModule(address)", _newSafeTeller);
+        bytes memory enableData = abi.encodeWithSignature(
+            "enableModule(address)",
+            _newSafeTeller
+        );
 
-        bool enableSuccess =
-            IGnosisSafe(safe).execTransactionFromModule(
-                safe,
-                0,
-                enableData,
-                IGnosisSafe.Operation.Call
-            );
+        bool enableSuccess = IGnosisSafe(safe).execTransactionFromModule(
+            safe,
+            0,
+            enableData,
+            IGnosisSafe.Operation.Call
+        );
         require(enableSuccess, "Migration failed on enable");
 
         // find current safe teller in module array
@@ -68,8 +69,8 @@ contract SafeTeller {
         address prevModule = address(0);
 
         while (prevModule == address(0)) {
-            (address[] memory moduleBuffer, address next) =
-                IGnosisSafe(safe).getModulesPaginated(index, pageSize);
+            (address[] memory moduleBuffer, address next) = IGnosisSafe(safe)
+                .getModulesPaginated(index, pageSize);
             require(moduleBuffer[0] != address(0), "module not found");
             index = next;
 
@@ -80,20 +81,18 @@ contract SafeTeller {
         }
 
         // disable current safeTeller
-        bytes memory disableData =
-            abi.encodeWithSignature(
-                "disableModule(address,address)",
-                prevModule,
-                address(this)
-            );
+        bytes memory disableData = abi.encodeWithSignature(
+            "disableModule(address,address)",
+            prevModule,
+            address(this)
+        );
 
-        bool disableSuccess =
-            IGnosisSafe(safe).execTransactionFromModule(
-                safe,
-                0,
-                disableData,
-                IGnosisSafe.Operation.Call
-            );
+        bool disableSuccess = IGnosisSafe(safe).execTransactionFromModule(
+            safe,
+            0,
+            disableData,
+            IGnosisSafe.Operation.Call
+        );
         require(disableSuccess, "Migration failed on disable");
     }
 
@@ -103,23 +102,24 @@ contract SafeTeller {
         uint256 _threshold
     ) external returns (address safeAddress) {
         require(controller == msg.sender, "!controller");
-        bytes memory data =
-            abi.encodeWithSignature(FUNCTION_SIG_ENABLE, context);
+        bytes memory data = abi.encodeWithSignature(
+            FUNCTION_SIG_ENABLE,
+            context
+        );
 
         // encode the setup call that will be called on the new proxy safe
         // from the proxy factory
-        bytes memory setupData =
-            abi.encodeWithSignature(
-                FUNCTION_SIG_SETUP,
-                _owners,
-                _threshold,
-                this,
-                data,
-                address(0),
-                address(0),
-                uint256(0),
-                address(0)
-            );
+        bytes memory setupData = abi.encodeWithSignature(
+            FUNCTION_SIG_SETUP,
+            _owners,
+            _threshold,
+            this,
+            data,
+            address(0),
+            address(0),
+            uint256(0),
+            address(0)
+        );
 
         try
             IGnosisSafeProxyFactory(proxyFactoryAddress).createProxy(
@@ -139,20 +139,18 @@ contract SafeTeller {
         require(controller == msg.sender, "!controller");
         uint256 threshold = IGnosisSafe(safe).getThreshold();
 
-        bytes memory data =
-            abi.encodeWithSignature(
-                "addOwnerWithThreshold(address,uint256)",
-                to,
-                threshold
-            );
+        bytes memory data = abi.encodeWithSignature(
+            "addOwnerWithThreshold(address,uint256)",
+            to,
+            threshold
+        );
 
-        bool success =
-            IGnosisSafe(safe).execTransactionFromModule(
-                safe,
-                0,
-                data,
-                IGnosisSafe.Operation.Call
-            );
+        bool success = IGnosisSafe(safe).execTransactionFromModule(
+            safe,
+            0,
+            data,
+            IGnosisSafe.Operation.Call
+        );
 
         require(success, "Module Transaction Failed");
     }
@@ -174,21 +172,19 @@ contract SafeTeller {
             }
         }
         if (owners.length - 1 < threshold) threshold -= 1;
-        bytes memory data =
-            abi.encodeWithSignature(
-                "removeOwner(address,address,uint256)",
-                prevFrom,
-                from,
-                threshold
-            );
+        bytes memory data = abi.encodeWithSignature(
+            "removeOwner(address,address,uint256)",
+            prevFrom,
+            from,
+            threshold
+        );
 
-        bool success =
-            IGnosisSafe(safe).execTransactionFromModule(
-                safe,
-                0,
-                data,
-                IGnosisSafe.Operation.Call
-            );
+        bool success = IGnosisSafe(safe).execTransactionFromModule(
+            safe,
+            0,
+            data,
+            IGnosisSafe.Operation.Call
+        );
         require(success, "Module Transaction Failed");
     }
 
@@ -212,21 +208,19 @@ contract SafeTeller {
             }
         }
 
-        bytes memory data =
-            abi.encodeWithSignature(
-                "swapOwner(address,address,address)",
-                prevFrom,
-                from,
-                to
-            );
+        bytes memory data = abi.encodeWithSignature(
+            "swapOwner(address,address,address)",
+            prevFrom,
+            from,
+            to
+        );
 
-        bool success =
-            IGnosisSafe(safe).execTransactionFromModule(
-                safe,
-                0,
-                data,
-                IGnosisSafe.Operation.Call
-            );
+        bool success = IGnosisSafe(safe).execTransactionFromModule(
+            safe,
+            0,
+            data,
+            IGnosisSafe.Operation.Call
+        );
         require(success, "Module Transaction Failed");
     }
 

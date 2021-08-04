@@ -93,8 +93,9 @@ contract RuleManager {
             }
         }
 
-        (bool success, bytes memory result) =
-            currentRule.contractAddress.staticcall(
+        (bool success, bytes memory result) = currentRule
+            .contractAddress
+            .staticcall(
                 abi.encodePacked(
                     currentRule.functionSignature,
                     currentRule.functionParams[0],
