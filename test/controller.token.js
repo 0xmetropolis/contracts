@@ -19,7 +19,7 @@ describe("Controller beforeTokenTransfer Test", () => {
   const TX_OPTIONS = { gasLimit: 4000000 };
 
   // create pod args
-  const POD_ID = 1;
+  const POD_ID = 0;
   const MEMBERS = [alice.address, bob.address];
 
   let controller;
@@ -34,7 +34,7 @@ describe("Controller beforeTokenTransfer Test", () => {
 
     await safeTeller.mock.createSafe.returns(safe.address);
     const threshold = 1;
-    await controller.createPod(POD_ID, members, threshold, adminAddress, TX_OPTIONS);
+    await controller.createPod(members, threshold, adminAddress, TX_OPTIONS);
   };
 
   const setup = async () => {

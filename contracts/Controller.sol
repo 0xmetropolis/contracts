@@ -44,59 +44,46 @@ contract Controller is IController {
      * and sets the initial rules for that pod.
      */
     function createPod(
-        uint256 _podId,
         address[] memory _members,
         uint256 threshold,
         address _admin
     ) external {
-        require(memberToken.exists(_podId) == false, "pod already exists");
+        uint256 podId = memberToken.getNextAvailablePodId();
 
-        if (_admin != address(0)) podAdmin[_podId] = _admin;
+        if (_admin != address(0)) podAdmin[podId] = _admin;
 
-        emit CreatePod(_podId);
+        emit CreatePod(podId);
 
-        safeAddress[_podId] = safeTeller.createSafe(
-            _podId,
-            _members,
-            threshold
-        );
+        safeAddress[podId] = safeTeller.createSafe(podId, _members, threshold);
 
-        if (_members.length != 0) {
-            // add create event flag to token data
-            bytes memory data = new bytes(1);
-            data[0] = bytes1(uint8(CREATE_EVENT));
+        // add create event flag to token data
+        bytes memory data = new bytes(1);
+        data[0] = bytes1(uint8(CREATE_EVENT));
 
-            memberToken.mintSingleBatch(_members, _podId, data);
-        }
+        memberToken.createPod(_members, data);
     }
 
-    function createPodWithSafe(
-        uint256 _podId,
-        address _admin,
-        address _safe
-    ) external {
-        require(memberToken.exists(_podId) == false, "pod already exists");
+    function createPodWithSafe(address _admin, address _safe) external {
+        uint256 podId = memberToken.getNextAvailablePodId();
         require(_safe != address(0), "invalid safe address");
         require(
             safeTeller.isModuleEnabled(_safe),
             "safe module must be enabled"
         );
 
-        if (_admin != address(0)) podAdmin[_podId] = _admin;
+        if (_admin != address(0)) podAdmin[podId] = _admin;
 
-        emit CreatePod(_podId);
+        emit CreatePod(podId);
 
-        safeAddress[_podId] = _safe;
+        safeAddress[podId] = _safe;
 
         address[] memory members = safeTeller.getMembers(_safe);
 
-        if (members.length != 0) {
-            // add create event flag to token data
-            bytes memory data = new bytes(1);
-            data[0] = bytes1(uint8(CREATE_EVENT));
+        // add create event flag to token data
+        bytes memory data = new bytes(1);
+        data[0] = bytes1(uint8(CREATE_EVENT));
 
-            memberToken.mintSingleBatch(members, _podId, data);
-        }
+        memberToken.createPod(members, data);
     }
 
     function createRule(

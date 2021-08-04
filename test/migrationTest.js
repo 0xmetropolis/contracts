@@ -26,8 +26,8 @@ describe("pod migration test", () => {
 
   // create pod args
   const MEMBERS = [alice.address, bob.address];
-  const LEGACY_POD_ID = 1;
-  const UPGRADE_POD_ID = 2;
+  const LEGACY_POD_ID = 0;
+  const UPGRADE_POD_ID = 1;
 
   let multiSend;
   const controllerRegistry = {};
@@ -52,7 +52,7 @@ describe("pod migration test", () => {
 
   const createPodSafe = async (podId, members, ownerAddress = AddressZero) => {
     const threshold = 1;
-    await controller.V1.createPod(podId, members, threshold, ownerAddress, TX_OPTIONS);
+    await controller.V1.createPod(members, threshold, ownerAddress, TX_OPTIONS);
     const safeAddress = await controller.V1.safeAddress(podId);
     return new ethers.Contract(safeAddress, GnosisSafe.abi, owner);
   };
