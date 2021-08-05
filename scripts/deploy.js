@@ -37,10 +37,7 @@ const setup = async () => {
 
 async function main() {
   const { memberToken, safeTeller, ruleManager, controller } = await setup();
-  console.log("memberToken.address", memberToken.address);
-  console.log("safeTeller.address", safeTeller.address);
-  console.log("ruleManager.address", ruleManager.address);
-  console.log("controller.address", controller.address);
+  console.log(memberToken.address, safeTeller.address, ruleManager.address, controller.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

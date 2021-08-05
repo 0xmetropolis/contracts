@@ -6,3 +6,5 @@ artifacts
 
 # Private keys
 ethKeys.json
+
+.vercel
