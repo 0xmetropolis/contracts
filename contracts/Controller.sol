@@ -70,6 +70,35 @@ contract Controller is IController {
         }
     }
 
+    function createPodWithSafe(
+        uint256 _podId,
+        address _admin,
+        address _safe
+    ) external {
+        require(memberToken.exists(_podId) == false, "pod already exists");
+        require(_safe != address(0), "invalid safe address");
+        require(
+            safeTeller.isModuleEnabled(_safe),
+            "safe module must be enabled"
+        );
+
+        if (_admin != address(0)) podAdmin[_podId] = _admin;
+
+        emit CreatePod(_podId);
+
+        safeAddress[_podId] = _safe;
+
+        address[] memory members = safeTeller.getMembers(_safe);
+
+        if (members.length != 0) {
+            // add create event flag to token data
+            bytes memory data = new bytes(1);
+            data[0] = bytes1(uint8(CREATE_EVENT));
+
+            memberToken.mintSingleBatch(members, _podId, data);
+        }
+    }
+
     function createRule(
         uint256 _podId,
         address _contractAddress,

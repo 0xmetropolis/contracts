@@ -96,6 +96,14 @@ contract SafeTeller {
         require(disableSuccess, "Migration failed on disable");
     }
 
+    function getMembers(address safe) external returns (address[] memory) {
+        return IGnosisSafe(safe).getOwners();
+    }
+
+    function isModuleEnabled(address safe) external view returns (bool) {
+        return IGnosisSafe(safe).isModuleEnabled(address(this));
+    }
+
     function createSafe(
         uint256 _podId,
         address[] memory _owners,

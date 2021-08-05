@@ -23,7 +23,7 @@ describe("Controller safe integration test", () => {
   let multiSend;
   let controller;
 
-  const { HashZero } = ethers.constants;
+  const { HashZero, AddressZero } = ethers.constants;
 
   const TX_OPTIONS = { gasLimit: 4000000 };
 
@@ -84,7 +84,7 @@ describe("Controller safe integration test", () => {
     const podSafe = await createPodSafe();
     const ethersSafe = await createSafeSigner(podSafe, admin);
 
-    return { memberToken, ethersSafe, safeTeller };
+    return { memberToken, ethersSafe, safeTeller, gnosisSafeProxyFactory, gnosisSafeMaster };
   };
 
   describe("new pod creation with safe deployment", () => {
@@ -106,6 +106,36 @@ describe("Controller safe integration test", () => {
       // should mint member tokens
       expect(await memberToken.balanceOf(alice.address, POD_ID)).to.equal(1);
       expect(await memberToken.balanceOf(bob.address, POD_ID)).to.equal(1);
+    });
+  });
+
+  describe("new pod creation with existing safe", () => {
+    it("should create a new safe with safe teller module", async () => {
+      const { memberToken, safeTeller, gnosisSafeProxyFactory, gnosisSafeMaster } = await setup();
+
+      const safeAddress = await gnosisSafeProxyFactory.callStatic.createProxy(gnosisSafeMaster.address, HashZero);
+      await gnosisSafeProxyFactory.createProxy(gnosisSafeMaster.address, HashZero);
+      const safe = gnosisSafeMaster.attach(safeAddress);
+
+      await safe.setup(MEMBERS, 1, AddressZero, HashZero, AddressZero, AddressZero, 0, AddressZero);
+
+      const txArgs = {
+        to: safe.address,
+        data: safe.interface.encodeFunctionData("enableModule", [safeTeller.address]),
+        value: 0,
+      };
+
+      const safeSignerAlice = await createSafeSigner(safe, alice);
+      const tx = await safeSignerAlice.createTransaction(txArgs);
+      await safeSignerAlice.executeTransaction(tx);
+
+      await controller.createPodWithSafe(POD_ID + 1, admin.address, safe.address);
+
+      // should set admin
+      expect(await controller.podAdmin(POD_ID + 1)).to.equal(admin.address);
+      // should mint member tokens
+      expect(await memberToken.balanceOf(alice.address, POD_ID + 1)).to.equal(1);
+      expect(await memberToken.balanceOf(bob.address, POD_ID + 1)).to.equal(1);
     });
   });
 
