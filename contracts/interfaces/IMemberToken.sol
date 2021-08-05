@@ -13,6 +13,8 @@ interface IMemberToken is IERC1155 {
      */
     function exists(uint256 id) external view returns (bool);
 
+    function getNextAvailablePodId() external view returns (uint256);
+
     function migrateMemberController(uint256 _podId, address _newController)
         external;
 
@@ -27,4 +29,6 @@ interface IMemberToken is IERC1155 {
         uint256 _id,
         bytes memory data
     ) external;
+
+    function createPod(address[] memory _accounts, bytes memory data) external returns (uint256);
 }

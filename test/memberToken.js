@@ -16,7 +16,7 @@ const { HashZero } = ethers.constants;
 describe("Member Token Test", () => {
   const [admin, safe, alice] = provider.getWallets();
 
-  const POD_ID = 1;
+  const POD_ID = 0;
   const CREATE_FLAG = ethers.utils.hexlify([1]);
   const THRESHOLD = 1;
   const TX_OPTIONS = { gasLimit: 4000000 };
@@ -49,27 +49,20 @@ describe("Member Token Test", () => {
   };
 
   describe("minting and creation", () => {
-    it("should NOT allow token creation without the create flag", async () => {
+    it("should NOT allow pod creation without the create flag", async () => {
       const { memberToken } = await setup();
-      await expect(memberToken.connect(admin).mint(admin.address, POD_ID, HashZero)).to.be.revertedWith(
-        "Invalid creation flag",
-      );
-      await expect(memberToken.connect(admin).mintSingleBatch([admin.address], POD_ID, HashZero)).to.be.revertedWith(
+      await expect(memberToken.connect(admin).createPod([admin.address], HashZero)).to.be.revertedWith(
         "Invalid creation flag",
       );
     });
 
-    it("should NOT allow token creation from unregistered controller", async () => {
+    it("should NOT allow pod creation from unregistered controller", async () => {
       await setup();
       const controllerRegistry = await deployMockContract(admin, ControllerRegistry.abi);
       await controllerRegistry.mock.isRegistered.returns(false);
 
       const memberToken = await deployContract(admin, MemberToken, [controllerRegistry.address]);
-
-      await expect(memberToken.connect(admin).mint(admin.address, POD_ID, CREATE_FLAG)).to.be.revertedWith(
-        "Controller not registered",
-      );
-      await expect(memberToken.connect(admin).mintSingleBatch([admin.address], POD_ID, CREATE_FLAG)).to.be.revertedWith(
+      await expect(memberToken.connect(admin).createPod([admin.address], CREATE_FLAG)).to.be.revertedWith(
         "Controller not registered",
       );
     });
@@ -77,17 +70,25 @@ describe("Member Token Test", () => {
     it("should set controller on create", async () => {
       const { memberToken, controller } = await setup();
 
-      await controller.connect(admin).createPod(POD_ID, [admin.address], THRESHOLD, admin.address, TX_OPTIONS);
+      await controller.connect(admin).createPod([admin.address], THRESHOLD, admin.address, TX_OPTIONS);
       expect(await memberToken.memberController(POD_ID)).to.equal(controller.address);
     });
 
     it("should mint additional memberships", async () => {
       const { memberToken, controller } = await setup();
 
-      await controller.connect(admin).createPod(POD_ID, [admin.address], THRESHOLD, admin.address, TX_OPTIONS);
+      await controller.connect(admin).createPod([admin.address], THRESHOLD, admin.address, TX_OPTIONS);
       await expect(memberToken.connect(admin).mint(alice.address, POD_ID, HashZero)).to.emit(
         memberToken,
         "TransferSingle",
+      );
+    });
+
+    it("should NOT be able to mint memberships on a nonexistent pod", async () => {
+      const { memberToken } = await setup();
+
+      await expect(memberToken.connect(admin).mint(alice.address, POD_ID, HashZero)).to.revertedWith(
+        "Cannot mint on nonexistent pod",
       );
     });
   });
@@ -97,8 +98,8 @@ describe("Member Token Test", () => {
       const { memberToken, controller } = await setup();
 
       // create 2 pods from the same controller
-      await controller.connect(admin).createPod(POD_ID, [admin.address], THRESHOLD, admin.address, TX_OPTIONS);
-      await controller.connect(admin).createPod(POD_ID + 1, [admin.address], THRESHOLD, admin.address, TX_OPTIONS);
+      await controller.connect(admin).createPod([admin.address], THRESHOLD, admin.address, TX_OPTIONS);
+      await controller.connect(admin).createPod([admin.address], THRESHOLD, admin.address, TX_OPTIONS);
 
       await expect(
         memberToken
@@ -131,29 +132,12 @@ describe("Member Token Test", () => {
         safeTeller.address,
         controllerRegistry.address,
       ]);
-      await controller.connect(admin).createPod(POD_ID, [admin.address], THRESHOLD, admin.address, TX_OPTIONS);
+      await controller.connect(admin).createPod([admin.address], THRESHOLD, admin.address, TX_OPTIONS);
 
       await controllerRegistry.mock.isRegistered.returns(false);
       await expect(controller.connect(admin).migratePodController(POD_ID, controllerV2.address)).to.revertedWith(
         "Controller not registered",
       );
-    });
-
-    it("should NOT be able to create the same pod from multiple controllers", async () => {
-      const { memberToken, controller, ruleManager, safeTeller, controllerRegistry } = await setup();
-
-      const controllerV2 = await deployContract(admin, Controller, [
-        memberToken.address,
-        ruleManager.address,
-        safeTeller.address,
-        controllerRegistry.address,
-      ]);
-
-      // create 2 pods from different controllers
-      await controller.connect(admin).createPod(POD_ID, [admin.address], THRESHOLD, admin.address, TX_OPTIONS);
-      await expect(
-        controllerV2.connect(admin).createPod(POD_ID, [admin.address], THRESHOLD, admin.address, TX_OPTIONS),
-      ).to.revertedWith("pod already exists");
     });
 
     it("should NOT be able to transfer memberships associate with different controllers", async () => {
@@ -167,8 +151,8 @@ describe("Member Token Test", () => {
       ]);
 
       // create 2 pods from different controllers
-      await controller.connect(admin).createPod(POD_ID, [admin.address], THRESHOLD, admin.address, TX_OPTIONS);
-      await controllerV2.connect(admin).createPod(POD_ID + 1, [admin.address], THRESHOLD, admin.address, TX_OPTIONS);
+      await controller.connect(admin).createPod([admin.address], THRESHOLD, admin.address, TX_OPTIONS);
+      await controllerV2.connect(admin).createPod([admin.address], THRESHOLD, admin.address, TX_OPTIONS);
 
       await expect(
         memberToken

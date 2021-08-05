@@ -89,6 +89,7 @@ contract MemberToken is ERC1155Supply {
     mapping(uint256 => address) public memberController;
 
     uint8 internal constant CREATE_EVENT = 0x01;
+    uint256 public nextAvailablePodId = 0;
 
     event MigrateMemberController(uint256 podId, address newController);
 
@@ -112,23 +113,16 @@ contract MemberToken is ERC1155Supply {
         emit MigrateMemberController(_podId, _newController);
     }
 
+    function getNextAvailablePodId() external view returns (uint256) {
+        return nextAvailablePodId;
+    }
+
     function mint(
         address _account,
         uint256 _id,
         bytes memory data
     ) external {
-        bool isCreating = uint8(data[0]) == CREATE_EVENT;
-
-        require(exists(_id) != isCreating, "Invalid creation flag");
-
-        if (isCreating) {
-            require(
-                controllerRegistry.isRegistered(msg.sender),
-                "Controller not registered"
-            );
-            memberController[_id] = msg.sender;
-        }
-
+        require(exists(_id), "Cannot mint on nonexistent pod");
         _mint(_account, _id, 1, data);
     }
 
@@ -136,22 +130,39 @@ contract MemberToken is ERC1155Supply {
         address[] memory _accounts,
         uint256 _id,
         bytes memory data
-    ) external {
-        bool isCreating = uint8(data[0]) == CREATE_EVENT;
+    ) public {
+        require(exists(_id), "Cannot mint on nonexistent pod");
+        for (uint256 index = 0; index < _accounts.length; index++) {
+            _mint(_accounts[index], _id, 1, data);
+        }
+    }
 
-        require(exists(_id) != isCreating, "Invalid creation flag");
+    function createPod(address[] memory _accounts, bytes memory data)
+        external
+        returns (uint256)
+    {
+        bool isCreating = uint8(data[0]) == CREATE_EVENT;
+        uint256 id = nextAvailablePodId;
+        nextAvailablePodId = nextAvailablePodId + 1;
+
+        require(exists(id) != isCreating, "Invalid creation flag");
 
         if (isCreating) {
             require(
                 controllerRegistry.isRegistered(msg.sender),
                 "Controller not registered"
             );
-            memberController[_id] = msg.sender;
+            memberController[id] = msg.sender;
         }
 
-        for (uint256 index = 0; index < _accounts.length; index++) {
-            _mint(_accounts[index], _id, 1, data);
+        if (_accounts.length != 0) {
+            // Can't call mintSingleBatch because of its require
+            for (uint256 index = 0; index < _accounts.length; index++) {
+                _mint(_accounts[index], id, 1, data);
+            }
         }
+
+        return id;
     }
 
     function burn(address _account, uint256 _id) external {

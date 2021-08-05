@@ -29,7 +29,7 @@ describe("Controller safe integration test", () => {
 
   const THRESHOLD = 2;
   const MEMBERS = [alice.address, bob.address];
-  const POD_ID = 1;
+  const POD_ID = 0;
 
   const createSafeSigner = async (safe, signer) => {
     const { chainId } = await provider.getNetwork();
@@ -46,7 +46,7 @@ describe("Controller safe integration test", () => {
   };
 
   const createPodSafe = async () => {
-    await controller.connect(admin).createPod(POD_ID, MEMBERS, THRESHOLD, admin.address, TX_OPTIONS);
+    await controller.connect(admin).createPod(MEMBERS, THRESHOLD, admin.address, TX_OPTIONS);
     // query the new gnosis safe
     const safeAddress = await controller.safeAddress(POD_ID);
     return new ethers.Contract(safeAddress, GnosisSafe.abi, admin);
@@ -129,7 +129,7 @@ describe("Controller safe integration test", () => {
       const tx = await safeSignerAlice.createTransaction(txArgs);
       await safeSignerAlice.executeTransaction(tx);
 
-      await controller.createPodWithSafe(POD_ID + 1, admin.address, safe.address);
+      await controller.createPodWithSafe(admin.address, safe.address);
 
       // should set admin
       expect(await controller.podAdmin(POD_ID + 1)).to.equal(admin.address);
