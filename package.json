@@ -22,13 +22,18 @@
     "prettier": "^2.2.1",
     "prettier-plugin-solidity": "^1.0.0-beta.3",
     "solhint": "^3.3.2",
-    "solhint-plugin-prettier": "0.0.5"
+    "solhint-plugin-prettier": "0.0.5",
+    "vercel": "^23.0.1"
   },
   "scripts": {
     "lint": "solhint contracts/*.sol",
     "prettier": "prettier --write contracts/*.sol",
     "test": " hardhat test",
-    "compile": " hardhat compile"
+    "compile": " hardhat compile",
+    "deploy-rinkeby": "./deploy.sh",
+    "vercel-link": "vercel link",
+    "vercel-push": "vercel env add",
+    "vercel-rm": "vercel env rm"
   },
   "husky": {
     "hooks": {
