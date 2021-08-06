@@ -32,6 +32,9 @@ contract RuleManager {
         controller = msg.sender;
     }
 
+    /**
+     * @param _controller The account address to be assigned as controller
+     */
     function updateController(address _controller) external {
         require(_controller != address(0), "Invalid gnosisMaster address");
         require(controller == msg.sender, "!controller");
@@ -57,6 +60,9 @@ contract RuleManager {
         );
     }
 
+    /**
+     * @param _podId The id number of the pod
+     */
     function finalizeRule(uint256 _podId) external {
         require(controller == msg.sender, "!controller");
         rulesByPod[_podId].isFinalized = true;
@@ -71,11 +77,18 @@ contract RuleManager {
         );
     }
 
+    /**
+     * @param _podId The id number of the pod
+     */
     function hasRules(uint256 _podId) external view returns (bool) {
         Rule memory currentRule = rulesByPod[_podId];
         return (currentRule.contractAddress != address(0));
     }
 
+    /**
+     * @param _podId The id number of the pod
+     * @param _user The account address of a pod member
+     */
     function isRuleCompliant(uint256 _podId, address _user)
         external
         view

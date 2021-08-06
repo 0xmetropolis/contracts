@@ -93,13 +93,16 @@ contract MemberToken is ERC1155Supply {
 
     event MigrateMemberController(uint256 podId, address newController);
 
+    /**
+     * @param _controllerRegistry The address of the ControllerRegistry contract
+     */
     constructor(address _controllerRegistry) ERC1155("POD") {
         controllerRegistry = IControllerRegistry(_controllerRegistry);
     }
 
     /**
      * @param _podId The pod id number 
-     * @param _newController The address of the new member controller
+     * @param _newController The address of the new controller
      */
     function migrateMemberController(uint256 _podId, address _newController)
         external

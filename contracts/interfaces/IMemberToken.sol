@@ -15,15 +15,29 @@ interface IMemberToken is IERC1155 {
 
     function getNextAvailablePodId() external view returns (uint256);
 
+    /**
+     * @param _podId The pod id number 
+     * @param _newController The address of the new controller
+     */
     function migrateMemberController(uint256 _podId, address _newController)
         external;
 
+    /**
+     * @param _account The account address to assign the membership token to
+     * @param _id The membership token id to mint
+     * @param data Passes a flag for initial creation event
+     */
     function mint(
         address _account,
         uint256 _id,
         bytes memory data
     ) external;
 
+    /**
+     * @param _accounts The account addresses to assign the membership tokens to
+     * @param _id The membership token id to mint
+     * @param data Passes a flag for an initial creation event
+     */
     function mintSingleBatch(
         address[] memory _accounts,
         uint256 _id,

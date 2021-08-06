@@ -27,6 +27,10 @@ contract SafeTeller {
 
     event CreateSafe(uint256 indexed podId, address safeAddress);
 
+    /**
+     * @param _proxyFactoryAddress The proxy factory address
+     * @param _gnosisMasterAddress The gnosis master address
+     */
     constructor(address _proxyFactoryAddress, address _gnosisMasterAddress) {
         require(
             _proxyFactoryAddress != address(0),
@@ -42,12 +46,19 @@ contract SafeTeller {
         context = address(this);
     }
 
+    /**
+     * @param _controller The account address to set as controller
+     */
     function updateController(address _controller) external {
         require(_controller != address(0), "Invalid controller address");
         require(controller == msg.sender, "!controller");
         controller = _controller;
     }
 
+    /**
+     * @param safe The address of the safe
+     * @param _newSafeTeller The address of the new safe teller contract
+     */
     function migrateSafeTeller(address safe, address _newSafeTeller) external {
         require(controller == msg.sender, "!controller");
         bytes memory enableData = abi.encodeWithSignature(
@@ -104,6 +115,12 @@ contract SafeTeller {
         return IGnosisSafe(safe).isModuleEnabled(address(this));
     }
 
+    /**
+     * @param _podId The ID number of the pod
+     * @param _owners The account addresses to be owners of the safe
+     * @param _threshold The number of owners that are required to sign a transaciton
+     * @return The address of the new safe
+     */
     function createSafe(
         uint256 _podId,
         address[] memory _owners,
@@ -143,6 +160,10 @@ contract SafeTeller {
     }
 
     //TODO: could probably do all this as a delegate call
+    /**
+     * @param to The account address to add as an owner
+     * @param safe The address of the safe
+     */
     function onMint(address to, address safe) external {
         require(controller == msg.sender, "!controller");
         uint256 threshold = IGnosisSafe(safe).getThreshold();
@@ -163,6 +184,10 @@ contract SafeTeller {
         require(success, "Module Transaction Failed");
     }
 
+    /**
+     * @param from The account address to be removed as an owner
+     * @param safe The address of the safe
+     */
     function onBurn(address from, address safe) external {
         require(controller == msg.sender, "!controller");
         uint256 threshold = IGnosisSafe(safe).getThreshold();
@@ -196,6 +221,11 @@ contract SafeTeller {
         require(success, "Module Transaction Failed");
     }
 
+    /**
+     * @param from The account address being removed as an owner
+     * @param to The account address being added as an owner
+     * @param safe The address of the safe
+     */
     function onTransfer(
         address from,
         address to,
