@@ -3,6 +3,8 @@ node_modules
 #Hardhat files
 cache
 artifacts
+coverage
+coverage.json
 
 # Private keys
 ethKeys.json

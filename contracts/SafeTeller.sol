@@ -119,7 +119,7 @@ contract SafeTeller {
      * @param _podId The id number of the pod
      * @param _owners The  addresses to be owners of the safe
      * @param _threshold The number of owners that are required to sign a transaciton
-     * @return The address of the new safe
+     * @return safeAddress The address of the new safe
      */
     function createSafe(
         uint256 _podId,

@@ -1,5 +1,6 @@
 require("@nomiclabs/hardhat-waffle");
 require("hardhat-gas-reporter");
+require("solidity-coverage");
 
 // ethKeys should export an object with private keys as strings
 let ethKeys;

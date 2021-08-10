@@ -55,22 +55,20 @@ contract Controller is IController {
         uint256 threshold,
         address _admin
     ) external {
-        uint256 podId = memberToken.getNextAvailablePodId();
+        // add create event flag to token data
+        bytes memory data = new bytes(1);
+        data[0] = bytes1(uint8(CREATE_EVENT));
+
+        uint256 podId = memberToken.createPod(_members, data);
 
         if (_admin != address(0)) podAdmin[podId] = _admin;
 
         emit CreatePod(podId);
 
         safeAddress[podId] = safeTeller.createSafe(podId, _members, threshold);
-
-        // add create event flag to token data
-        bytes memory data = new bytes(1);
-        data[0] = bytes1(uint8(CREATE_EVENT));
-
-        memberToken.createPod(_members, data);
     }
 
-     /**
+    /**
      * @dev Used to create a pod with an existing safe
      * @dev Will automatically distribute membership NFTs to current safe members
      * @param _admin The address of the pod admin
@@ -185,7 +183,6 @@ contract Controller is IController {
      * @param from The address sending the membership token
      * @param to The address recieveing the membership token
      * @param ids An array of membership token ids to be transfered
-     * @param amounts The amount of each membership token type to transfer
      * @param data Passes a flag for an initial creation event
      */
     function beforeTokenTransfer(
