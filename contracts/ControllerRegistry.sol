@@ -11,16 +11,26 @@ contract ControllerRegistry is IControllerRegistry, Ownable {
 
     constructor() {}
 
+    /**
+     * @param _controller The address to register as a controller
+     */
     function registerController(address _controller) external onlyOwner {
         emit ControllerRegister(_controller);
         controllerRegistry[_controller] = true;
     }
 
+    /**
+     * @param _controller The address to remove as a controller
+     */
     function removeController(address _controller) external onlyOwner {
         emit ControllerRemove(_controller);
         controllerRegistry[_controller] = false;
     }
 
+    /**
+     * @param _controller The address to check if registered as a controller
+     * @return Boolean representing if the address is a registered as a controller
+     */
     function isRegistered(address _controller)
         external
         view

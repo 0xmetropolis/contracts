@@ -93,10 +93,17 @@ contract MemberToken is ERC1155Supply {
 
     event MigrateMemberController(uint256 podId, address newController);
 
+    /**
+     * @param _controllerRegistry The address of the ControllerRegistry contract
+     */
     constructor(address _controllerRegistry) ERC1155("POD") {
         controllerRegistry = IControllerRegistry(_controllerRegistry);
     }
 
+    /**
+     * @param _podId The pod id number 
+     * @param _newController The address of the new controller
+     */
     function migrateMemberController(uint256 _podId, address _newController)
         external
     {
@@ -117,6 +124,11 @@ contract MemberToken is ERC1155Supply {
         return nextAvailablePodId;
     }
 
+    /**
+     * @param _account The account address to assign the membership token to
+     * @param _id The membership token id to mint
+     * @param data Passes a flag for initial creation event
+     */
     function mint(
         address _account,
         uint256 _id,
@@ -126,6 +138,11 @@ contract MemberToken is ERC1155Supply {
         _mint(_account, _id, 1, data);
     }
 
+    /**
+     * @param _accounts The account addresses to assign the membership tokens to
+     * @param _id The membership token id to mint
+     * @param data Passes a flag for an initial creation event
+     */
     function mintSingleBatch(
         address[] memory _accounts,
         uint256 _id,
@@ -165,6 +182,10 @@ contract MemberToken is ERC1155Supply {
         return id;
     }
 
+    /**
+     * @param _account The account address holding the membership token to destroy
+     * @param _id The id of the membership token to destroy
+     */
     function burn(address _account, uint256 _id) external {
         require(balanceOf(_account, _id) == 1, "User is not a member");
 
@@ -172,6 +193,14 @@ contract MemberToken is ERC1155Supply {
     }
 
     // this hook gets called before every token event including mint and burn
+    /**
+     * @param operator The account address that initiated the action
+     * @param from The account address recieveing the membership token
+     * @param to The account address sending the membership token
+     * @param ids An array of membership token ids to be transfered
+     * @param amounts The amount of each membership token type to transfer
+     * @param data Passes a flag for an initial creation event
+     */
     function _beforeTokenTransfer(
         address operator,
         address from,

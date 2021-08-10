@@ -27,6 +27,12 @@ contract Controller is IController {
 
     uint8 internal constant CREATE_EVENT = 0x01;
 
+    /**
+     * @param _memberToken The address of the MemberToken contract
+     * @param _ruleManager The address of the RuleManager contract
+     * @param _safeTeller The address of the SafeTeller contract
+     * @param _controllerRegistry The address of the ControllerRegistry contract
+     */
     constructor(
         address _memberToken,
         address _ruleManager,
@@ -39,9 +45,10 @@ contract Controller is IController {
         controllerRegistry = IControllerRegistry(_controllerRegistry);
     }
 
-    /*
-     * This function creates a pod, assigns one token to the sender of the message,
-     * and sets the initial rules for that pod.
+    /**
+     * @param _members The addresses of the members of the pod
+     * @param threshold The number of members that are required to sign a transaction
+     * @param _admin The address of the pod admin
      */
     function createPod(
         address[] memory _members,
@@ -63,6 +70,12 @@ contract Controller is IController {
         memberToken.createPod(_members, data);
     }
 
+     /**
+     * @dev Used to create a pod with an existing safe
+     * @dev Will automatically distribute membership NFTs to current safe members
+     * @param _admin The address of the pod admin
+     * @param _safe The address of existing safe
+     */
     function createPodWithSafe(address _admin, address _safe) external {
         uint256 podId = memberToken.getNextAvailablePodId();
         require(_safe != address(0), "invalid safe address");
@@ -112,10 +125,17 @@ contract Controller is IController {
         ruleManager.finalizeRule(_podId);
     }
 
+    /**
+     * @return The address of the safe teller contract
+     */
     function getSafeTeller() external view returns (address) {
         return address(safeTeller);
     }
 
+    /**
+     * @param _podId The id number of the pod
+     * @param _newController The address of the new pod controller
+     */
     function migratePodController(uint256 _podId, address _newController)
         external
     {
@@ -142,6 +162,11 @@ contract Controller is IController {
         newController.updatePodState(_podId, admin, safe);
     }
 
+    /**
+     * @param _podId The id number of the pod
+     * @param _podAdmin The address of the pod admin
+     * @param _safeAddress The address of the safe
+     */
     function updatePodState(
         uint256 _podId,
         address _podAdmin,
@@ -155,6 +180,14 @@ contract Controller is IController {
         safeAddress[_podId] = _safeAddress;
     }
 
+    /**
+     * @param operator The address that initiated the action
+     * @param from The address sending the membership token
+     * @param to The address recieveing the membership token
+     * @param ids An array of membership token ids to be transfered
+     * @param amounts The amount of each membership token type to transfer
+     * @param data Passes a flag for an initial creation event
+     */
     function beforeTokenTransfer(
         address operator,
         address from,
