@@ -101,7 +101,7 @@ contract MemberToken is ERC1155Supply {
     }
 
     /**
-     * @param _podId The pod id number 
+     * @param _podId The pod id number
      * @param _newController The address of the new controller
      */
     function migrateMemberController(uint256 _podId, address _newController)
@@ -149,7 +149,7 @@ contract MemberToken is ERC1155Supply {
         bytes memory data
     ) public {
         require(exists(_id), "Cannot mint on nonexistent pod");
-        for (uint256 index = 0; index < _accounts.length; index++) {
+        for (uint256 index = 0; index < _accounts.length; index += 1) {
             _mint(_accounts[index], _id, 1, data);
         }
     }
@@ -158,23 +158,19 @@ contract MemberToken is ERC1155Supply {
         external
         returns (uint256)
     {
-        bool isCreating = uint8(data[0]) == CREATE_EVENT;
         uint256 id = nextAvailablePodId;
-        nextAvailablePodId = nextAvailablePodId + 1;
+        nextAvailablePodId += 1;
 
-        require(exists(id) != isCreating, "Invalid creation flag");
+        require(
+            controllerRegistry.isRegistered(msg.sender),
+            "Controller not registered"
+        );
 
-        if (isCreating) {
-            require(
-                controllerRegistry.isRegistered(msg.sender),
-                "Controller not registered"
-            );
-            memberController[id] = msg.sender;
-        }
+        memberController[id] = msg.sender;
 
         if (_accounts.length != 0) {
             // Can't call mintSingleBatch because of its require
-            for (uint256 index = 0; index < _accounts.length; index++) {
+            for (uint256 index = 0; index < _accounts.length; index += 1) {
                 _mint(_accounts[index], id, 1, data);
             }
         }

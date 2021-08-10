@@ -49,13 +49,6 @@ describe("Member Token Test", () => {
   };
 
   describe("minting and creation", () => {
-    it("should NOT allow pod creation without the create flag", async () => {
-      const { memberToken } = await setup();
-      await expect(memberToken.connect(admin).createPod([admin.address], HashZero)).to.be.revertedWith(
-        "Invalid creation flag",
-      );
-    });
-
     it("should NOT allow pod creation from unregistered controller", async () => {
       await setup();
       const controllerRegistry = await deployMockContract(admin, ControllerRegistry.abi);
