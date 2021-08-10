@@ -47,7 +47,7 @@ contract SafeTeller {
     }
 
     /**
-     * @param _controller The account address to set as controller
+     * @param _controller The address to set as controller
      */
     function updateController(address _controller) external {
         require(_controller != address(0), "Invalid controller address");
@@ -116,8 +116,8 @@ contract SafeTeller {
     }
 
     /**
-     * @param _podId The ID number of the pod
-     * @param _owners The account addresses to be owners of the safe
+     * @param _podId The id number of the pod
+     * @param _owners The  addresses to be owners of the safe
      * @param _threshold The number of owners that are required to sign a transaciton
      * @return The address of the new safe
      */
@@ -185,7 +185,7 @@ contract SafeTeller {
     }
 
     /**
-     * @param from The account address to be removed as an owner
+     * @param from The address to be removed as an owner
      * @param safe The address of the safe
      */
     function onBurn(address from, address safe) external {
@@ -222,8 +222,8 @@ contract SafeTeller {
     }
 
     /**
-     * @param from The account address being removed as an owner
-     * @param to The account address being added as an owner
+     * @param from The address being removed as an owner
+     * @param to The address being added as an owner
      * @param safe The address of the safe
      */
     function onTransfer(

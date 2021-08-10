@@ -4,11 +4,11 @@ interface IController{
 
     /**
      * @param operator The account address that initiated the action
-     * @param from The account address recieveing the membership token
-     * @param to The account address sending the membership token
+     * @param from The account address sending the membership token
+     * @param to The account address recieving the membership token
      * @param ids An array of membership token ids to be transfered
      * @param amounts The amount of each membership token type to transfer
-     * @param data Passes a flag for an initial creation event
+     * @param data Arbitrary data
      */
     function beforeTokenTransfer(
         address operator,

@@ -23,9 +23,9 @@ interface IMemberToken is IERC1155 {
         external;
 
     /**
-     * @param _account The account address to assign the membership token to
+     * @param _account The account address to transfer the membership token to
      * @param _id The membership token id to mint
-     * @param data Passes a flag for initial creation event
+     * @param data Arbitrary data
      */
     function mint(
         address _account,
@@ -34,9 +34,9 @@ interface IMemberToken is IERC1155 {
     ) external;
 
     /**
-     * @param _accounts The account addresses to assign the membership tokens to
+     * @param _accounts The account addresses to transfer the membership tokens to
      * @param _id The membership token id to mint
-     * @param data Passes a flag for an initial creation event
+     * @param data Arbitrary data
      */
     function mintSingleBatch(
         address[] memory _accounts,

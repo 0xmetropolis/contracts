@@ -45,15 +45,10 @@ contract Controller is IController {
         controllerRegistry = IControllerRegistry(_controllerRegistry);
     }
 
-    /*
-     * This function creates a pod, assigns one token to the sender of the message,
-     * and sets the initial rules for that pod.
-     */
     /**
-     * @param _podId The id number of the new pod
-     * @param _members The account addresses of the members of the pod
+     * @param _members The addresses of the members of the pod
      * @param threshold The number of members that are required to sign a transaction
-     * @param _admin The account address of the pod admin
+     * @param _admin The address of the pod admin
      */
     function createPod(
         address[] memory _members,
@@ -75,6 +70,12 @@ contract Controller is IController {
         memberToken.createPod(_members, data);
     }
 
+     /**
+     * @dev Used to create a pod with an existing safe
+     * @dev Will automatically distribute membership NFTs to current safe members
+     * @param _admin The address of the pod admin
+     * @param _safe The address of existing safe
+     */
     function createPodWithSafe(address _admin, address _safe) external {
         uint256 podId = memberToken.getNextAvailablePodId();
         require(_safe != address(0), "invalid safe address");
@@ -133,7 +134,7 @@ contract Controller is IController {
 
     /**
      * @param _podId The id number of the pod
-     * @param _newController The account address of the new pod controller
+     * @param _newController The address of the new pod controller
      */
     function migratePodController(uint256 _podId, address _newController)
         external
@@ -163,7 +164,7 @@ contract Controller is IController {
 
     /**
      * @param _podId The id number of the pod
-     * @param _podAdmin The account address of the pod admin
+     * @param _podAdmin The address of the pod admin
      * @param _safeAddress The address of the safe
      */
     function updatePodState(
@@ -180,9 +181,9 @@ contract Controller is IController {
     }
 
     /**
-     * @param operator The account address that initiated the action
-     * @param from The account address recieveing the membership token
-     * @param to The account address sending the membership token
+     * @param operator The address that initiated the action
+     * @param from The address sending the membership token
+     * @param to The address recieveing the membership token
      * @param ids An array of membership token ids to be transfered
      * @param amounts The amount of each membership token type to transfer
      * @param data Passes a flag for an initial creation event
