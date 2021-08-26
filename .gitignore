@@ -7,6 +7,6 @@ coverage
 coverage.json
 
 # Private keys
-ethKeys.json
+.env
 
 .vercel
