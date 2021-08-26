@@ -18,13 +18,13 @@ run `npm run test`
 
 You must create `.env` in the product root, and it should look like this:
 
-```json
+```
 // This should be your private key
-RINKEBY_PK = ""
+PRIVATE_KEY = ""
 
 COINMARKETCAP_KEY= ""
 
-INFURA_URL_RINKEBY= ""
+INFURA_API_KEY= ""
 ```
 
 ### Deploying

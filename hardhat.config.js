@@ -6,6 +6,8 @@ require("hardhat-deploy");
 require("@nomiclabs/hardhat-ethers");
 require("dotenv").config();
 
+const accounts = process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [];
+
 const networks = {
   hardhat: {
     gas: 12000000,
@@ -16,8 +18,8 @@ const networks = {
     hardfork: "berlin",
   },
   rinkeby: {
-    url: process.env.INFURA_URL_RINKEBY,
-    accounts: [process.env.RINKEBY_PK],
+    url: `https://rinkeby.infura.io/v3/${process.env.INFURA_API_KEY}`,
+    accounts,
   },
 };
 
