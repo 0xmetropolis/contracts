@@ -1,17 +1,19 @@
-## Orca Protocol 
+## Orca Protocol
 
 Orca Protocol is a lightweight permissions and membership management protocol that can be connected to Gnosis Safe through the `SafeTeller.sol` safe module.
+
 Each membership group within orca is referred to as a pod and pod memberships are represented by ERC1155 membership tokens.
 
 ## Development
 
-### Getting Started 
+### Getting Started
 
-run `npm install` 
+Run `npm install`
 
 ### Testing
 
-run `npm run test`
+Run `npm run test`
+
 ## Deployment
 
 ### Pre-Reqs
