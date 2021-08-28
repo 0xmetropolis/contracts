@@ -115,6 +115,14 @@ contract SafeTeller {
         return IGnosisSafe(safe).isModuleEnabled(address(this));
     }
 
+    function isMember(address safe, address member)
+        external
+        view
+        returns (bool)
+    {
+        return IGnosisSafe(safe).isOwner(member);
+    }
+
     /**
      * @param _podId The id number of the pod
      * @param _owners The  addresses to be owners of the safe
