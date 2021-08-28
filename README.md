@@ -12,7 +12,9 @@ Run `npm install`
 
 ### Testing
 
-Run `npm run test`
+Run `npm run test` to run the test suite
+
+Run `npm run coverage` to print a coverage report
 
 ## Deployment
 
@@ -32,3 +34,38 @@ INFURA_API_KEY= ""
 ### Deploying
 
 You can run `npx hardhat --network rinkeby deploy` to deploy contracts to the testnet. This will deploy all our contracts and connect them to the official Gnosis Safe contracts.
+
+## Architecture
+
+The high level architecture of orca protocol is a permission wrapper around a gnosis safe that uses 1155 NFT membership to manage access.
+
+A gnosis safe wrapped by orca is referred to as a pod. 
+### Member Token
+
+The `MemberToken` is an 1155 token contract that represents manages the memberships of all pods. 
+
+Each pod is represented by a unique 1155 token `id`, which correspond to its set of member NFTs.
+
+Each pod also is tied to a version of the `Controller`, for future upgradeability.
+
+On any token event the `_beforeTokenTransfer` hook will call the `beforeTokenTransfer` function of the pod's version of `Controller` to perform validation and manage side effects before the token is allowed to transfer.
+
+### Controller
+
+The `Controller` manages the creation of pods as well as managing their membership validation and side effects. 
+
+When the `MemberToken` calls the `beforeTokenTransfer` function, the `Controller` will validate the action with the `RuleManager` to verify the membership change is permissible.
+
+If the event is permissible the `Controller` will call the `SafeTeller` to handle the side effects of the membership change.
+
+### RuleManager
+
+The `RuleManager` manages the rules for multiple pods, each rule is an arbitrary transaction that returns `true` or `false` based on a member's compliance at transfer time
+
+### SafeTeller
+
+The `SafeTeller` manages the side effects for multiple pods, before a valid token transfer the `SafeTeller` will perform owner updates to the pod's safe
+
+
+
+

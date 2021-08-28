@@ -128,6 +128,25 @@ contract Controller is IController {
     }
 
     /**
+     * @param _podId The id number of the pod
+     * @param _newAdmin The address of the new pod admin
+     */
+    function updatePodAdmin(uint256 _podId, address _newAdmin) external {
+        address admin = podAdmin[_podId];
+        address safe = safeAddress[_podId];
+
+        require(safe != address(0), "Pod doesn't exist");
+
+        // if there is no admin it can only be added by safe
+        if (admin == address(0)) {
+            require(msg.sender == safe, "Only safe can add new admin");
+        } else {
+            require(msg.sender == admin, "Only admin can update admin");
+        }
+        safeAddress[_podId] = _newAdmin;
+    }
+
+    /**
      * @return The address of the safe teller contract
      */
     function getSafeTeller() external view returns (address) {
