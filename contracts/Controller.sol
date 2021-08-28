@@ -4,8 +4,8 @@ pragma solidity 0.7.4;
 
 import "./interfaces/IController.sol";
 import "./interfaces/IMemberToken.sol";
-import "./RuleManager.sol";
-import "./SafeTeller.sol";
+import "./interfaces/IRuleManager.sol";
+import "./interfaces/ISafeTeller.sol";
 import "./interfaces/IControllerRegistry.sol";
 
 // TODO: consider  order of contract  deployment. May not want to deploy all together
@@ -18,8 +18,8 @@ contract Controller is IController {
     event CreatePod(uint256 podId);
 
     IMemberToken public memberToken;
-    RuleManager public ruleManager;
-    SafeTeller public safeTeller;
+    IRuleManager public ruleManager;
+    ISafeTeller public safeTeller;
     IControllerRegistry public controllerRegistry;
 
     mapping(uint256 => address) public safeAddress;
@@ -40,8 +40,8 @@ contract Controller is IController {
         address _controllerRegistry
     ) {
         memberToken = IMemberToken(_memberToken);
-        ruleManager = RuleManager(_ruleManager);
-        safeTeller = SafeTeller(_safeTeller);
+        ruleManager = IRuleManager(_ruleManager);
+        safeTeller = ISafeTeller(_safeTeller);
         controllerRegistry = IControllerRegistry(_controllerRegistry);
     }
 
@@ -80,6 +80,10 @@ contract Controller is IController {
         require(
             safeTeller.isModuleEnabled(_safe),
             "safe module must be enabled"
+        );
+        require(
+            safeTeller.isMember(_safe, msg.sender) || msg.sender == _safe,
+            "caller must be safe or member"
         );
 
         if (_admin != address(0)) podAdmin[podId] = _admin;

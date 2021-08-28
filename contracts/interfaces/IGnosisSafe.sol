@@ -18,7 +18,9 @@ interface IGnosisSafe {
 
     /// @dev Returns array of owners.
     /// @return Array of Safe owners.
-    function getOwners() external returns (address[] memory);
+    function getOwners() external view returns (address[] memory);
+
+    function isOwner(address owner) external view returns (bool);
 
     function getThreshold() external returns (uint256);
 
@@ -28,7 +30,8 @@ interface IGnosisSafe {
     /// @return array Array of modules.
     /// @return next Start of the next page.
     function getModulesPaginated(address start, uint256 pageSize)
-        external
+        external 
+        view
         returns (address[] memory array, address next);
 
     /// @dev Returns if an module is enabled
