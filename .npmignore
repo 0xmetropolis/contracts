@@ -3,9 +3,7 @@ node_modules
 #Hardhat files
 cache
 artifacts/*
-!artifacts/contracts
-artifacts/contracts/*/*.dbg.json
-artifacts/contracts/test
+artifacts/contracts
 
 test
 abis
