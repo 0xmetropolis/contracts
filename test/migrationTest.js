@@ -1,12 +1,8 @@
 const { expect, use } = require("chai");
-const { waffle, ethers } = require("hardhat");
+const { waffle, ethers, deployments } = require("hardhat");
 
 const GnosisSafe = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/GnosisSafe.sol/GnosisSafe.json");
-const GnosisSafeProxyFactory = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/proxies/GnosisSafeProxyFactory.sol/GnosisSafeProxyFactory.json");
-
-const ControllerRegistry = require("../artifacts/contracts/ControllerRegistry.sol/ControllerRegistry.json");
 const Controller = require("../artifacts/contracts/Controller.sol/Controller.json");
-const MemberToken = require("../artifacts/contracts/MemberToken.sol/MemberToken.json");
 
 const { deployContract, solidity, provider } = waffle;
 
@@ -24,9 +20,10 @@ describe("pod migration test", () => {
   const LEGACY_POD_ID = 0;
   const UPGRADE_POD_ID = 1;
 
-  const controllerRegistry = {};
+  let controllerRegistry;
+  let memberToken;
+
   const controller = {};
-  const memberToken = {};
 
   const createPodSafe = async (podId, members, ownerAddress = AddressZero) => {
     const threshold = 1;
@@ -36,34 +33,27 @@ describe("pod migration test", () => {
   };
 
   const setup = async () => {
-    const gnosisSafeMaster = await deployContract(admin, GnosisSafe);
-    const gnosisSafeProxyFactory = await deployContract(admin, GnosisSafeProxyFactory);
+    await deployments.fixture(["Base"]);
 
-    // V1
-    // deploy V1 contracts
-    controllerRegistry.V1 = await deployContract(admin, ControllerRegistry);
-    memberToken.V1 = await deployContract(admin, MemberToken, [controllerRegistry.V1.address]);
+    const gnosisSafeProxyFactory = await ethers.getContract("GnosisSafeProxyFactory", admin);
+    const gnosisSafeMaster = await ethers.getContract("GnosisSafe", admin);
 
-    controller.V1 = await deployContract(admin, Controller, [
-      memberToken.V1.address,
-      controllerRegistry.V1.address,
-      gnosisSafeProxyFactory.address,
-      gnosisSafeMaster.address,
-    ]);
-    // register V1 controller
-    await controllerRegistry.V1.connect(admin).registerController(controller.V1.address);
+    controller.V1 = await ethers.getContract("Controller", admin);
+
+    memberToken = await ethers.getContract("MemberToken", admin);
+    controllerRegistry = await ethers.getContract("ControllerRegistry", admin);
 
     // V2
     // deploy V2 contract
     controller.V2 = await deployContract(admin, Controller, [
-      memberToken.V1.address,
-      controllerRegistry.V1.address,
+      memberToken.address,
+      controllerRegistry.address,
       gnosisSafeProxyFactory.address,
       gnosisSafeMaster.address,
     ]);
 
     // register V2 contracts
-    await controllerRegistry.V1.connect(admin).registerController(controller.V2.address);
+    await controllerRegistry.connect(admin).registerController(controller.V2.address);
 
     // create V1 pods
     const legacyPod = await createPodSafe(LEGACY_POD_ID, MEMBERS, owner.address);
@@ -78,7 +68,7 @@ describe("pod migration test", () => {
   it("should update pod controller in memberToken", async () => {
     await setup();
     // should point the member token to new controller
-    expect(await memberToken.V1.memberController(UPGRADE_POD_ID)).to.equal(controller.V2.address);
+    expect(await memberToken.memberController(UPGRADE_POD_ID)).to.equal(controller.V2.address);
   });
 
   it("should migrate pod state to new controller", async () => {
@@ -106,16 +96,16 @@ describe("pod migration test", () => {
   it("should be able to mint memberships for upgraded pod", async () => {
     await setup();
 
-    await expect(memberToken.V1.connect(owner).mint(charlie.address, UPGRADE_POD_ID, HashZero, TX_OPTIONS))
-      .to.emit(memberToken.V1, "TransferSingle")
+    await expect(memberToken.connect(owner).mint(charlie.address, UPGRADE_POD_ID, HashZero, TX_OPTIONS))
+      .to.emit(memberToken, "TransferSingle")
       .withArgs(owner.address, AddressZero, charlie.address, UPGRADE_POD_ID, 1);
   });
 
   it("should be able to mint memberships for legacy pod", async () => {
     await setup();
 
-    await expect(memberToken.V1.connect(owner).mint(charlie.address, LEGACY_POD_ID, HashZero, TX_OPTIONS))
-      .to.emit(memberToken.V1, "TransferSingle")
+    await expect(memberToken.connect(owner).mint(charlie.address, LEGACY_POD_ID, HashZero, TX_OPTIONS))
+      .to.emit(memberToken, "TransferSingle")
       .withArgs(owner.address, AddressZero, charlie.address, LEGACY_POD_ID, 1);
   });
 });

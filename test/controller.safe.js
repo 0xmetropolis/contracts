@@ -1,17 +1,12 @@
 const { expect, use } = require("chai");
-const { waffle, ethers } = require("hardhat");
+const { waffle, ethers, deployments } = require("hardhat");
 
 const EthersSafe = require("@gnosis.pm/safe-core-sdk").default;
 
 const GnosisSafe = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/GnosisSafe.sol/GnosisSafe.json");
-const GnosisSafeProxyFactory = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/proxies/GnosisSafeProxyFactory.sol/GnosisSafeProxyFactory.json");
 const MultiSend = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/libraries/MultiSend.sol/MultiSend.json");
 
-const ControllerRegistry = require("../artifacts/contracts/ControllerRegistry.sol/ControllerRegistry.json");
-const Controller = require("../artifacts/contracts/Controller.sol/Controller.json");
-const MemberToken = require("../artifacts/contracts/MemberToken.sol/MemberToken.json");
-
-const { deployContract, deployMockContract, provider, solidity } = waffle;
+const { deployContract, provider, solidity } = waffle;
 
 use(solidity);
 
@@ -31,6 +26,7 @@ describe("Controller safe integration test", () => {
 
   const createSafeSigner = async (safe, signer) => {
     const { chainId } = await provider.getNetwork();
+
     return EthersSafe.create({
       ethers,
       safeAddress: safe.address,
@@ -51,22 +47,15 @@ describe("Controller safe integration test", () => {
   };
 
   const setup = async () => {
+    await deployments.fixture(["Base"]);
     // Deploy the master safe contract and multisend
     multiSend = await deployContract(admin, MultiSend);
-    const gnosisSafeMaster = await deployContract(admin, GnosisSafe);
-    const gnosisSafeProxyFactory = await deployContract(admin, GnosisSafeProxyFactory);
 
-    const controllerRegistry = await deployMockContract(admin, ControllerRegistry.abi);
-    await controllerRegistry.mock.isRegistered.returns(true);
+    controller = await ethers.getContract("Controller", admin);
 
-    const memberToken = await deployContract(admin, MemberToken, [controllerRegistry.address]);
-
-    controller = await deployContract(admin, Controller, [
-      memberToken.address,
-      controllerRegistry.address,
-      gnosisSafeProxyFactory.address,
-      gnosisSafeMaster.address,
-    ]);
+    const memberToken = await ethers.getContract("MemberToken", admin);
+    const gnosisSafeProxyFactory = await ethers.getContract("GnosisSafeProxyFactory", admin);
+    const gnosisSafeMaster = await ethers.getContract("GnosisSafe", admin);
 
     const podSafe = await createPodSafe();
     const ethersSafe = await createSafeSigner(podSafe, admin);

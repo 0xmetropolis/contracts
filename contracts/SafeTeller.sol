@@ -4,7 +4,6 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "./interfaces/IGnosisSafe.sol";
 import "./interfaces/IGnosisSafeProxyFactory.sol";
 
-import "hardhat/console.sol";
 
 contract SafeTeller {
     using Address for address;
@@ -100,16 +99,16 @@ contract SafeTeller {
         require(disableSuccess, "Migration failed on disable");
     }
 
-    function getSafeMembers(address safe) internal returns (address[] memory) {
+    function getSafeMembers(address safe) public view returns (address[] memory) {
         return IGnosisSafe(safe).getOwners();
     }
 
-    function isSafeModuleEnabled(address safe) internal view returns (bool) {
+    function isSafeModuleEnabled(address safe) public view returns (bool) {
         return IGnosisSafe(safe).isModuleEnabled(address(this));
     }
 
     function isSafeMember(address safe, address member)
-        internal
+        public
         view
         returns (bool)
     {

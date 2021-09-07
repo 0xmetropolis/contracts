@@ -127,13 +127,13 @@ contract Controller is IController, SafeTeller {
             "User not authorized"
         );
 
-        memberToken.migrateMemberController(_podId, _newController);
 
         Controller newController = Controller(_newController);
 
         podAdmin[_podId] = address(0);
         safeAddress[_podId] = address(0);
 
+        memberToken.migrateMemberController(_podId, _newController);
         migrateSafeTeller(safe, _newController);
         newController.updatePodState(_podId, admin, safe);
     }
@@ -185,7 +185,7 @@ contract Controller is IController, SafeTeller {
             if (from == address(0)) {
                 // mint event
 
-                // if there are no rules operator must be admin, safe or controller
+                // there are no rules operator must be admin, safe or controller
                 require(
                     operator == safe ||
                         operator == admin ||
@@ -197,7 +197,7 @@ contract Controller is IController, SafeTeller {
             } else if (to == address(0)) {
                 // burn event
 
-                // if there are no rules operator must be admin, safe or controller
+                // there are no rules  operator must be admin, safe or controller
                 require(
                     operator == safe ||
                         operator == admin ||

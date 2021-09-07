@@ -9,8 +9,6 @@ contract ControllerRegistry is IControllerRegistry, Ownable {
     event ControllerRegister(address newController);
     event ControllerRemove(address newController);
 
-    constructor() {}
-
     /**
      * @param _controller The address to register as a controller
      */

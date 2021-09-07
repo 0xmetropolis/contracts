@@ -1,19 +1,16 @@
 const { expect, use } = require("chai");
-const { waffle, ethers, network } = require("hardhat");
+const { waffle, ethers, network, deployments } = require("hardhat");
 
 const Safe = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/GnosisSafe.sol/GnosisSafe.json");
-const ControllerRegistry = require("../artifacts/contracts/ControllerRegistry.sol/ControllerRegistry.json");
-const Controller = require("../artifacts/contracts/Controller.sol/Controller.json");
-const MemberToken = require("../artifacts/contracts/MemberToken.sol/MemberToken.json");
 
-const { deployContract, deployMockContract, solidity, provider } = waffle;
+const { deployMockContract, solidity, provider } = waffle;
 
 const { AddressZero, HashZero } = ethers.constants;
 
 use(solidity);
 
 describe("Controller beforeTokenTransfer Test", () => {
-  const [admin, proxyFactory, safeMaster, alice, bob, charlie] = provider.getWallets();
+  const [admin, alice, bob, charlie] = provider.getWallets();
 
   const TX_OPTIONS = { gasLimit: 4000000 };
 
@@ -48,19 +45,12 @@ describe("Controller beforeTokenTransfer Test", () => {
   };
 
   const setup = async () => {
-    const controllerRegistry = await deployMockContract(admin, ControllerRegistry.abi);
-    await controllerRegistry.mock.isRegistered.returns(true);
+    await deployments.fixture(["Base"]);
 
-    memberToken = await deployContract(admin, MemberToken, [controllerRegistry.address]);
-    controller = await deployContract(admin, Controller, [
-      memberToken.address,
-      controllerRegistry.address,
-      proxyFactory.address,
-      safeMaster.address,
-    ]);
+    controller = await ethers.getContract("Controller", admin);
+    memberToken = await ethers.getContract("MemberToken", admin);
 
     safe = await deployMockContract(admin, Safe.abi);
-
     safeSigner = await setupMockSafe(MEMBERS);
 
     await controller.createPodWithSafe(admin.address, safe.address, TX_OPTIONS);

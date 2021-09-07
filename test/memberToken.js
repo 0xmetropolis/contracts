@@ -1,5 +1,5 @@
 const { expect, use } = require("chai");
-const { waffle, ethers, network } = require("hardhat");
+const { waffle, ethers, network, deployments } = require("hardhat");
 
 const Safe = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/GnosisSafe.sol/GnosisSafe.json");
 const ControllerRegistry = require("../artifacts/contracts/ControllerRegistry.sol/ControllerRegistry.json");
@@ -41,20 +41,13 @@ describe("Member Token Test", () => {
   };
 
   const setup = async () => {
-    const controllerRegistry = await deployMockContract(admin, ControllerRegistry.abi);
-    await controllerRegistry.mock.isRegistered.returns(true);
+    await deployments.fixture(["Base"]);
+
+    const controller = await ethers.getContract("Controller", admin);
+    const memberToken = await ethers.getContract("MemberToken", admin);
+    const controllerRegistry = await ethers.getContract("ControllerRegistry", admin);
 
     const safe = await deployMockContract(admin, Safe.abi);
-
-    const memberToken = await deployContract(admin, MemberToken, [controllerRegistry.address]);
-
-    const controller = await deployContract(admin, Controller, [
-      memberToken.address,
-      controllerRegistry.address,
-      proxyFactory.address,
-      safeMaster.address,
-    ]);
-
     const safeSigner = await setupMockSafe([admin.address], safe);
 
     return { memberToken, controller, controllerRegistry, proxyFactory, safeMaster, safeSigner };
@@ -62,11 +55,8 @@ describe("Member Token Test", () => {
 
   describe("when minting and creation", () => {
     it("should NOT allow pod creation from unregistered controller", async () => {
-      await setup();
-      const controllerRegistry = await deployMockContract(admin, ControllerRegistry.abi);
-      await controllerRegistry.mock.isRegistered.returns(false);
+      const { memberToken } = await setup();
 
-      const memberToken = await deployContract(admin, MemberToken, [controllerRegistry.address]);
       await expect(memberToken.connect(admin).createPod([admin.address], CREATE_FLAG)).to.be.revertedWith(
         "Controller not registered",
       );
@@ -128,7 +118,7 @@ describe("Member Token Test", () => {
       );
     });
 
-    it("should not migrate to an unregistered controller version", async () => {
+    it("should NOT migrate to an unregistered controller version", async () => {
       const { memberToken, controller, controllerRegistry, safeSigner } = await setup();
 
       const controllerV2 = await deployContract(admin, Controller, [
@@ -139,7 +129,6 @@ describe("Member Token Test", () => {
       ]);
       await controller.connect(admin).createPodWithSafe(admin.address, safeSigner.address);
 
-      await controllerRegistry.mock.isRegistered.returns(false);
       await expect(controller.connect(admin).migratePodController(POD_ID, controllerV2.address)).to.revertedWith(
         "Controller not registered",
       );
@@ -154,6 +143,8 @@ describe("Member Token Test", () => {
         proxyFactory.address,
         safeMaster.address,
       ]);
+
+      await controllerRegistry.connect(admin).registerController(controllerV2.address);
 
       // create 2 pods from different controllers
       await controller.connect(admin).createPodWithSafe(admin.address, safeSigner.address);

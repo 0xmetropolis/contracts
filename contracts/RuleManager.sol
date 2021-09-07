@@ -13,8 +13,10 @@ contract RuleManager {
         bytes32[5] functionParams;
         uint256 comparisonLogic;
         uint256 comparisonValue;
+        bool isFinalized;
     }
 
+    address controller;
     mapping(uint256 => Rule) public rulesByPod;
 
     event UpdateRule(
@@ -26,6 +28,19 @@ contract RuleManager {
         uint256 comparisonValue
     );
 
+    constructor() {
+        controller = msg.sender;
+    }
+
+    /**
+     * @param _controller The account address to be assigned as controller
+     */
+    function updateController(address _controller) external {
+        require(_controller != address(0), "Invalid gnosisMaster address");
+        require(controller == msg.sender, "!controller");
+        controller = _controller;
+    }
+
     function setPodRule(
         uint256 _podId,
         address _contractAddress,
@@ -33,20 +48,39 @@ contract RuleManager {
         bytes32[5] memory _functionParams,
         uint256 _comparisonLogic,
         uint256 _comparisonValue
-    ) internal {
+    ) external {
+        require(controller == msg.sender, "!controller");
         rulesByPod[_podId] = Rule(
             _contractAddress,
             _functionSignature,
             _functionParams,
             _comparisonLogic,
-            _comparisonValue
+            _comparisonValue,
+            false
         );
     }
 
     /**
      * @param _podId The id number of the pod
      */
-    function hasRules(uint256 _podId) public view returns (bool) {
+    function finalizeRule(uint256 _podId) external {
+        require(controller == msg.sender, "!controller");
+        rulesByPod[_podId].isFinalized = true;
+
+        emit UpdateRule(
+            _podId,
+            rulesByPod[_podId].contractAddress,
+            rulesByPod[_podId].functionSignature,
+            rulesByPod[_podId].functionParams,
+            rulesByPod[_podId].comparisonLogic,
+            rulesByPod[_podId].comparisonValue
+        );
+    }
+
+    /**
+     * @param _podId The id number of the pod
+     */
+    function hasRules(uint256 _podId) external view returns (bool) {
         Rule memory currentRule = rulesByPod[_podId];
         return (currentRule.contractAddress != address(0));
     }
@@ -56,14 +90,14 @@ contract RuleManager {
      * @param _user The account address of a pod member
      */
     function isRuleCompliant(uint256 _podId, address _user)
-        public
+        external
         view
         returns (bool)
     {
         Rule memory currentRule = rulesByPod[_podId];
 
         // if there are no rules return true
-        if (currentRule.contractAddress == address(0)) return true;
+        if (currentRule.contractAddress != address(0)) return true;
 
         // check function params for keywords
         for (uint256 i = 0; i < currentRule.functionParams.length; i++) {
