@@ -8,7 +8,7 @@ const MultiSend = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/l
 
 const Controller = require("../artifacts/contracts/Controller.sol/Controller.json");
 
-const { deployContract, provider, solidity } = waffle;
+const { deployContract, provider, solidity, deployMockContract } = waffle;
 
 use(solidity);
 
