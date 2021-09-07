@@ -10,8 +10,6 @@ const MultiSend = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/l
 const ControllerRegistry = require("../artifacts/contracts/ControllerRegistry.sol/ControllerRegistry.json");
 const Controller = require("../artifacts/contracts/Controller.sol/Controller.json");
 const MemberToken = require("../artifacts/contracts/MemberToken.sol/MemberToken.json");
-const RuleManager = require("../artifacts/contracts/RuleManager.sol/RuleManager.json");
-const SafeTeller = require("../artifacts/contracts/SafeTeller.sol/SafeTeller.json");
 
 const { deployContract, deployMockContract, provider, solidity } = waffle;
 
@@ -62,40 +60,29 @@ describe("Controller safe integration test", () => {
     await controllerRegistry.mock.isRegistered.returns(true);
 
     const memberToken = await deployContract(admin, MemberToken, [controllerRegistry.address]);
-    const safeTeller = await deployContract(admin, SafeTeller, [
+
+    controller = await deployContract(admin, Controller, [
+      memberToken.address,
+      controllerRegistry.address,
       gnosisSafeProxyFactory.address,
       gnosisSafeMaster.address,
     ]);
 
-    const ruleManager = await deployMockContract(admin, RuleManager.abi);
-    await ruleManager.mock.hasRules.returns(false);
-    // user is compliant if there are no rules
-    await ruleManager.mock.isRuleCompliant.returns(true);
-
-    controller = await deployContract(admin, Controller, [
-      memberToken.address,
-      ruleManager.address,
-      safeTeller.address,
-      controllerRegistry.address,
-    ]);
-
-    await safeTeller.connect(admin).updateController(controller.address);
-
     const podSafe = await createPodSafe();
     const ethersSafe = await createSafeSigner(podSafe, admin);
 
-    return { memberToken, ethersSafe, safeTeller, gnosisSafeProxyFactory, gnosisSafeMaster };
+    return { memberToken, ethersSafe, gnosisSafeProxyFactory, gnosisSafeMaster };
   };
 
   describe("new pod creation with safe deployment", () => {
     it("should create a new safe with safe teller module", async () => {
-      const { safeTeller, ethersSafe } = await setup();
+      const { ethersSafe } = await setup();
 
       // threshold and owners
       expect(await ethersSafe.getThreshold()).to.equal(THRESHOLD);
       expect(await ethersSafe.getOwners()).to.deep.equal(MEMBERS);
       // check to see if module has been enabled
-      expect(await ethersSafe.isModuleEnabled(safeTeller.address)).to.equal(true);
+      expect(await ethersSafe.isModuleEnabled(controller.address)).to.equal(true);
     });
 
     it("should distribute member tokens and set admin", async () => {
@@ -111,7 +98,7 @@ describe("Controller safe integration test", () => {
 
   describe("new pod creation with existing safe", () => {
     it("should create a new safe with safe teller module", async () => {
-      const { memberToken, safeTeller, gnosisSafeProxyFactory, gnosisSafeMaster } = await setup();
+      const { memberToken, gnosisSafeProxyFactory, gnosisSafeMaster } = await setup();
 
       const safeAddress = await gnosisSafeProxyFactory.callStatic.createProxy(gnosisSafeMaster.address, HashZero);
       await gnosisSafeProxyFactory.createProxy(gnosisSafeMaster.address, HashZero);
@@ -121,7 +108,7 @@ describe("Controller safe integration test", () => {
 
       const txArgs = {
         to: safe.address,
-        data: safe.interface.encodeFunctionData("enableModule", [safeTeller.address]),
+        data: safe.interface.encodeFunctionData("enableModule", [controller.address]),
         value: 0,
       };
 

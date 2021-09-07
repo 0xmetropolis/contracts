@@ -7,24 +7,26 @@ const GnosisSafe = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/
 const GnosisSafeProxyFactory = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/proxies/GnosisSafeProxyFactory.sol/GnosisSafeProxyFactory.json");
 const MultiSend = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/libraries/MultiSend.sol/MultiSend.json");
 
-const SafeTeller = require("../artifacts/contracts/SafeTeller.sol/SafeTeller.json");
+const ControllerRegistry = require("../artifacts/contracts/ControllerRegistry.sol/ControllerRegistry.json");
+const Controller = require("../artifacts/contracts/Controller.sol/Controller.json");
+const MemberToken = require("../artifacts/contracts/MemberToken.sol/MemberToken.json");
 
-const { deployContract, provider, solidity } = waffle;
+const { deployContract, provider, solidity, deployMockContract } = waffle;
 
 use(solidity);
 
 describe("SafeTeller test", () => {
-  const [admin, mockController, mockSafeTeller, mockModule, alice, bob, charlie] = provider.getWallets();
+  const [admin, alice, bob, charlie, mockModule] = provider.getWallets();
 
   let multiSend;
 
-  const { AddressZero } = ethers.constants;
+  const { HashZero } = ethers.constants;
 
   const TX_OPTIONS = { gasLimit: 4000000 };
 
   const THRESHOLD = 1;
   const MEMBERS = [alice.address, bob.address];
-  const POD_ID = 1;
+  const POD_ID = 0;
 
   const createSafeSigner = async (safe, signer) => {
     const { chainId } = await provider.getNetwork();
@@ -46,141 +48,92 @@ describe("SafeTeller test", () => {
     const gnosisSafeMaster = await deployContract(admin, GnosisSafe);
     const gnosisSafeProxyFactory = await deployContract(admin, GnosisSafeProxyFactory);
 
-    const safeTeller = await deployContract(admin, SafeTeller, [
+    const controllerRegistry = await deployMockContract(admin, ControllerRegistry.abi);
+    await controllerRegistry.mock.isRegistered.returns(true);
+
+    const memberToken = await deployContract(admin, MemberToken, [controllerRegistry.address]);
+
+    const controller = await deployContract(admin, Controller, [
+      memberToken.address,
+      controllerRegistry.address,
       gnosisSafeProxyFactory.address,
       gnosisSafeMaster.address,
     ]);
 
-    await safeTeller.connect(admin).updateController(mockController.address);
-
-    const res = await safeTeller.connect(mockController).createSafe(POD_ID, MEMBERS, THRESHOLD);
+    const res = await controller.connect(alice).createPod(MEMBERS, THRESHOLD, alice.address);
     const { args } = (await res.wait()).events.find(elem => elem.event === "CreateSafe");
 
-    const safe = new ethers.Contract(args.safeAddress, GnosisSafe.abi, admin);
+    const safe = new ethers.Contract(args.safeAddress, GnosisSafe.abi, alice);
 
-    const ethersSafe = await createSafeSigner(safe, admin);
+    const ethersSafe = await createSafeSigner(safe, alice);
 
-    return { safeTeller, ethersSafe, safe, gnosisSafeMaster };
+    return { controller, controllerRegistry, ethersSafe, safe, gnosisSafeProxyFactory, gnosisSafeMaster, memberToken };
   };
 
   describe("new safe setup", () => {
     it("should create a new safe with safe teller module", async () => {
-      const { safeTeller } = await setup();
+      const { controller } = await setup();
 
-      const res = await safeTeller.connect(mockController).createSafe(POD_ID + 1, MEMBERS, THRESHOLD);
+      const res = await controller.connect(alice).createPod(MEMBERS, THRESHOLD, alice.address);
       const { args } = (await res.wait()).events.find(elem => elem.event === "CreateSafe");
-      const safe = new ethers.Contract(args.safeAddress, GnosisSafe.abi, admin);
+      const safe = new ethers.Contract(args.safeAddress, GnosisSafe.abi, alice);
 
-      const ethersSafe = await createSafeSigner(safe, admin);
+      const ethersSafe = await createSafeSigner(safe, alice);
 
       // threshold and owners
       expect(await ethersSafe.getThreshold()).to.equal(THRESHOLD);
       expect(await ethersSafe.getOwners()).to.deep.equal(MEMBERS);
       // check to see if module has been enabled
-      expect(await ethersSafe.isModuleEnabled(safeTeller.address)).to.equal(true);
-    });
-
-    it("should throw error if user calls create safe", async () => {
-      const { safeTeller } = await setup();
-
-      await expect(safeTeller.connect(admin).createSafe(POD_ID, MEMBERS, THRESHOLD, TX_OPTIONS)).to.be.revertedWith(
-        "!controller",
-      );
+      expect(await ethersSafe.isModuleEnabled(controller.address)).to.equal(true);
     });
 
     it("should throw error on bad safe setup", async () => {
-      const { safeTeller } = await setup();
+      const { controller } = await setup();
 
-      await expect(
-        safeTeller.connect(mockController).createSafe(POD_ID + 1, MEMBERS, 0, TX_OPTIONS),
-      ).to.be.revertedWith("Create Proxy With Data Failed");
+      await expect(controller.connect(admin).createPod(MEMBERS, 0, admin.address)).to.be.revertedWith(
+        "Create Proxy With Data Failed",
+      );
     });
   });
 
-  describe("onMint", () => {
+  describe("#onMint", () => {
     it("should mint new safe owners", async () => {
-      const { safeTeller, ethersSafe, safe } = await setup();
+      const { memberToken, ethersSafe } = await setup();
 
-      await safeTeller.connect(mockController).onMint(charlie.address, safe.address);
+      await memberToken.connect(alice).mint(charlie.address, POD_ID, HashZero);
       expect(await ethersSafe.getOwners()).to.deep.equal([charlie.address, ...MEMBERS]);
     });
-
-    it("should throw error on if user calls mint", async () => {
-      const { safeTeller, safe } = await setup();
-      await expect(safeTeller.connect(admin).onMint(charlie.address, safe.address)).to.be.revertedWith("!controller");
-    });
-
-    it("should throw error on invalid mint", async () => {
-      const { safeTeller, safe } = await setup();
-      await expect(safeTeller.connect(mockController).onMint(AddressZero, safe.address)).to.be.revertedWith(
-        "Module Transaction Failed",
-      );
-    });
   });
 
-  describe("onBurn", () => {
+  describe("#onBurn", () => {
     it("should burn safe owners", async () => {
-      const { safeTeller, ethersSafe, safe } = await setup();
+      const { memberToken, ethersSafe } = await setup();
 
-      await safeTeller.connect(mockController).onBurn(bob.address, safe.address);
+      await memberToken.connect(alice).burn(bob.address, POD_ID);
       expect(await ethersSafe.getOwners()).to.deep.equal([alice.address]);
     });
-
-    it("should throw error on if user calls burn", async () => {
-      const { safeTeller, safe } = await setup();
-      await expect(safeTeller.connect(admin).onBurn(bob.address, safe.address)).to.be.revertedWith("!controller");
-    });
-
-    it("should throw error on invalid burn", async () => {
-      const { safeTeller, safe } = await setup();
-      await expect(safeTeller.connect(mockController).onBurn(charlie.address, safe.address)).to.be.revertedWith(
-        "Module Transaction Failed",
-      );
-    });
   });
 
-  describe("onTransfer", () => {
+  describe("#onTransfer", () => {
     it("should transfer safe owners", async () => {
-      const { safeTeller, ethersSafe, safe } = await setup();
+      const { memberToken, ethersSafe } = await setup();
 
-      await safeTeller.connect(mockController).onTransfer(bob.address, charlie.address, safe.address);
+      await memberToken.connect(bob).safeTransferFrom(bob.address, charlie.address, POD_ID, 1, HashZero);
       expect(await ethersSafe.getOwners()).to.deep.equal([alice.address, charlie.address]);
     });
-
-    it("should throw error on if user calls transfer", async () => {
-      const { safeTeller, safe } = await setup();
-      await expect(safeTeller.connect(admin).onTransfer(bob.address, charlie.address, safe.address)).to.be.revertedWith(
-        "!controller",
-      );
-    });
-
-    it("should throw error on invalid mint", async () => {
-      const { safeTeller, safe } = await setup();
-      await expect(
-        safeTeller.connect(mockController).onTransfer(bob.address, bob.address, safe.address),
-      ).to.be.revertedWith("Module Transaction Failed");
-    });
   });
 
-  describe("safeTeller migration", () => {
-    it("should migrate to a new version of the safeTeller", async () => {
-      const { safeTeller, ethersSafe, safe } = await setup();
-
-      await safeTeller.connect(mockController).migrateSafeTeller(safe.address, mockSafeTeller.address, TX_OPTIONS);
-      expect(await ethersSafe.isModuleEnabled(mockSafeTeller.address)).to.equal(true);
-      expect(await ethersSafe.isModuleEnabled(safeTeller.address)).to.equal(false);
-    });
-
-    it("should throw error if user tries to migrate safeTeller", async () => {
-      const { safeTeller, safe } = await setup();
-
-      await expect(
-        safeTeller.connect(alice).migrateSafeTeller(safe.address, mockSafeTeller.address, TX_OPTIONS),
-      ).to.be.revertedWith("!controller");
-    });
-
+  describe("when migrating safeTeller", () => {
     it("should migrate to a new version of the safeTeller with multiple modules", async () => {
-      const { safeTeller, ethersSafe, safe } = await setup();
+      const {
+        controller,
+        ethersSafe,
+        safe,
+        memberToken,
+        controllerRegistry,
+        gnosisSafeMaster,
+        gnosisSafeProxyFactory,
+      } = await setup();
 
       // safeSdk.getEnableModuleTx doesn't work so creating tx manually
       const txArgs = {
@@ -196,9 +149,16 @@ describe("SafeTeller test", () => {
       await txRes.wait();
       expect(await ethersSafe.isModuleEnabled(mockModule.address)).to.equal(true);
 
-      await safeTeller.connect(mockController).migrateSafeTeller(safe.address, mockSafeTeller.address, TX_OPTIONS);
-      expect(await ethersSafe.isModuleEnabled(mockSafeTeller.address)).to.equal(true);
-      expect(await ethersSafe.isModuleEnabled(safeTeller.address)).to.equal(false);
+      const controller2 = await deployContract(admin, Controller, [
+        memberToken.address,
+        controllerRegistry.address,
+        gnosisSafeProxyFactory.address,
+        gnosisSafeMaster.address,
+      ]);
+
+      await controller.connect(alice).migratePodController(POD_ID, controller2.address, TX_OPTIONS);
+      expect(await ethersSafe.isModuleEnabled(controller2.address)).to.equal(true);
+      expect(await ethersSafe.isModuleEnabled(controller.address)).to.equal(false);
     });
   });
 });
