@@ -1,4 +1,4 @@
-pragma solidity 0.7.4;
+pragma solidity 0.8.7;
 
 interface IGnosisSafeProxyFactory {
     /// @dev Allows to create new proxy contact and execute a message call to the new proxy within one transaction.
