@@ -40,7 +40,9 @@ const namedAccounts = {
  * @type import('hardhat/config').HardhatUserConfig
  */
 module.exports = {
-  solidity: "0.7.4",
+  solidity: {
+    compilers: [{ version: "0.8.7" }, { version: "0.7.4" }],
+  },
   gasReporter: {
     currency: "USD",
     gasPrice: 150,

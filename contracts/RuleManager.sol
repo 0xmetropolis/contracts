@@ -1,4 +1,4 @@
-pragma solidity 0.7.4;
+pragma solidity 0.7.4; // solhint-disable-line
 
 /* solhint-disable indent */
 
