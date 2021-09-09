@@ -127,7 +127,6 @@ contract Controller is IController, SafeTeller {
             "User not authorized"
         );
 
-
         Controller newController = Controller(_newController);
 
         podAdmin[_podId] = address(0);
@@ -139,6 +138,9 @@ contract Controller is IController, SafeTeller {
     }
 
     /**
+     * @dev This is called by another version of controller to migrate a pod to this version
+     * @dev Will only accept calls from registered controllers
+     * @dev Can only be called once.
      * @param _podId The id number of the pod
      * @param _podAdmin The address of the pod admin
      * @param _safeAddress The address of the safe
@@ -151,6 +153,10 @@ contract Controller is IController, SafeTeller {
         require(
             controllerRegistry.isRegistered(msg.sender),
             "Controller not registered"
+        );
+        require(
+            podAdmin[_podId] == address(0) && safeAddress[_podId] == address(0),
+            "Pod already exists"
         );
         podAdmin[_podId] = _podAdmin;
         safeAddress[_podId] = _safeAddress;
