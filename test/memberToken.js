@@ -83,7 +83,7 @@ describe("Member Token Test", () => {
       const { memberToken } = await setup();
 
       await expect(memberToken.connect(admin).mint(alice.address, POD_ID, HashZero)).to.revertedWith(
-        "Cannot mint on nonexistent pod",
+        "Pod doesn't exist",
       );
     });
   });

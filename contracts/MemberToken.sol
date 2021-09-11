@@ -63,7 +63,6 @@ contract MemberToken is ERC1155Supply {
         uint256 _id,
         bytes memory data
     ) external {
-        require(exists(_id), "Cannot mint on nonexistent pod");
         _mint(_account, _id, 1, data);
     }
 
@@ -77,7 +76,6 @@ contract MemberToken is ERC1155Supply {
         uint256 _id,
         bytes memory data
     ) public {
-        require(exists(_id), "Cannot mint on nonexistent pod");
         for (uint256 index = 0; index < _accounts.length; index += 1) {
             _mint(_accounts[index], _id, 1, data);
         }
@@ -136,6 +134,7 @@ contract MemberToken is ERC1155Supply {
     ) internal override {
         // use first id to lookup controller
         address controller = memberController[ids[0]];
+        require(controller != address(0), "Pod doesn't exist");
 
         for (uint256 i = 0; i < ids.length; i += 1) {
             // check if recipient is already member
