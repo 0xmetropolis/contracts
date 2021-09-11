@@ -180,8 +180,8 @@ contract Controller is IController, SafeTeller {
         require(msg.sender == address(memberToken), "Not Authorized");
 
         // if create event than side effects have been pre-handled
-        // no data field on burn
-        if (to != address(0) && uint8(data[0]) == CREATE_EVENT) return;
+        // only recognise data flags from this controller
+        if (operator == address(this) && uint8(data[0]) == CREATE_EVENT) return;
 
         for (uint256 i = 0; i < ids.length; i += 1) {
             uint256 podId = ids[i];
