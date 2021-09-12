@@ -52,6 +52,9 @@ contract SafeTeller {
      * @param _newSafeTeller The address of the new safe teller contract
      */
     function migrateSafeTeller(address safe, address _newSafeTeller) internal {
+        // verify the current contract is enabled as a module
+        require(isSafeModuleEnabled(safe), "Current safeteller not enabled");
+
         bytes memory enableData = abi.encodeWithSignature(
             "enableModule(address)",
             _newSafeTeller
@@ -66,6 +69,7 @@ contract SafeTeller {
         require(enableSuccess, "Migration failed on enable");
 
         // find current safe teller in module array
+        // will only handle safes with <=10 modules
         uint256 pageSize = 10;
         address index = SENTINEL;
         address prevModule = address(0);
@@ -73,12 +77,10 @@ contract SafeTeller {
         while (prevModule == address(0)) {
             (address[] memory moduleBuffer, address next) = IGnosisSafe(safe)
                 .getModulesPaginated(index, pageSize);
-            require(moduleBuffer[0] != address(0), "module not found");
-            index = next;
 
             for (uint256 i = 0; i < moduleBuffer.length; i++) {
                 if (moduleBuffer[i] == address(this))
-                    prevModule = i > 0 ? moduleBuffer[i - 1] : moduleBuffer[0];
+                    prevModule = i > 0 ? moduleBuffer[i - 1] : index;
             }
         }
 
