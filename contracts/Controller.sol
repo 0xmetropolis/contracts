@@ -4,22 +4,13 @@ pragma solidity 0.7.4;
 
 import "./interfaces/IController.sol";
 import "./interfaces/IMemberToken.sol";
-import "./interfaces/IRuleManager.sol";
-import "./interfaces/ISafeTeller.sol";
 import "./interfaces/IControllerRegistry.sol";
+import "./SafeTeller.sol";
 
-// TODO: consider  order of contract  deployment. May not want to deploy all together
-// this will impact the modifiers that are important for securiy
-// for not deploying supporting contracts as part of main contract
-
-contract Controller is IController {
-    event RuleManagerAddress(address contractAddress);
-    event MemberTokenAddress(address contractAddress);
+contract Controller is IController, SafeTeller {
     event CreatePod(uint256 podId);
 
     IMemberToken public memberToken;
-    IRuleManager public ruleManager;
-    ISafeTeller public safeTeller;
     IControllerRegistry public controllerRegistry;
 
     mapping(uint256 => address) public safeAddress;
@@ -29,20 +20,19 @@ contract Controller is IController {
 
     /**
      * @param _memberToken The address of the MemberToken contract
-     * @param _ruleManager The address of the RuleManager contract
-     * @param _safeTeller The address of the SafeTeller contract
      * @param _controllerRegistry The address of the ControllerRegistry contract
+     * @param _proxyFactoryAddress The proxy factory address
+     * @param _gnosisMasterAddress The gnosis master address
      */
     constructor(
         address _memberToken,
-        address _ruleManager,
-        address _safeTeller,
-        address _controllerRegistry
+        address _controllerRegistry,
+        address _proxyFactoryAddress,
+        address _gnosisMasterAddress
     ) {
         memberToken = IMemberToken(_memberToken);
-        ruleManager = IRuleManager(_ruleManager);
-        safeTeller = ISafeTeller(_safeTeller);
         controllerRegistry = IControllerRegistry(_controllerRegistry);
+        setupSafeTeller(_proxyFactoryAddress, _gnosisMasterAddress);
     }
 
     /**
@@ -65,7 +55,7 @@ contract Controller is IController {
 
         emit CreatePod(podId);
 
-        safeAddress[podId] = safeTeller.createSafe(podId, _members, threshold);
+        safeAddress[podId] = createSafe(podId, _members, threshold);
     }
 
     /**
@@ -77,12 +67,9 @@ contract Controller is IController {
     function createPodWithSafe(address _admin, address _safe) external {
         uint256 podId = memberToken.getNextAvailablePodId();
         require(_safe != address(0), "invalid safe address");
+        require(isSafeModuleEnabled(_safe), "safe module must be enabled");
         require(
-            safeTeller.isModuleEnabled(_safe),
-            "safe module must be enabled"
-        );
-        require(
-            safeTeller.isMember(_safe, msg.sender) || msg.sender == _safe,
+            isSafeMember(_safe, msg.sender) || msg.sender == _safe,
             "caller must be safe or member"
         );
 
@@ -92,39 +79,13 @@ contract Controller is IController {
 
         safeAddress[podId] = _safe;
 
-        address[] memory members = safeTeller.getMembers(_safe);
+        address[] memory members = getSafeMembers(_safe);
 
         // add create event flag to token data
         bytes memory data = new bytes(1);
         data[0] = bytes1(uint8(CREATE_EVENT));
 
         memberToken.createPod(members, data);
-    }
-
-    function createRule(
-        uint256 _podId,
-        address _contractAddress,
-        bytes4 _functionSignature,
-        bytes32[5] memory _functionParams,
-        uint256 _comparisonLogic,
-        uint256 _comparisonValue
-    ) external {
-        //TODO: executable id
-        require(
-            msg.sender == podAdmin[_podId] || msg.sender == safeAddress[_podId],
-            "User not authorized"
-        );
-
-        ruleManager.setPodRule(
-            _podId,
-            _contractAddress,
-            _functionSignature,
-            _functionParams,
-            _comparisonLogic,
-            _comparisonValue
-        );
-
-        ruleManager.finalizeRule(_podId);
     }
 
     /**
@@ -147,13 +108,6 @@ contract Controller is IController {
     }
 
     /**
-     * @return The address of the safe teller contract
-     */
-    function getSafeTeller() external view returns (address) {
-        return address(safeTeller);
-    }
-
-    /**
      * @param _podId The id number of the pod
      * @param _newController The address of the new pod controller
      */
@@ -173,13 +127,14 @@ contract Controller is IController {
             "User not authorized"
         );
 
+
         Controller newController = Controller(_newController);
 
         podAdmin[_podId] = address(0);
         safeAddress[_podId] = address(0);
 
         memberToken.migrateMemberController(_podId, _newController);
-        safeTeller.migrateSafeTeller(safe, newController.getSafeTeller());
+        migrateSafeTeller(safe, _newController);
         newController.updatePodState(_podId, admin, safe);
     }
 
@@ -227,53 +182,33 @@ contract Controller is IController {
             address safe = safeAddress[podId];
             address admin = podAdmin[podId];
 
-            // mint event
             if (from == address(0)) {
-                // if there are rules recipient must be rule compliant
-                if (ruleManager.hasRules(podId)) {
-                    require(
-                        ruleManager.isRuleCompliant(podId, to),
-                        "Not Rule Compliant"
-                    );
-                    // if there are no rules operator must be admin, safe or controller
-                } else {
-                    require(
-                        operator == safe ||
-                            operator == admin ||
-                            operator == address(this),
-                        "No Rules Set"
-                    );
-                }
-                safeTeller.onMint(to, safe);
+                // mint event
 
-                // burn event
-            } else if (to == address(0)) {
-                // if there are rules terminee must not be rule compliant
-                if (ruleManager.hasRules(podId)) {
-                    require(
-                        ruleManager.isRuleCompliant(podId, from) == false,
-                        "Rule Compliant"
-                    );
-                    // if there are no rules operator must be admin, safe or controller
-                } else {
-                    require(
-                        operator == safe ||
-                            operator == admin ||
-                            operator == address(this),
-                        "No Rules Set"
-                    );
-                }
-
-                safeTeller.onBurn(from, safe);
-
-                // transfer event
-            } else {
+                // there are no rules operator must be admin, safe or controller
                 require(
-                    ruleManager.isRuleCompliant(podId, to),
-                    "Not Rule Compliant"
+                    operator == safe ||
+                        operator == admin ||
+                        operator == address(this),
+                    "No Rules Set"
                 );
 
-                safeTeller.onTransfer(from, to, safe);
+                onMint(to, safe);
+            } else if (to == address(0)) {
+                // burn event
+
+                // there are no rules  operator must be admin, safe or controller
+                require(
+                    operator == safe ||
+                        operator == admin ||
+                        operator == address(this),
+                    "No Rules Set"
+                );
+
+                onBurn(from, safe);
+            } else {
+                // transfer event
+                onTransfer(from, to, safe);
             }
         }
     }

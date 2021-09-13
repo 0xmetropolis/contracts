@@ -4,6 +4,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "./interfaces/IGnosisSafe.sol";
 import "./interfaces/IGnosisSafeProxyFactory.sol";
 
+
 contract SafeTeller {
     using Address for address;
 
@@ -22,7 +23,6 @@ contract SafeTeller {
 
     address internal constant SENTINEL = address(0x1);
 
-    address public controller;
     address public context;
 
     event CreateSafe(uint256 indexed podId, address safeAddress);
@@ -31,7 +31,10 @@ contract SafeTeller {
      * @param _proxyFactoryAddress The proxy factory address
      * @param _gnosisMasterAddress The gnosis master address
      */
-    constructor(address _proxyFactoryAddress, address _gnosisMasterAddress) {
+    function setupSafeTeller(
+        address _proxyFactoryAddress,
+        address _gnosisMasterAddress
+    ) internal {
         require(
             _proxyFactoryAddress != address(0),
             "Invalid proxyFactory address"
@@ -40,27 +43,16 @@ contract SafeTeller {
             _gnosisMasterAddress != address(0),
             "Invalid gnosisMaster address"
         );
-        controller = msg.sender;
         proxyFactoryAddress = _proxyFactoryAddress;
         gnosisMasterAddress = _gnosisMasterAddress;
         context = address(this);
     }
 
     /**
-     * @param _controller The address to set as controller
-     */
-    function updateController(address _controller) external {
-        require(_controller != address(0), "Invalid controller address");
-        require(controller == msg.sender, "!controller");
-        controller = _controller;
-    }
-
-    /**
      * @param safe The address of the safe
      * @param _newSafeTeller The address of the new safe teller contract
      */
-    function migrateSafeTeller(address safe, address _newSafeTeller) external {
-        require(controller == msg.sender, "!controller");
+    function migrateSafeTeller(address safe, address _newSafeTeller) internal {
         bytes memory enableData = abi.encodeWithSignature(
             "enableModule(address)",
             _newSafeTeller
@@ -107,16 +99,16 @@ contract SafeTeller {
         require(disableSuccess, "Migration failed on disable");
     }
 
-    function getMembers(address safe) external returns (address[] memory) {
+    function getSafeMembers(address safe) public view returns (address[] memory) {
         return IGnosisSafe(safe).getOwners();
     }
 
-    function isModuleEnabled(address safe) external view returns (bool) {
+    function isSafeModuleEnabled(address safe) public view returns (bool) {
         return IGnosisSafe(safe).isModuleEnabled(address(this));
     }
 
-    function isMember(address safe, address member)
-        external
+    function isSafeMember(address safe, address member)
+        public
         view
         returns (bool)
     {
@@ -133,8 +125,7 @@ contract SafeTeller {
         uint256 _podId,
         address[] memory _owners,
         uint256 _threshold
-    ) external returns (address safeAddress) {
-        require(controller == msg.sender, "!controller");
+    ) internal returns (address safeAddress) {
         bytes memory data = abi.encodeWithSignature(
             FUNCTION_SIG_ENABLE,
             context
@@ -172,8 +163,7 @@ contract SafeTeller {
      * @param to The account address to add as an owner
      * @param safe The address of the safe
      */
-    function onMint(address to, address safe) external {
-        require(controller == msg.sender, "!controller");
+    function onMint(address to, address safe) internal {
         uint256 threshold = IGnosisSafe(safe).getThreshold();
 
         bytes memory data = abi.encodeWithSignature(
@@ -196,8 +186,7 @@ contract SafeTeller {
      * @param from The address to be removed as an owner
      * @param safe The address of the safe
      */
-    function onBurn(address from, address safe) external {
-        require(controller == msg.sender, "!controller");
+    function onBurn(address from, address safe) internal {
         uint256 threshold = IGnosisSafe(safe).getThreshold();
         address[] memory owners = IGnosisSafe(safe).getOwners();
 
@@ -238,8 +227,7 @@ contract SafeTeller {
         address from,
         address to,
         address safe
-    ) external {
-        require(controller == msg.sender, "!controller");
+    ) internal {
         address[] memory owners = IGnosisSafe(safe).getOwners();
 
         //look for the address pointing to address from

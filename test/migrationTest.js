@@ -1,17 +1,8 @@
 const { expect, use } = require("chai");
-const { waffle, ethers } = require("hardhat");
-
-const EthersSafe = require("@gnosis.pm/safe-core-sdk").default;
+const { waffle, ethers, deployments } = require("hardhat");
 
 const GnosisSafe = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/GnosisSafe.sol/GnosisSafe.json");
-const GnosisSafeProxyFactory = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/proxies/GnosisSafeProxyFactory.sol/GnosisSafeProxyFactory.json");
-const MultiSend = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/libraries/MultiSend.sol/MultiSend.json");
-
-const ControllerRegistry = require("../artifacts/contracts/ControllerRegistry.sol/ControllerRegistry.json");
 const Controller = require("../artifacts/contracts/Controller.sol/Controller.json");
-const MemberToken = require("../artifacts/contracts/MemberToken.sol/MemberToken.json");
-const RuleManager = require("../artifacts/contracts/RuleManager.sol/RuleManager.json");
-const SafeTeller = require("../artifacts/contracts/SafeTeller.sol/SafeTeller.json");
 
 const { deployContract, solidity, provider } = waffle;
 
@@ -29,26 +20,10 @@ describe("pod migration test", () => {
   const LEGACY_POD_ID = 0;
   const UPGRADE_POD_ID = 1;
 
-  let multiSend;
-  const controllerRegistry = {};
-  const controller = {};
-  const safeTeller = {};
-  const ruleManager = {};
-  const memberToken = {};
+  let controllerRegistry;
+  let memberToken;
 
-  const createSafeSigner = async (safe, signer) => {
-    const { chainId } = await provider.getNetwork();
-    return EthersSafe.create({
-      ethers,
-      safeAddress: safe.address,
-      providerOrSigner: signer,
-      contractNetworks: {
-        [chainId]: {
-          multiSendAddress: multiSend.address,
-        },
-      },
-    });
-  };
+  const controller = {};
 
   const createPodSafe = async (podId, members, ownerAddress = AddressZero) => {
     const threshold = 1;
@@ -58,42 +33,27 @@ describe("pod migration test", () => {
   };
 
   const setup = async () => {
-    multiSend = await deployContract(admin, MultiSend);
-    const gnosisSafeMaster = await deployContract(admin, GnosisSafe);
-    const gnosisSafeProxyFactory = await deployContract(admin, GnosisSafeProxyFactory);
+    await deployments.fixture(["Base"]);
 
-    // V1
-    // deploy V1 contracts
-    controllerRegistry.V1 = await deployContract(admin, ControllerRegistry);
-    ruleManager.V1 = await deployContract(admin, RuleManager);
-    safeTeller.V1 = await deployContract(admin, SafeTeller, [gnosisSafeProxyFactory.address, gnosisSafeMaster.address]);
-    memberToken.V1 = await deployContract(admin, MemberToken, [controllerRegistry.V1.address]);
+    const gnosisSafeProxyFactory = await ethers.getContract("GnosisSafeProxyFactory", admin);
+    const gnosisSafeMaster = await ethers.getContract("GnosisSafe", admin);
 
-    controller.V1 = await deployContract(admin, Controller, [
-      memberToken.V1.address,
-      ruleManager.V1.address,
-      safeTeller.V1.address,
-      controllerRegistry.V1.address,
-    ]);
-    // register V1 controller
-    await controllerRegistry.V1.connect(admin).registerController(controller.V1.address);
-    await safeTeller.V1.connect(admin).updateController(controller.V1.address, TX_OPTIONS);
+    controller.V1 = await ethers.getContract("Controller", admin);
+
+    memberToken = await ethers.getContract("MemberToken", admin);
+    controllerRegistry = await ethers.getContract("ControllerRegistry", admin);
 
     // V2
-    // deploy V2 contracts
-    ruleManager.V2 = await deployContract(admin, RuleManager);
-    safeTeller.V2 = await deployContract(admin, SafeTeller, [gnosisSafeProxyFactory.address, gnosisSafeMaster.address]);
-
+    // deploy V2 contract
     controller.V2 = await deployContract(admin, Controller, [
-      memberToken.V1.address,
-      ruleManager.V2.address,
-      safeTeller.V2.address,
-      controllerRegistry.V1.address,
+      memberToken.address,
+      controllerRegistry.address,
+      gnosisSafeProxyFactory.address,
+      gnosisSafeMaster.address,
     ]);
 
     // register V2 contracts
-    await controllerRegistry.V1.connect(admin).registerController(controller.V2.address);
-    await safeTeller.V2.connect(admin).updateController(controller.V2.address, TX_OPTIONS);
+    await controllerRegistry.connect(admin).registerController(controller.V2.address);
 
     // create V1 pods
     const legacyPod = await createPodSafe(LEGACY_POD_ID, MEMBERS, owner.address);
@@ -108,7 +68,7 @@ describe("pod migration test", () => {
   it("should update pod controller in memberToken", async () => {
     await setup();
     // should point the member token to new controller
-    expect(await memberToken.V1.memberController(UPGRADE_POD_ID)).to.equal(controller.V2.address);
+    expect(await memberToken.memberController(UPGRADE_POD_ID)).to.equal(controller.V2.address);
   });
 
   it("should migrate pod state to new controller", async () => {
@@ -122,30 +82,30 @@ describe("pod migration test", () => {
     expect(await controller.V2.podAdmin(UPGRADE_POD_ID)).to.equal(owner.address);
   });
 
-  it("should migrate safe to new safe teller version", async () => {
+  it("should migrate safe to new controller version", async () => {
     const { upgradePod, legacyPod } = await setup();
 
     // check upgraded pod
-    expect(await upgradePod.isModuleEnabled(safeTeller.V2.address)).to.equal(true);
-    expect(await upgradePod.isModuleEnabled(safeTeller.V1.address)).to.equal(false);
+    expect(await upgradePod.isModuleEnabled(controller.V2.address)).to.equal(true);
+    expect(await upgradePod.isModuleEnabled(controller.V1.address)).to.equal(false);
     // check legacy pod
-    expect(await legacyPod.isModuleEnabled(safeTeller.V1.address)).to.equal(true);
-    expect(await legacyPod.isModuleEnabled(safeTeller.V2.address)).to.equal(false);
+    expect(await legacyPod.isModuleEnabled(controller.V1.address)).to.equal(true);
+    expect(await legacyPod.isModuleEnabled(controller.V2.address)).to.equal(false);
   });
 
   it("should be able to mint memberships for upgraded pod", async () => {
     await setup();
 
-    await expect(memberToken.V1.connect(owner).mint(charlie.address, UPGRADE_POD_ID, HashZero, TX_OPTIONS))
-      .to.emit(memberToken.V1, "TransferSingle")
+    await expect(memberToken.connect(owner).mint(charlie.address, UPGRADE_POD_ID, HashZero, TX_OPTIONS))
+      .to.emit(memberToken, "TransferSingle")
       .withArgs(owner.address, AddressZero, charlie.address, UPGRADE_POD_ID, 1);
   });
 
   it("should be able to mint memberships for legacy pod", async () => {
     await setup();
 
-    await expect(memberToken.V1.connect(owner).mint(charlie.address, LEGACY_POD_ID, HashZero, TX_OPTIONS))
-      .to.emit(memberToken.V1, "TransferSingle")
+    await expect(memberToken.connect(owner).mint(charlie.address, LEGACY_POD_ID, HashZero, TX_OPTIONS))
+      .to.emit(memberToken, "TransferSingle")
       .withArgs(owner.address, AddressZero, charlie.address, LEGACY_POD_ID, 1);
   });
 });

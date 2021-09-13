@@ -28,6 +28,9 @@ const namedAccounts = {
     default: 0,
     rinkeby: 0,
   },
+  gnosisDeployer: {
+    default: 1,
+  },
 };
 
 // You need to export an object to set up your config
@@ -45,4 +48,11 @@ module.exports = {
   },
   networks,
   namedAccounts,
+  external: {
+    contracts: [
+      {
+        artifacts: "node_modules/@gnosis.pm/safe-contracts/build/artifacts",
+      },
+    ],
+  },
 };
