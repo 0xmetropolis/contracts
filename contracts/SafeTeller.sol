@@ -48,49 +48,42 @@ contract SafeTeller {
     }
 
     /**
-     * @param safe The address of the safe
+     * @param _safe The address of the safe
      * @param _newSafeTeller The address of the new safe teller contract
      */
-    function migrateSafeTeller(address safe, address _newSafeTeller) internal {
+    function migrateSafeTeller(
+        address _safe,
+        address _newSafeTeller,
+        address _prevModule
+    ) internal {
+        // add new safeTeller
         bytes memory enableData = abi.encodeWithSignature(
             "enableModule(address)",
             _newSafeTeller
         );
 
-        bool enableSuccess = IGnosisSafe(safe).execTransactionFromModule(
-            safe,
+        bool enableSuccess = IGnosisSafe(_safe).execTransactionFromModule(
+            _safe,
             0,
             enableData,
             IGnosisSafe.Operation.Call
         );
         require(enableSuccess, "Migration failed on enable");
 
-        // find current safe teller in module array
-        uint256 pageSize = 10;
-        address index = SENTINEL;
-        address prevModule = address(0);
-
-        while (prevModule == address(0)) {
-            (address[] memory moduleBuffer, address next) = IGnosisSafe(safe)
-                .getModulesPaginated(index, pageSize);
-            require(moduleBuffer[0] != address(0), "module not found");
-            index = next;
-
-            for (uint256 i = 0; i < moduleBuffer.length; i++) {
-                if (moduleBuffer[i] == address(this))
-                    prevModule = i > 0 ? moduleBuffer[i - 1] : moduleBuffer[0];
-            }
-        }
+        // validate prevModule of current safe teller
+        (address[] memory moduleBuffer, ) = IGnosisSafe(_safe)
+            .getModulesPaginated(_prevModule, 1);
+        require(moduleBuffer[0] == address(this), "incorrect prevModule");
 
         // disable current safeTeller
         bytes memory disableData = abi.encodeWithSignature(
             "disableModule(address,address)",
-            prevModule,
+            _prevModule,
             address(this)
         );
 
-        bool disableSuccess = IGnosisSafe(safe).execTransactionFromModule(
-            safe,
+        bool disableSuccess = IGnosisSafe(_safe).execTransactionFromModule(
+            _safe,
             0,
             disableData,
             IGnosisSafe.Operation.Call

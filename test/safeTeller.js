@@ -10,6 +10,8 @@ const Controller = require("../artifacts/contracts/Controller.sol/Controller.jso
 
 const { deployContract, provider, solidity } = waffle;
 
+const AddressOne = "0x0000000000000000000000000000000000000001";
+
 use(solidity);
 
 describe("SafeTeller test", () => {
@@ -150,7 +152,9 @@ describe("SafeTeller test", () => {
 
       await controllerRegistry.connect(admin).registerController(controller2.address);
 
-      await controller.connect(alice).migratePodController(POD_ID, controller2.address, TX_OPTIONS);
+      const modules = await safe.getModulesPaginated(AddressOne, 3);
+
+      await controller.connect(alice).migratePodController(POD_ID, controller2.address, modules.array[0], TX_OPTIONS);
       expect(await ethersSafe.isModuleEnabled(controller2.address)).to.equal(true);
       expect(await ethersSafe.isModuleEnabled(controller.address)).to.equal(false);
     });

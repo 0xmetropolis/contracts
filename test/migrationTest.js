@@ -60,7 +60,11 @@ describe("pod migration test", () => {
     const upgradePod = await createPodSafe(UPGRADE_POD_ID, MEMBERS, owner.address);
 
     // migrate pod to V2
-    await controller.V1.connect(owner).migratePodController(UPGRADE_POD_ID, controller.V2.address);
+    await controller.V1.connect(owner).migratePodController(
+      UPGRADE_POD_ID,
+      controller.V2.address,
+      controller.V2.address,
+    );
 
     return { upgradePod, legacyPod };
   };

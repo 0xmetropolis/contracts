@@ -2,14 +2,14 @@ const { expect, use } = require("chai");
 const { waffle, ethers, network, deployments } = require("hardhat");
 
 const Safe = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/GnosisSafe.sol/GnosisSafe.json");
-const ControllerRegistry = require("../artifacts/contracts/ControllerRegistry.sol/ControllerRegistry.json");
-const MemberToken = require("../artifacts/contracts/MemberToken.sol/MemberToken.json");
+
 const Controller = require("../artifacts/contracts/Controller.sol/Controller.json");
 
 const { provider, solidity, deployContract, deployMockContract } = waffle;
 
 use(solidity);
 
+const AddressOne = "0x0000000000000000000000000000000000000001";
 const { HashZero } = ethers.constants;
 
 describe("Member Token Test", () => {
@@ -129,9 +129,9 @@ describe("Member Token Test", () => {
       ]);
       await controller.connect(admin).createPodWithSafe(admin.address, safeSigner.address);
 
-      await expect(controller.connect(admin).migratePodController(POD_ID, controllerV2.address)).to.revertedWith(
-        "Controller not registered",
-      );
+      await expect(
+        controller.connect(admin).migratePodController(POD_ID, controllerV2.address, AddressOne),
+      ).to.revertedWith("Controller not registered");
     });
 
     it("should NOT be able to transfer memberships associate with different controllers", async () => {
