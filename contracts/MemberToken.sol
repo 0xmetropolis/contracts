@@ -110,8 +110,7 @@ contract MemberToken is ERC1155Supply {
      * @param _id The id of the membership token to destroy
      */
     function burn(address _account, uint256 _id) external {
-        require(balanceOf(_account, _id) == 1, "User is not a member");
-
+        require(balanceOf(_account, _id) >= 1, "User is not a member");
         _burn(_account, _id, 1);
     }
 
