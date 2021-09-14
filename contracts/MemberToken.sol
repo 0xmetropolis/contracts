@@ -26,6 +26,7 @@ contract MemberToken is ERC1155Supply {
      * @param _controllerRegistry The address of the ControllerRegistry contract
      */
     constructor(address _controllerRegistry) ERC1155("POD") {
+        require(_controllerRegistry != address(0), "Invalid address");
         controllerRegistry = IControllerRegistry(_controllerRegistry);
     }
 
@@ -36,6 +37,7 @@ contract MemberToken is ERC1155Supply {
     function migrateMemberController(uint256 _podId, address _newController)
         external
     {
+        require(_newController != address(0), "Invalid address");
         require(
             msg.sender == memberController[_podId],
             "Invalid migrate controller"
@@ -63,6 +65,7 @@ contract MemberToken is ERC1155Supply {
         uint256 _id,
         bytes memory data
     ) external {
+        require(_account != address(0), "Invalid address");
         _mint(_account, _id, 1, data);
     }
 
@@ -77,6 +80,7 @@ contract MemberToken is ERC1155Supply {
         bytes memory data
     ) public {
         for (uint256 index = 0; index < _accounts.length; index += 1) {
+            require(_accounts[index] != address(0), "Invalid address");
             _mint(_accounts[index], _id, 1, data);
         }
     }

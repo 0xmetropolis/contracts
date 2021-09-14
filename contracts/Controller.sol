@@ -30,6 +30,11 @@ contract Controller is IController, SafeTeller {
         address _proxyFactoryAddress,
         address _gnosisMasterAddress
     ) {
+        require(_memberToken != address(0), "Invalid address");
+        require(_controllerRegistry != address(0), "Invalid address");
+        require(_proxyFactoryAddress != address(0), "Invalid address");
+        require(_gnosisMasterAddress != address(0), "Invalid address");
+
         memberToken = IMemberToken(_memberToken);
         controllerRegistry = IControllerRegistry(_controllerRegistry);
         setupSafeTeller(_proxyFactoryAddress, _gnosisMasterAddress);
@@ -116,6 +121,7 @@ contract Controller is IController, SafeTeller {
         address _newController,
         address _prevModule
     ) external {
+        require(_newController != address(0), "Invalid address");
         require(
             controllerRegistry.isRegistered(_newController),
             "Controller not registered"
@@ -152,6 +158,7 @@ contract Controller is IController, SafeTeller {
         address _podAdmin,
         address _safeAddress
     ) external {
+        require(_safeAddress != address(0), "Invalid address");
         require(
             controllerRegistry.isRegistered(msg.sender),
             "Controller not registered"
