@@ -13,6 +13,7 @@ contract ControllerRegistry is IControllerRegistry, Ownable {
      * @param _controller The address to register as a controller
      */
     function registerController(address _controller) external onlyOwner {
+        require(_controller != address(0), "Invalid address");
         emit ControllerRegister(_controller);
         controllerRegistry[_controller] = true;
     }
@@ -21,6 +22,7 @@ contract ControllerRegistry is IControllerRegistry, Ownable {
      * @param _controller The address to remove as a controller
      */
     function removeController(address _controller) external onlyOwner {
+        require(_controller != address(0), "Invalid address");
         emit ControllerRemove(_controller);
         controllerRegistry[_controller] = false;
     }
