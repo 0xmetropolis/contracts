@@ -111,9 +111,11 @@ contract Controller is IController, SafeTeller {
      * @param _podId The id number of the pod
      * @param _newController The address of the new pod controller
      */
-    function migratePodController(uint256 _podId, address _newController)
-        external
-    {
+    function migratePodController(
+        uint256 _podId,
+        address _newController,
+        address _prevModule
+    ) external {
         require(
             controllerRegistry.isRegistered(_newController),
             "Controller not registered"
@@ -133,7 +135,7 @@ contract Controller is IController, SafeTeller {
         safeAddress[_podId] = address(0);
 
         memberToken.migrateMemberController(_podId, _newController);
-        migrateSafeTeller(safe, _newController);
+        migrateSafeTeller(safe, _newController, _prevModule);
         newController.updatePodState(_podId, admin, safe);
     }
 
