@@ -1,9 +1,8 @@
-pragma solidity 0.7.4;
+pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./interfaces/IGnosisSafe.sol";
 import "./interfaces/IGnosisSafeProxyFactory.sol";
-
 
 contract SafeTeller {
     using Address for address;
@@ -99,7 +98,11 @@ contract SafeTeller {
         require(disableSuccess, "Migration failed on disable");
     }
 
-    function getSafeMembers(address safe) public view returns (address[] memory) {
+    function getSafeMembers(address safe)
+        public
+        view
+        returns (address[] memory)
+    {
         return IGnosisSafe(safe).getOwners();
     }
 
