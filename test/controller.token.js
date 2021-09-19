@@ -2,6 +2,7 @@ const { expect, use } = require("chai");
 const { waffle, ethers, network, deployments } = require("hardhat");
 
 const Safe = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/GnosisSafe.sol/GnosisSafe.json");
+const { labelhash } = require("@ensdomains/ensjs");
 
 const { deployMockContract, solidity, provider } = waffle;
 
@@ -17,6 +18,7 @@ describe("Controller beforeTokenTransfer Test", () => {
   // create pod args
   const POD_ID = 0;
   const MEMBERS = [alice.address, bob.address];
+  const POD_LABEL = labelhash("test");
 
   let controller;
   let memberToken;
@@ -53,7 +55,7 @@ describe("Controller beforeTokenTransfer Test", () => {
     safe = await deployMockContract(admin, Safe.abi);
     safeSigner = await setupMockSafe(MEMBERS);
 
-    await controller.createPodWithSafe(admin.address, safe.address, TX_OPTIONS);
+    await controller.createPodWithSafe(admin.address, safe.address, POD_LABEL, TX_OPTIONS);
   };
 
   it("should not let a user call beforeTokenTransfer function", async () => {

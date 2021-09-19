@@ -33,6 +33,12 @@ const namedAccounts = {
   gnosisDeployer: {
     default: 1,
   },
+  ensDeployer: {
+    default: 1,
+  },
+  ensHolder: {
+    default: 2,
+  },
 };
 
 task("tenderly", "verifies current deployment on tenderly").setAction(async () => {
@@ -65,6 +71,9 @@ module.exports = {
     contracts: [
       {
         artifacts: "node_modules/@gnosis.pm/safe-contracts/build/artifacts",
+      },
+      {
+        artifacts: "node_modules/@ensdomains/ens-contracts/artifacts",
       },
     ],
   },

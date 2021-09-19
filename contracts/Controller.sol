@@ -6,6 +6,7 @@ import "./interfaces/IController.sol";
 import "./interfaces/IMemberToken.sol";
 import "./interfaces/IControllerRegistry.sol";
 import "./SafeTeller.sol";
+import "./ens/IPodENSRegistrar.sol";
 
 contract Controller is IController, SafeTeller {
     event CreatePod(uint256 podId, address safe, address admin);
@@ -13,6 +14,7 @@ contract Controller is IController, SafeTeller {
 
     IMemberToken public immutable memberToken;
     IControllerRegistry public immutable controllerRegistry;
+    IPodENSRegistrar public podENSRegistrar;
 
     mapping(address => uint256) public safeToPodId;
     mapping(uint256 => address) public podIdToSafe;
@@ -31,38 +33,49 @@ contract Controller is IController, SafeTeller {
         address _memberToken,
         address _controllerRegistry,
         address _proxyFactoryAddress,
-        address _gnosisMasterAddress
+        address _gnosisMasterAddress,
+        address _podENSRegisrar
     ) SafeTeller(_proxyFactoryAddress, _gnosisMasterAddress) {
         require(_memberToken != address(0), "Invalid address");
         require(_controllerRegistry != address(0), "Invalid address");
         require(_proxyFactoryAddress != address(0), "Invalid address");
         require(_gnosisMasterAddress != address(0), "Invalid address");
+        require(_podENSRegisrar != address(0), "Invalid address");
 
         memberToken = IMemberToken(_memberToken);
         controllerRegistry = IControllerRegistry(_controllerRegistry);
+        podENSRegistrar = IPodENSRegistrar(_podENSRegisrar);
     }
 
     /**
      * @param _members The addresses of the members of the pod
      * @param threshold The number of members that are required to sign a transaction
      * @param _admin The address of the pod admin
+     * @param _label label hash of pod name
      */
     function createPod(
         address[] memory _members,
         uint256 threshold,
-        address _admin
+        address _admin,
+        bytes32 _label
     ) external {
         address safe = createSafe(_members, threshold);
-        _createPod(_members, safe, _admin);
+
+        _createPod(_members, safe, _admin, _label);
     }
 
     /**
      * @dev Used to create a pod with an existing safe
      * @dev Will automatically distribute membership NFTs to current safe members
-     * @param _safe The address of existing safe
      * @param _admin The address of the pod admin
+     * @param _safe The address of existing safe
+     * @param _label label hash of pod name
      */
-    function createPodWithSafe(address _admin, address _safe) external {
+    function createPodWithSafe(
+        address _admin,
+        address _safe,
+        bytes32 _label
+    ) external {
         require(_safe != address(0), "invalid safe address");
         require(safeToPodId[_safe] == 0, "safe already in use");
         require(isSafeModuleEnabled(_safe), "safe module must be enabled");
@@ -72,18 +85,21 @@ contract Controller is IController, SafeTeller {
         );
 
         address[] memory members = getSafeMembers(_safe);
-        _createPod(members, _safe, _admin);
+
+        _createPod(members, _safe, _admin, _label);
     }
 
     /**
      * @param _members The addresses of the members of the pod
      * @param _admin The address of the pod admin
      * @param _safe The address of existing safe
+     * @param _label label hash of pod name
      */
     function _createPod(
         address[] memory _members,
         address _safe,
-        address _admin
+        address _admin,
+        bytes32 _label
     ) internal {
         // add create event flag to token data
         bytes memory data = new bytes(1);
@@ -97,6 +113,8 @@ contract Controller is IController, SafeTeller {
         if (_admin != address(0)) podAdmin[podId] = _admin;
         podIdToSafe[podId] = _safe;
         safeToPodId[_safe] = podId;
+        
+        podENSRegistrar.registerPod(_label, _safe);
     }
 
     /**

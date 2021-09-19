@@ -39,6 +39,8 @@
     }
   },
   "dependencies": {
+    "@ensdomains/ens-contracts": "0.0.7",
+    "@ensdomains/ensjs": "^2.0.1",
     "@gnosis.pm/safe-contracts": "^1.2.0",
     "@gnosis.pm/safe-core-sdk": "^0.2.0",
     "@gnosis.pm/safe-deployments": "^1.1.0",

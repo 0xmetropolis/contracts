@@ -1,5 +1,6 @@
 const { expect, use } = require("chai");
 const { waffle, ethers, deployments } = require("hardhat");
+const { labelhash } = require("@ensdomains/ensjs");
 
 const EthersSafe = require("@gnosis.pm/safe-core-sdk").default;
 
@@ -53,22 +54,32 @@ describe("SafeTeller test", () => {
     const gnosisSafeMaster = await ethers.getContract("GnosisSafe", admin);
 
     const controllerRegistry = await ethers.getContract("ControllerRegistry", admin);
+    const podENSRegistrar = await ethers.getContract("PodENSRegistrar", admin);
 
-    const res = await controller.connect(alice).createPod(MEMBERS, THRESHOLD, alice.address);
+    const res = await controller.connect(alice).createPod(MEMBERS, THRESHOLD, alice.address, labelhash("test"));
     const { args } = (await res.wait()).events.find(elem => elem.event === "CreatePod");
 
     const safe = new ethers.Contract(args.safe, GnosisSafe.abi, alice);
 
     const ethersSafe = await createSafeSigner(safe, alice);
 
-    return { controller, controllerRegistry, ethersSafe, safe, gnosisSafeProxyFactory, gnosisSafeMaster, memberToken };
+    return {
+      controller,
+      controllerRegistry,
+      ethersSafe,
+      safe,
+      gnosisSafeProxyFactory,
+      gnosisSafeMaster,
+      memberToken,
+      podENSRegistrar,
+    };
   };
 
   describe("new safe setup", () => {
     it("should create a new safe with safe teller module", async () => {
       const { controller } = await setup();
 
-      const res = await controller.connect(alice).createPod(MEMBERS, THRESHOLD, alice.address);
+      const res = await controller.connect(alice).createPod(MEMBERS, THRESHOLD, alice.address, labelhash("test2"));
       const { args } = (await res.wait()).events.find(elem => elem.event === "CreatePod");
       const safe = new ethers.Contract(args.safe, GnosisSafe.abi, alice);
 
@@ -84,9 +95,9 @@ describe("SafeTeller test", () => {
     it("should throw error on bad safe setup", async () => {
       const { controller } = await setup();
 
-      await expect(controller.connect(admin).createPod(MEMBERS, 0, admin.address)).to.be.revertedWith(
-        "Create Proxy With Data Failed",
-      );
+      await expect(
+        controller.connect(admin).createPod(MEMBERS, 0, admin.address, labelhash("test2")),
+      ).to.be.revertedWith("Create Proxy With Data Failed");
     });
   });
 
@@ -127,6 +138,7 @@ describe("SafeTeller test", () => {
         controllerRegistry,
         gnosisSafeMaster,
         gnosisSafeProxyFactory,
+        podENSRegistrar,
       } = await setup();
 
       // safeSdk.getEnableModuleTx doesn't work so creating tx manually
@@ -148,6 +160,7 @@ describe("SafeTeller test", () => {
         controllerRegistry.address,
         gnosisSafeProxyFactory.address,
         gnosisSafeMaster.address,
+        podENSRegistrar.address,
       ]);
 
       await controllerRegistry.connect(admin).registerController(controller2.address);

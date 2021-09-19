@@ -1,5 +1,6 @@
 const { expect, use } = require("chai");
 const { waffle, ethers, deployments } = require("hardhat");
+const { labelhash } = require("@ensdomains/ensjs");
 
 const EthersSafe = require("@gnosis.pm/safe-core-sdk").default;
 
@@ -40,7 +41,7 @@ describe("Controller safe integration test", () => {
   };
 
   const createPodSafe = async (adminAddress, podId) => {
-    await controller.connect(admin).createPod(MEMBERS, THRESHOLD, adminAddress, TX_OPTIONS);
+    await controller.connect(admin).createPod(MEMBERS, THRESHOLD, adminAddress, labelhash("test"), TX_OPTIONS);
     // query the new gnosis safe
     const safeAddress = await controller.podIdToSafe(podId);
     return new ethers.Contract(safeAddress, GnosisSafe.abi, admin);
@@ -63,7 +64,7 @@ describe("Controller safe integration test", () => {
     return { memberToken, ethersSafe, gnosisSafeProxyFactory, gnosisSafeMaster };
   };
 
-  describe("new pod creation with safe deployment", () => {
+  describe("when creating new pod with safe deployment", () => {
     it("should create a new safe with safe teller module", async () => {
       const { ethersSafe } = await setup();
 
@@ -85,8 +86,8 @@ describe("Controller safe integration test", () => {
     });
   });
 
-  describe("new pod creation with existing safe", () => {
-    it("should create a new pod with safe teller module", async () => {
+  describe("when creating new pod with existing safe", () => {
+    it("should create a new safe with safe teller module", async () => {
       const { memberToken, gnosisSafeProxyFactory, gnosisSafeMaster } = await setup();
 
       const safeAddress = await gnosisSafeProxyFactory.callStatic.createProxy(gnosisSafeMaster.address, HashZero);
@@ -105,7 +106,7 @@ describe("Controller safe integration test", () => {
       const tx = await safeSignerAlice.createTransaction(txArgs);
       await safeSignerAlice.executeTransaction(tx);
 
-      await controller.connect(alice).createPodWithSafe(admin.address, safe.address);
+      await controller.connect(alice).createPodWithSafe(admin.address, safe.address, labelhash("test2"));
 
       // should set admin
       expect(await controller.podAdmin(POD_ID + 1)).to.equal(admin.address);
@@ -220,7 +221,10 @@ describe("Controller safe integration test", () => {
       ({ memberToken, ethersSafe } = await setup());
     });
 
+  describe("when managing pod owners with membership NFTs", () => {
     it("should be able to transfer memberships", async () => {
+      const { memberToken, ethersSafe } = await setup();
+
       await memberToken
         .connect(alice)
         .safeTransferFrom(alice.address, charlie.address, POD_ID, 1, HashZero, TX_OPTIONS);
@@ -232,6 +236,8 @@ describe("Controller safe integration test", () => {
     });
 
     it("should be able to burn memberships", async () => {
+      const { memberToken, ethersSafe } = await setup();
+
       await memberToken.connect(admin).burn(alice.address, POD_ID, TX_OPTIONS);
       // check token balance
       expect(await memberToken.balanceOf(alice.address, POD_ID)).to.equal(0);
@@ -240,6 +246,8 @@ describe("Controller safe integration test", () => {
     });
 
     it("should be able to mint memberships", async () => {
+      const { memberToken, ethersSafe } = await setup();
+
       await memberToken.connect(admin).mint(charlie.address, POD_ID, HashZero);
       // check token balance
       expect(await memberToken.balanceOf(charlie.address, POD_ID)).to.equal(1);
