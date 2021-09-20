@@ -57,11 +57,12 @@ contract Controller is IController, SafeTeller {
         address[] memory _members,
         uint256 threshold,
         address _admin,
-        bytes32 _label
+        bytes32 _label,
+        string memory _ensString
     ) external {
         address safe = createSafe(_members, threshold);
 
-        _createPod(_members, safe, _admin, _label);
+        _createPod(_members, safe, _admin, _label, _ensString);
     }
 
     /**
@@ -74,7 +75,8 @@ contract Controller is IController, SafeTeller {
     function createPodWithSafe(
         address _admin,
         address _safe,
-        bytes32 _label
+        bytes32 _label,
+        string memory _ensString
     ) external {
         require(_safe != address(0), "invalid safe address");
         require(safeToPodId[_safe] == 0, "safe already in use");
@@ -86,7 +88,7 @@ contract Controller is IController, SafeTeller {
 
         address[] memory members = getSafeMembers(_safe);
 
-        _createPod(members, _safe, _admin, _label);
+        _createPod(members, _safe, _admin, _label, _ensString);
     }
 
     /**
@@ -99,8 +101,10 @@ contract Controller is IController, SafeTeller {
         address[] memory _members,
         address _safe,
         address _admin,
-        bytes32 _label
-    ) internal {
+        bytes32 _label,
+        string memory _ensString
+    ) private {
+
         // add create event flag to token data
         bytes memory data = new bytes(1);
         data[0] = bytes1(uint8(CREATE_EVENT));
@@ -113,8 +117,10 @@ contract Controller is IController, SafeTeller {
         if (_admin != address(0)) podAdmin[podId] = _admin;
         podIdToSafe[podId] = _safe;
         safeToPodId[_safe] = podId;
-        
-        podENSRegistrar.registerPod(_label, _safe);
+
+        // setup pod ENS
+        address reverseRegistrar = podENSRegistrar.registerPod(_label, _safe);
+        setupSafeReverseResolver(_safe, reverseRegistrar, _ensString);
     }
 
     /**

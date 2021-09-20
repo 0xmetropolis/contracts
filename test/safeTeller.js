@@ -1,6 +1,6 @@
 const { expect, use } = require("chai");
 const { waffle, ethers, deployments } = require("hardhat");
-const { labelhash } = require("@ensdomains/ensjs");
+const { default: ENS, labelhash } = require("@ensdomains/ensjs");
 
 const EthersSafe = require("@gnosis.pm/safe-core-sdk").default;
 
@@ -19,6 +19,7 @@ describe("SafeTeller test", () => {
   const [admin, alice, bob, charlie, mockModule] = provider.getWallets();
 
   let multiSend;
+  let ens;
 
   const { HashZero } = ethers.constants;
 
@@ -55,8 +56,14 @@ describe("SafeTeller test", () => {
 
     const controllerRegistry = await ethers.getContract("ControllerRegistry", admin);
     const podENSRegistrar = await ethers.getContract("PodENSRegistrar", admin);
+    const ensRegistry = await ethers.getContract("ENSRegistry", admin);
 
-    const res = await controller.connect(alice).createPod(MEMBERS, THRESHOLD, alice.address, labelhash("test"));
+    ens = new ENS({ provider, ensAddress: ensRegistry.address });
+
+    const res = await controller
+      .connect(alice)
+      .createPod(MEMBERS, THRESHOLD, alice.address, labelhash("test"), "test.pod.eth");
+
     const { args } = (await res.wait()).events.find(elem => elem.event === "CreatePod");
 
     const safe = new ethers.Contract(args.safe, GnosisSafe.abi, alice);
@@ -79,7 +86,10 @@ describe("SafeTeller test", () => {
     it("should create a new safe with safe teller module", async () => {
       const { controller } = await setup();
 
-      const res = await controller.connect(alice).createPod(MEMBERS, THRESHOLD, alice.address, labelhash("test2"));
+      const res = await controller
+        .connect(alice)
+        .createPod(MEMBERS, THRESHOLD, alice.address, labelhash("test2"), "test2.pod.eth");
+
       const { args } = (await res.wait()).events.find(elem => elem.event === "CreatePod");
       const safe = new ethers.Contract(args.safe, GnosisSafe.abi, alice);
 
@@ -90,13 +100,15 @@ describe("SafeTeller test", () => {
       expect(await ethersSafe.getOwners()).to.deep.equal(MEMBERS);
       // check to see if module has been enabled
       expect(await ethersSafe.isModuleEnabled(controller.address)).to.equal(true);
+      // check reverse resolver
+      expect(await ens.getName(args.safeAddress)).to.deep.equal({ name: "test2.pod.eth" });
     });
 
     it("should throw error on bad safe setup", async () => {
       const { controller } = await setup();
 
       await expect(
-        controller.connect(admin).createPod(MEMBERS, 0, admin.address, labelhash("test2")),
+        controller.connect(admin).createPod(MEMBERS, 0, admin.address, labelhash("test2"), "test2.pod.eth"),
       ).to.be.revertedWith("Create Proxy With Data Failed");
     });
   });

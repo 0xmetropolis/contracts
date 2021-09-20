@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract PodENSRegistrar is Ownable {
     ENS ens;
     Resolver resolver;
+    address reverseRegistrar;
     IControllerRegistry controllerRegistry;
     bytes32 rootNode;
 
@@ -21,14 +22,15 @@ contract PodENSRegistrar is Ownable {
      * @param ensAddr The address of the ENS registry.
      * @param node The node that this registrar administers.
      */
-    constructor(ENS ensAddr, Resolver resolverAddr, IControllerRegistry controllerRegistryAddr, bytes32 node) {
+    constructor(ENS ensAddr, Resolver resolverAddr, address _reverseRegistrar, IControllerRegistry controllerRegistryAddr, bytes32 node) {
         ens = ensAddr;
         resolver = resolverAddr;
         controllerRegistry = controllerRegistryAddr;
         rootNode = node;
+        reverseRegistrar = _reverseRegistrar;
     }
 
-    function registerPod(bytes32 label, address podSafe) public {
+    function registerPod(bytes32 label, address podSafe) public returns(address) {
 
         bytes32 node = keccak256(abi.encodePacked(rootNode, label));
 
@@ -42,6 +44,8 @@ contract PodENSRegistrar is Ownable {
         _register(label, address(this));
 
         resolver.setAddr(node, podSafe);
+
+        return address(reverseRegistrar);
     }
 
 

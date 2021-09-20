@@ -15,6 +15,7 @@ describe("registrar test", () => {
   let podEnsRegistrar;
   let controllerRegistry;
 
+  let ensReverseRegistrar;
   let ens;
 
   async function setup() {
@@ -26,6 +27,8 @@ describe("registrar test", () => {
     podEnsRegistrar = await ethers.getContract("PodENSRegistrar", deployer);
     controllerRegistry = await ethers.getContract("ControllerRegistry", deployer);
 
+    ensReverseRegistrar = await ethers.getContract("ReverseRegistrar", alice);
+
     await controllerRegistry.registerController(mockController.address);
 
     ens = new ENS({ provider, ensAddress: ensRegistry.address });
@@ -36,6 +39,12 @@ describe("registrar test", () => {
   });
 
   describe("when setting up PodENS registrar", () => {
+    it("should be able to set reverse resolver name", async () => {
+      expect(await ensRegistry.owner(ethers.utils.namehash("addr.reverse"))).to.equal(ensReverseRegistrar.address);
+      await ensReverseRegistrar.setName("alice.eth");
+      expect(await ens.getName(alice.address)).to.deep.equal({ name: "alice.eth" });
+    });
+
     it("should approve registrar in ENSRegistry", async () => {
       await ensRegistry.setApprovalForAll(podEnsRegistrar.address, true);
 

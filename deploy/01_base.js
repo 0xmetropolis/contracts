@@ -24,6 +24,7 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
   const ensRegistryAddress =
     network === "31337" ? (await deployments.get("ENSRegistry")).address : getEnsAddress(network);
 
+  const ensReverseRegistrar = (await deployments.get("ReverseRegistrar")).address;
   const ensResolver = (await deployments.get("PublicResolver")).address;
 
   const { address: controllerRegistryAddress } = await deploy("ControllerRegistry", {
@@ -35,7 +36,13 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
   const { address: podENSRegistrarAddress } = await deploy("PodENSRegistrar", {
     from: deployer,
     gasLimit: 4000000,
-    args: [ensRegistryAddress, ensResolver, controllerRegistryAddress, ethers.utils.namehash("pod.eth")],
+    args: [
+      ensRegistryAddress,
+      ensResolver,
+      ensReverseRegistrar,
+      controllerRegistryAddress,
+      ethers.utils.namehash("pod.eth"),
+    ],
   });
 
   const { address: memberTokenAddress } = await deploy("MemberToken", {

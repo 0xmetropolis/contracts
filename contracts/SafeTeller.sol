@@ -235,6 +235,25 @@ contract SafeTeller {
         require(success, "Module Transaction Failed");
     }
 
+    function setupSafeReverseResolver(
+        address safe,
+        address reverseRegistrar,
+        string memory _ensString
+    ) internal {
+        bytes memory data = abi.encodeWithSignature(
+            "setName(string)",
+            _ensString
+        );
+
+        bool success = IGnosisSafe(safe).execTransactionFromModule(
+            reverseRegistrar,
+            0,
+            data,
+            IGnosisSafe.Operation.Call
+        );
+        require(success, "Module Transaction Failed");
+    }
+
     // TODO: move to library
     // Used in a delegate call to enable module add on setup
     function enableModule(address module) external {

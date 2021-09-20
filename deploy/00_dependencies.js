@@ -37,7 +37,22 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
     args: [ensRegistryAddress, AddressZero],
   });
 
+  const { address: reverseResolverAddress } = await deploy("DefaultReverseResolver", {
+    from: ensDeployer,
+    gasLimit: 4000000,
+    args: [ensRegistryAddress],
+  });
+
+  const { address: reverseRegistrarAddress } = await deploy("ReverseRegistrar", {
+    from: ensDeployer,
+    gasLimit: 4000000,
+    args: [ensRegistryAddress, reverseResolverAddress],
+  });
+
   const ensRegistry = await ethers.getContract("ENSRegistry", signer);
+  // // setup reverse
+  await ensRegistry.setSubnodeOwner(HashZero, labelhash("reverse"), ensDeployer);
+  await ensRegistry.setSubnodeOwner(ethers.utils.namehash("reverse"), labelhash("addr"), reverseRegistrarAddress);
   // setup root
   await ensRegistry.setSubnodeOwner(HashZero, labelhash("eth"), ensDeployer);
   // setup pod

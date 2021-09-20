@@ -17,7 +17,6 @@ describe("Member Token Test", () => {
 
   const POD_ID = 0;
   const CREATE_FLAG = ethers.utils.hexlify([1]);
-  const POD_LABEL = labelhash("test");
   const TX_OPTIONS = { gasLimit: 4000000 };
 
   const setupMockSafe = async (members, safe) => {
@@ -67,14 +66,18 @@ describe("Member Token Test", () => {
     it("should set controller on create", async () => {
       const { memberToken, controller, safeSigner } = await setup();
 
-      await controller.connect(admin).createPodWithSafe(admin.address, safeSigner.address, POD_LABEL);
+      await controller
+        .connect(admin)
+        .createPodWithSafe(admin.address, safeSigner.address, labelhash("test"), "test.pod.eth");
       expect(await memberToken.memberController(POD_ID)).to.equal(controller.address);
     });
 
     it("should mint additional memberships", async () => {
       const { memberToken, controller, safeSigner } = await setup();
 
-      await controller.connect(admin).createPodWithSafe(admin.address, safeSigner.address, POD_LABEL);
+      await controller
+        .connect(admin)
+        .createPodWithSafe(admin.address, safeSigner.address, labelhash("test"), "test.pod.eth");
       await expect(memberToken.connect(admin).mint(alice.address, POD_ID, HashZero)).to.emit(
         memberToken,
         "TransferSingle",
@@ -95,8 +98,12 @@ describe("Member Token Test", () => {
       const { memberToken, controller, safeSigner } = await setup();
 
       // create 2 pods from the same controller
-      await controller.connect(admin).createPodWithSafe(admin.address, safeSigner.address, POD_LABEL);
-      await controller.connect(admin).createPodWithSafe(admin.address, safeSigner.address, labelhash("test2"));
+      await controller
+        .connect(admin)
+        .createPodWithSafe(admin.address, safeSigner.address, labelhash("test"), "test.pod.eth");
+      await controller
+        .connect(admin)
+        .createPodWithSafe(admin.address, safeSigner.address, labelhash("test2"), "test2.pod.eth");
 
       await expect(
         memberToken
@@ -131,7 +138,9 @@ describe("Member Token Test", () => {
         safeMaster.address,
         podENSRegistrar.address,
       ]);
-      await controller.connect(admin).createPodWithSafe(admin.address, safeSigner.address, POD_LABEL);
+      await controller
+        .connect(admin)
+        .createPodWithSafe(admin.address, safeSigner.address, labelhash("test"), "test.pod.eth");
 
       await expect(
         controller.connect(admin).migratePodController(POD_ID, controllerV2.address, AddressOne),
@@ -152,8 +161,12 @@ describe("Member Token Test", () => {
       await controllerRegistry.connect(admin).registerController(controllerV2.address);
 
       // create 2 pods from the same controller
-      await controller.connect(admin).createPodWithSafe(admin.address, safeSigner.address, POD_LABEL);
-      await controllerV2.connect(admin).createPodWithSafe(admin.address, safeSigner.address, labelhash("test2"));
+      await controller
+        .connect(admin)
+        .createPodWithSafe(admin.address, safeSigner.address, labelhash("test"), "test.pod.eth");
+      await controllerV2
+        .connect(admin)
+        .createPodWithSafe(admin.address, safeSigner.address, labelhash("test2"), "test2.pod.eth");
 
       await expect(
         memberToken

@@ -61,8 +61,8 @@ describe("pod migration test", () => {
     await controllerRegistry.connect(admin).registerController(controller.V2.address);
 
     // create V1 pods
-    const legacyPod = await createPodSafe(LEGACY_POD_ID, MEMBERS, owner.address, labelhash("test"));
-    const upgradePod = await createPodSafe(UPGRADE_POD_ID, MEMBERS, owner.address, labelhash("test2"));
+    const legacyPod = await createPodSafe(LEGACY_POD_ID, MEMBERS, owner.address, labelhash("test"), "test.pod.eth");
+    const upgradePod = await createPodSafe(UPGRADE_POD_ID, MEMBERS, owner.address, labelhash("test2"), "test2.pod.eth");
 
     // migrate pod to V2
     await controller.V1.connect(owner).migratePodController(

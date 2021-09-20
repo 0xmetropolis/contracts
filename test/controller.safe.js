@@ -106,7 +106,9 @@ describe("Controller safe integration test", () => {
       const tx = await safeSignerAlice.createTransaction(txArgs);
       await safeSignerAlice.executeTransaction(tx);
 
-      await controller.connect(alice).createPodWithSafe(admin.address, safe.address, labelhash("test2"));
+      await controller
+        .connect(alice)
+        .createPodWithSafe(admin.address, safe.address, labelhash("test2"), "test2.pod.xyz");
 
       // should set admin
       expect(await controller.podAdmin(POD_ID + 1)).to.equal(admin.address);
