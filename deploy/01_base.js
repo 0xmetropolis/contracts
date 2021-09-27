@@ -21,19 +21,19 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
 
   const { address: controllerRegistryAddress } = await deploy("ControllerRegistry", {
     from: deployer,
-    gasLimit: 4000000,
+    gasLimit: 8000000,
     args: [],
   });
 
   const { address: memberTokenAddress } = await deploy("MemberToken", {
     from: deployer,
-    gasLimit: 4000000,
+    gasLimit: 8000000,
     args: [controllerRegistryAddress],
   });
 
   const { address: controllerAddress } = await deploy("Controller", {
     from: deployer,
-    gasLimit: 4000000,
+    gasLimit: 8000000,
     args: [memberTokenAddress, controllerRegistryAddress, proxyFactoryAddress, gnosisSafeAddress],
   });
 

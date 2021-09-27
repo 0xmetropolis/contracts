@@ -90,7 +90,10 @@ contract Controller is IController, SafeTeller {
         bytes memory data = new bytes(1);
         data[0] = bytes1(uint8(CREATE_EVENT));
 
-        require(podId == memberToken.createPod(members, data), "Mismatched podId on create");
+        require(
+            podId == memberToken.createPod(members, data),
+            "Mismatched podId on create"
+        );
     }
 
     /**
