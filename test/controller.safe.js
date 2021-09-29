@@ -86,7 +86,7 @@ describe("Controller safe integration test", () => {
   });
 
   describe("new pod creation with existing safe", () => {
-    it("should create a new safe with safe teller module", async () => {
+    it("should create a new pod with safe teller module", async () => {
       const { memberToken, gnosisSafeProxyFactory, gnosisSafeMaster } = await setup();
 
       const safeAddress = await gnosisSafeProxyFactory.callStatic.createProxy(gnosisSafeMaster.address, HashZero);
@@ -112,6 +112,11 @@ describe("Controller safe integration test", () => {
       // should mint member tokens
       expect(await memberToken.balanceOf(alice.address, POD_ID + 1)).to.equal(1);
       expect(await memberToken.balanceOf(bob.address, POD_ID + 1)).to.equal(1);
+
+      // should throw on subsequent create
+      await expect(controller.connect(alice).createPodWithSafe(admin.address, safe.address)).to.be.revertedWith(
+        "safe already in use",
+      );
     });
   });
 

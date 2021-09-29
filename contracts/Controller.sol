@@ -14,6 +14,8 @@ contract Controller is IController, SafeTeller {
     IMemberToken public memberToken;
     IControllerRegistry public controllerRegistry;
 
+    mapping(address => uint256) public safePodId;
+
     mapping(uint256 => address) public safeAddress;
     mapping(uint256 => address) public podAdmin;
 
@@ -62,7 +64,10 @@ contract Controller is IController, SafeTeller {
         emit CreatePod(podId);
         emit UpdatePodAdmin(podId, _admin);
 
-        safeAddress[podId] = createSafe(podId, _members, threshold);
+        address safe = createSafe(podId, _members, threshold);
+
+        safeAddress[podId] = safe;
+        safePodId[safe] = podId;
     }
 
     /**
@@ -74,6 +79,7 @@ contract Controller is IController, SafeTeller {
     function createPodWithSafe(address _admin, address _safe) external {
         uint256 podId = memberToken.getNextAvailablePodId();
         require(_safe != address(0), "invalid safe address");
+        require(safePodId[_safe] == 0, "safe already in use");
         require(isSafeModuleEnabled(_safe), "safe module must be enabled");
         require(
             isSafeMember(_safe, msg.sender) || msg.sender == _safe,
@@ -86,6 +92,7 @@ contract Controller is IController, SafeTeller {
         emit UpdatePodAdmin(podId, _admin);
 
         safeAddress[podId] = _safe;
+        safePodId[_safe] = podId;
 
         address[] memory members = getSafeMembers(_safe);
 
@@ -147,6 +154,7 @@ contract Controller is IController, SafeTeller {
 
         podAdmin[_podId] = address(0);
         safeAddress[_podId] = address(0);
+        safePodId[safe] = 0;
 
         memberToken.migrateMemberController(_podId, _newController);
         migrateSafeTeller(safe, _newController, _prevModule);
@@ -177,6 +185,7 @@ contract Controller is IController, SafeTeller {
         );
         podAdmin[_podId] = _podAdmin;
         safeAddress[_podId] = _safeAddress;
+        safePodId[_safeAddress] = _podId;
 
         emit UpdatePodAdmin(_podId, _podAdmin);
     }

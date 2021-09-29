@@ -81,9 +81,11 @@ describe("pod migration test", () => {
     // should clear pod state on old controller
     expect(await controller.V1.safeAddress(UPGRADE_POD_ID)).to.equal(AddressZero);
     expect(await controller.V1.podAdmin(UPGRADE_POD_ID)).to.equal(AddressZero);
+    expect(await controller.V1.safePodId(upgradePod.address)).to.equal(0);
     // should update state in new controller
     expect(await controller.V2.safeAddress(UPGRADE_POD_ID)).to.equal(upgradePod.address);
     expect(await controller.V2.podAdmin(UPGRADE_POD_ID)).to.equal(owner.address);
+    expect(await controller.V2.safePodId(upgradePod.address)).to.equal(UPGRADE_POD_ID);
   });
 
   it("should migrate safe to new controller version", async () => {
