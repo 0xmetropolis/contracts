@@ -166,6 +166,52 @@ describe("Controller safe integration test", () => {
     });
   });
 
+  describe("when a pod has an admin", () => {
+    it("should let admin set new admin", async () => {
+      await setup();
+
+      await controller.updatePodAdmin(POD_ID, alice.address);
+      expect(await controller.podAdmin(POD_ID)).to.equal(alice.address);
+    });
+    it("should throw if safe updates admin", async () => {
+      const { ethersSafe } = await setup();
+
+      const txArgs = {
+        to: controller.address,
+        data: controller.interface.encodeFunctionData("updatePodAdmin", [POD_ID, alice.address]),
+        value: 0,
+      };
+
+      await expect(ethersSafe.createTransaction(txArgs)).to.be.revertedWith("Only admin can update admin");
+    });
+  });
+
+  describe("when a pod has no admin", () => {
+    it("should throw if member updates admin", async () => {
+      await setup();
+      await createPodSafe(AddressZero, POD_ID + 1);
+
+      await expect(controller.connect(alice).updatePodAdmin(POD_ID + 1, alice.address)).to.be.revertedWith(
+        "Only safe can add new admin",
+      );
+    });
+    it("should let safe update admin", async () => {
+      await setup();
+      const podSafe = await createPodSafe(AddressZero, POD_ID + 1);
+      const ethersSafe = await createSafeSigner(podSafe, alice);
+
+      const txArgs = {
+        to: controller.address,
+        data: controller.interface.encodeFunctionData("updatePodAdmin", [POD_ID + 1, alice.address]),
+        value: 0,
+      };
+      const tx = await ethersSafe.createTransaction(txArgs);
+      await ethersSafe.executeTransaction(tx);
+
+      expect(await controller.podAdmin(POD_ID + 1)).to.equal(alice.address);
+    });
+  });
+
   describe("managing pod owners with membership NFTs", () => {
     let memberToken;
     let ethersSafe;
