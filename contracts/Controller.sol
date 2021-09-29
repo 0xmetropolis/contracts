@@ -115,8 +115,8 @@ contract Controller is IController, SafeTeller {
         } else {
             require(msg.sender == admin, "Only admin can update admin");
         }
-        safeAddress[_podId] = _newAdmin;
-
+        podAdmin[_podId] = _newAdmin;
+        
         emit UpdatePodAdmin(_podId, _newAdmin);
     }
 
