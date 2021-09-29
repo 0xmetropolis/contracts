@@ -14,8 +14,14 @@ contract Controller is IController, SafeTeller {
     IMemberToken public immutable memberToken;
     IControllerRegistry public immutable controllerRegistry;
 
+<<<<<<< HEAD
     mapping(address => uint256) public safeToPodId;
     mapping(uint256 => address) public podIdToSafe;
+=======
+    mapping(address => uint256) public safePodId;
+
+    mapping(uint256 => address) public safeAddress;
+>>>>>>> 91643cb (fix: add Controller.safePodId to validate safe address is not tied to multiple pods)
     mapping(uint256 => address) public podAdmin;
 
     uint8 internal constant CREATE_EVENT = 0x01;
@@ -146,8 +152,13 @@ contract Controller is IController, SafeTeller {
         Controller newController = Controller(_newController);
 
         podAdmin[_podId] = address(0);
+<<<<<<< HEAD
         podIdToSafe[_podId] = address(0);
         safeToPodId[safe] = 0;
+=======
+        safeAddress[_podId] = address(0);
+        safePodId[safe] = 0;
+>>>>>>> 91643cb (fix: add Controller.safePodId to validate safe address is not tied to multiple pods)
 
         memberToken.migrateMemberController(_podId, _newController);
         migrateSafeTeller(safe, _newController, _prevModule);
@@ -177,10 +188,15 @@ contract Controller is IController, SafeTeller {
             "Pod already exists"
         );
         podAdmin[_podId] = _podAdmin;
+<<<<<<< HEAD
         podIdToSafe[_podId] = _safeAddress;
         safeToPodId[_safeAddress] = _podId;
 
         emit UpdatePodAdmin(_podId, _podAdmin);
+=======
+        safeAddress[_podId] = _safeAddress;
+        safePodId[_safeAddress] = _podId;
+>>>>>>> 91643cb (fix: add Controller.safePodId to validate safe address is not tied to multiple pods)
     }
 
     /**
