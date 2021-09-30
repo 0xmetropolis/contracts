@@ -8,11 +8,12 @@ import "./interfaces/IControllerRegistry.sol";
 import "./SafeTeller.sol";
 
 contract Controller is IController, SafeTeller {
-    event CreatePod(uint256 podId);
+    event CreatePod(uint256 podId, address safe, address admin);
     event UpdatePodAdmin(uint256 podId, address podAdmin);
+    
 
-    IMemberToken public memberToken;
-    IControllerRegistry public controllerRegistry;
+    IMemberToken public immutable memberToken;
+    IControllerRegistry public immutable controllerRegistry;
 
     mapping(address => uint256) public safePodId;
 
@@ -61,10 +62,9 @@ contract Controller is IController, SafeTeller {
 
         if (_admin != address(0)) podAdmin[podId] = _admin;
 
-        emit CreatePod(podId);
+        emit CreatePod(podId, safe, _admin);
         emit UpdatePodAdmin(podId, _admin);
-
-        address safe = createSafe(podId, _members, threshold);
+        address safe = createSafe(_members, threshold);
 
         safeAddress[podId] = safe;
         safePodId[safe] = podId;
@@ -88,7 +88,7 @@ contract Controller is IController, SafeTeller {
 
         if (_admin != address(0)) podAdmin[podId] = _admin;
 
-        emit CreatePod(podId);
+        emit CreatePod(podId, _safe, _admin);
         emit UpdatePodAdmin(podId, _admin);
 
         safeAddress[podId] = _safe;

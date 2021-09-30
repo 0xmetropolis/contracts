@@ -24,8 +24,6 @@ contract SafeTeller {
 
     address public context;
 
-    event CreateSafe(uint256 indexed podId, address safeAddress);
-
     /**
      * @param _proxyFactoryAddress The proxy factory address
      * @param _gnosisMasterAddress The gnosis master address
@@ -112,16 +110,14 @@ contract SafeTeller {
     }
 
     /**
-     * @param _podId The id number of the pod
      * @param _owners The  addresses to be owners of the safe
      * @param _threshold The number of owners that are required to sign a transaciton
      * @return safeAddress The address of the new safe
      */
-    function createSafe(
-        uint256 _podId,
-        address[] memory _owners,
-        uint256 _threshold
-    ) internal returns (address safeAddress) {
+    function createSafe(address[] memory _owners, uint256 _threshold)
+        internal
+        returns (address safeAddress)
+    {
         bytes memory data = abi.encodeWithSignature(
             FUNCTION_SIG_ENABLE,
             context
@@ -147,7 +143,6 @@ contract SafeTeller {
                 setupData
             )
         returns (address newSafeAddress) {
-            emit CreateSafe(_podId, newSafeAddress);
             return newSafeAddress;
         } catch (bytes memory) {
             revert("Create Proxy With Data Failed");
