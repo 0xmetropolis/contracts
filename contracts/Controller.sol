@@ -9,7 +9,7 @@ import "./SafeTeller.sol";
 
 contract Controller is IController, SafeTeller {
     event CreatePod(uint256 podId, address safe, address admin);
-    event UpdatePodAdmin(uint256 podId, address podAdmin);
+    event UpdatePodAdmin(uint256 podId, address admin);
     
 
     IMemberToken public immutable memberToken;
@@ -54,30 +54,17 @@ contract Controller is IController, SafeTeller {
         uint256 threshold,
         address _admin
     ) external {
-        // add create event flag to token data
-        bytes memory data = new bytes(1);
-        data[0] = bytes1(uint8(CREATE_EVENT));
-
-        uint256 podId = memberToken.createPod(_members, data);
-
-        if (_admin != address(0)) podAdmin[podId] = _admin;
-
-        emit CreatePod(podId, safe, _admin);
-        emit UpdatePodAdmin(podId, _admin);
         address safe = createSafe(_members, threshold);
-
-        safeAddress[podId] = safe;
-        safePodId[safe] = podId;
+        _createPod(_members, safe, _admin);
     }
 
     /**
      * @dev Used to create a pod with an existing safe
      * @dev Will automatically distribute membership NFTs to current safe members
-     * @param _admin The address of the pod admin
      * @param _safe The address of existing safe
+     * @param _admin The address of the pod admin
      */
     function createPodWithSafe(address _admin, address _safe) external {
-        uint256 podId = memberToken.getNextAvailablePodId();
         require(_safe != address(0), "invalid safe address");
         require(safePodId[_safe] == 0, "safe already in use");
         require(isSafeModuleEnabled(_safe), "safe module must be enabled");
@@ -86,24 +73,32 @@ contract Controller is IController, SafeTeller {
             "caller must be safe or member"
         );
 
-        if (_admin != address(0)) podAdmin[podId] = _admin;
-
-        emit CreatePod(podId, _safe, _admin);
-        emit UpdatePodAdmin(podId, _admin);
-
-        safeAddress[podId] = _safe;
-        safePodId[_safe] = podId;
-
         address[] memory members = getSafeMembers(_safe);
+        _createPod(members, _safe, _admin);
+    }
 
+    /**
+     * @param _members The addresses of the members of the pod
+     * @param _admin The address of the pod admin
+     * @param _safe The address of existing safe
+     */
+    function _createPod(
+        address[] memory _members,
+        address _safe,
+        address _admin
+    ) internal {
         // add create event flag to token data
         bytes memory data = new bytes(1);
         data[0] = bytes1(uint8(CREATE_EVENT));
 
-        require(
-            podId == memberToken.createPod(members, data),
-            "Mismatched podId on create"
-        );
+        uint256 podId = memberToken.createPod(_members, data);
+
+        emit CreatePod(podId, _safe, _admin);
+        emit UpdatePodAdmin(podId, _admin);
+
+        if (_admin != address(0)) podAdmin[podId] = _admin;
+        safeAddress[podId] = _safe;
+        safePodId[_safe] = podId;
     }
 
     /**
