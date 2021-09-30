@@ -23,6 +23,7 @@ contract Controller is IController, SafeTeller {
     uint8 internal constant CREATE_EVENT = 0x01;
 
     /**
+     * @dev Will instantiate safe teller with gnosis master and proxy addresses
      * @param _memberToken The address of the MemberToken contract
      * @param _controllerRegistry The address of the ControllerRegistry contract
      * @param _proxyFactoryAddress The proxy factory address
@@ -33,7 +34,7 @@ contract Controller is IController, SafeTeller {
         address _controllerRegistry,
         address _proxyFactoryAddress,
         address _gnosisMasterAddress
-    ) {
+    ) SafeTeller(_proxyFactoryAddress, _gnosisMasterAddress) {
         require(_memberToken != address(0), "Invalid address");
         require(_controllerRegistry != address(0), "Invalid address");
         require(_proxyFactoryAddress != address(0), "Invalid address");
@@ -41,7 +42,6 @@ contract Controller is IController, SafeTeller {
 
         memberToken = IMemberToken(_memberToken);
         controllerRegistry = IControllerRegistry(_controllerRegistry);
-        setupSafeTeller(_proxyFactoryAddress, _gnosisMasterAddress);
     }
 
     /**
