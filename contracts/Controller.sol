@@ -9,7 +9,10 @@ import "./SafeTeller.sol";
 
 contract Controller is IController, SafeTeller {
     event CreatePod(uint256 podId, address safe, address admin);
+<<<<<<< HEAD
     event UpdatePodAdmin(uint256 podId, address admin);
+=======
+>>>>>>> eda2084 (refactor: remove redundant checks in MemberToken.mint/mintSingleBatch/burn && unused MemberToken.CREATE_EVENT  && redundant event SafeTeller.createSafe)
 
     IMemberToken public immutable memberToken;
     IControllerRegistry public immutable controllerRegistry;
