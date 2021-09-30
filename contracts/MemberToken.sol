@@ -8,8 +8,6 @@ import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "./interfaces/IControllerRegistry.sol";
 import "./interfaces/IController.sol";
 
-string constant beforeTokenTransferSig = "beforeTokenTransfer(address,address,address,uint256[],uint256[],bytes)";
-
 contract MemberToken is ERC1155Supply {
     using Address for address;
 
@@ -145,16 +143,13 @@ contract MemberToken is ERC1155Supply {
         }
 
         // perform orca token transfer validations
-        controller.functionCall(
-            abi.encodeWithSignature(
-                beforeTokenTransferSig,
-                operator,
-                from,
-                to,
-                ids,
-                amounts,
-                data
-            )
+        IController(controller).beforeTokenTransfer(
+            operator,
+            from,
+            to,
+            ids,
+            amounts,
+            data
         );
     }
 }
