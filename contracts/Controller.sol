@@ -196,7 +196,9 @@ contract Controller is IController, SafeTeller {
             "Controller not registered"
         );
         require(
-            podAdmin[_podId] == address(0) && podIdToSafe[_podId] == address(0),
+            podAdmin[_podId] == address(0) &&
+                podIdToSafe[_podId] == address(0) &&
+                safeToPodId[_safeAddress] == 0,
             "Pod already exists"
         );
         podAdmin[_podId] = _podAdmin;
