@@ -104,7 +104,6 @@ contract Controller is IController, SafeTeller {
         bytes32 _label,
         string memory _ensString
     ) private {
-
         // add create event flag to token data
         bytes memory data = new bytes(1);
         data[0] = bytes1(uint8(CREATE_EVENT));

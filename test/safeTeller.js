@@ -101,7 +101,7 @@ describe("SafeTeller test", () => {
       // check to see if module has been enabled
       expect(await ethersSafe.isModuleEnabled(controller.address)).to.equal(true);
       // check reverse resolver
-      expect(await ens.getName(args.safeAddress)).to.deep.equal({ name: "test2.pod.eth" });
+      expect(await ens.getName(args.safe)).to.deep.equal({ name: "test2.pod.eth" });
     });
 
     it("should throw error on bad safe setup", async () => {
