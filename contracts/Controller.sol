@@ -9,6 +9,7 @@ import "./SafeTeller.sol";
 
 contract Controller is IController, SafeTeller {
     event CreatePod(uint256 podId);
+    event UpdatePodAdmin(uint256 podId, address podAdmin);
 
     IMemberToken public memberToken;
     IControllerRegistry public controllerRegistry;
@@ -59,6 +60,7 @@ contract Controller is IController, SafeTeller {
         if (_admin != address(0)) podAdmin[podId] = _admin;
 
         emit CreatePod(podId);
+        emit UpdatePodAdmin(podId, _admin);
 
         safeAddress[podId] = createSafe(podId, _members, threshold);
     }
@@ -81,6 +83,7 @@ contract Controller is IController, SafeTeller {
         if (_admin != address(0)) podAdmin[podId] = _admin;
 
         emit CreatePod(podId);
+        emit UpdatePodAdmin(podId, _admin);
 
         safeAddress[podId] = _safe;
 
@@ -113,6 +116,8 @@ contract Controller is IController, SafeTeller {
             require(msg.sender == admin, "Only admin can update admin");
         }
         safeAddress[_podId] = _newAdmin;
+
+        emit UpdatePodAdmin(_podId, _newAdmin);
     }
 
     /**
@@ -172,6 +177,8 @@ contract Controller is IController, SafeTeller {
         );
         podAdmin[_podId] = _podAdmin;
         safeAddress[_podId] = _safeAddress;
+
+        emit UpdatePodAdmin(_podId, _podAdmin);
     }
 
     /**
