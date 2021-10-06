@@ -1,9 +1,11 @@
+/* eslint-disable no-undef */
 /* eslint-disable import/no-extraneous-dependencies */
 require("@nomiclabs/hardhat-waffle");
 require("hardhat-gas-reporter");
 require("solidity-coverage");
 require("hardhat-deploy");
 require("@nomiclabs/hardhat-ethers");
+require("@tenderly/hardhat-tenderly");
 require("dotenv").config();
 
 const accounts = process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [];
@@ -33,6 +35,15 @@ const namedAccounts = {
   },
 };
 
+task("tenderly", "verifies current deployment on tenderly").setAction(async () => {
+  const contracts = [
+    { name: "Controller", address: (await deployments.get("Controller")).address },
+    { name: "MemberToken", address: (await deployments.get("MemberToken")).address },
+    { name: "ControllerRegistry", address: (await deployments.get("ControllerRegistry")).address },
+  ];
+  await tenderly.verify(...contracts);
+});
+
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
 
@@ -56,5 +67,9 @@ module.exports = {
         artifacts: "node_modules/@gnosis.pm/safe-contracts/build/artifacts",
       },
     ],
+  },
+  tenderly: {
+    project: "orca",
+    username: "dev-sonar",
   },
 };
