@@ -42,7 +42,7 @@ describe("Controller safe integration test", () => {
   const createPodSafe = async (adminAddress, podId) => {
     await controller.connect(admin).createPod(MEMBERS, THRESHOLD, adminAddress, TX_OPTIONS);
     // query the new gnosis safe
-    const safeAddress = await controller.safeAddress(podId);
+    const safeAddress = await controller.podIdToSafe(podId);
     return new ethers.Contract(safeAddress, GnosisSafe.abi, admin);
   };
 

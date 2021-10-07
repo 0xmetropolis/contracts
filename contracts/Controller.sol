@@ -10,14 +10,12 @@ import "./SafeTeller.sol";
 contract Controller is IController, SafeTeller {
     event CreatePod(uint256 podId, address safe, address admin);
     event UpdatePodAdmin(uint256 podId, address admin);
-    
 
     IMemberToken public immutable memberToken;
     IControllerRegistry public immutable controllerRegistry;
 
-    mapping(address => uint256) public safePodId;
-
-    mapping(uint256 => address) public safeAddress;
+    mapping(address => uint256) public safeToPodId;
+    mapping(uint256 => address) public podIdToSafe;
     mapping(uint256 => address) public podAdmin;
 
     uint8 internal constant CREATE_EVENT = 0x01;
@@ -66,7 +64,7 @@ contract Controller is IController, SafeTeller {
      */
     function createPodWithSafe(address _admin, address _safe) external {
         require(_safe != address(0), "invalid safe address");
-        require(safePodId[_safe] == 0, "safe already in use");
+        require(safeToPodId[_safe] == 0, "safe already in use");
         require(isSafeModuleEnabled(_safe), "safe module must be enabled");
         require(
             isSafeMember(_safe, msg.sender) || msg.sender == _safe,
@@ -97,8 +95,8 @@ contract Controller is IController, SafeTeller {
         emit UpdatePodAdmin(podId, _admin);
 
         if (_admin != address(0)) podAdmin[podId] = _admin;
-        safeAddress[podId] = _safe;
-        safePodId[_safe] = podId;
+        podIdToSafe[podId] = _safe;
+        safeToPodId[_safe] = podId;
     }
 
     /**
@@ -107,7 +105,7 @@ contract Controller is IController, SafeTeller {
      */
     function updatePodAdmin(uint256 _podId, address _newAdmin) external {
         address admin = podAdmin[_podId];
-        address safe = safeAddress[_podId];
+        address safe = podIdToSafe[_podId];
 
         require(safe != address(0), "Pod doesn't exist");
 
@@ -118,7 +116,7 @@ contract Controller is IController, SafeTeller {
             require(msg.sender == admin, "Only admin can update admin");
         }
         podAdmin[_podId] = _newAdmin;
-        
+
         emit UpdatePodAdmin(_podId, _newAdmin);
     }
 
@@ -138,7 +136,7 @@ contract Controller is IController, SafeTeller {
         );
 
         address admin = podAdmin[_podId];
-        address safe = safeAddress[_podId];
+        address safe = podIdToSafe[_podId];
 
         require(
             msg.sender == admin || msg.sender == safe,
@@ -148,8 +146,8 @@ contract Controller is IController, SafeTeller {
         Controller newController = Controller(_newController);
 
         podAdmin[_podId] = address(0);
-        safeAddress[_podId] = address(0);
-        safePodId[safe] = 0;
+        podIdToSafe[_podId] = address(0);
+        safeToPodId[safe] = 0;
 
         memberToken.migrateMemberController(_podId, _newController);
         migrateSafeTeller(safe, _newController, _prevModule);
@@ -175,12 +173,12 @@ contract Controller is IController, SafeTeller {
             "Controller not registered"
         );
         require(
-            podAdmin[_podId] == address(0) && safeAddress[_podId] == address(0),
+            podAdmin[_podId] == address(0) && podIdToSafe[_podId] == address(0),
             "Pod already exists"
         );
         podAdmin[_podId] = _podAdmin;
-        safeAddress[_podId] = _safeAddress;
-        safePodId[_safeAddress] = _podId;
+        podIdToSafe[_podId] = _safeAddress;
+        safeToPodId[_safeAddress] = _podId;
 
         emit UpdatePodAdmin(_podId, _podAdmin);
     }
@@ -208,7 +206,7 @@ contract Controller is IController, SafeTeller {
 
         for (uint256 i = 0; i < ids.length; i += 1) {
             uint256 podId = ids[i];
-            address safe = safeAddress[podId];
+            address safe = podIdToSafe[podId];
             address admin = podAdmin[podId];
 
             if (from == address(0)) {
