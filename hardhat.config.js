@@ -46,6 +46,7 @@ task("tenderly-verify", "verifies current deployment on tenderly").setAction(asy
     { name: "Controller", address: (await deployments.get("Controller")).address },
     { name: "MemberToken", address: (await deployments.get("MemberToken")).address },
     { name: "ControllerRegistry", address: (await deployments.get("ControllerRegistry")).address },
+    { name: "PodENSRegistrar", address: (await deployments.get("PodENSRegistrar")).address },
   ];
   await tenderly.verify(...contracts);
 });
