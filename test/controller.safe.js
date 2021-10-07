@@ -58,7 +58,7 @@ describe("Controller safe integration test", () => {
     const gnosisSafeProxyFactory = await ethers.getContract("GnosisSafeProxyFactory", admin);
     const gnosisSafeMaster = await ethers.getContract("GnosisSafe", admin);
 
-    const podSafe = await createPodSafe(admin.address, POD_ID, labelhash("test"), "test.pod.xyz");
+    const podSafe = await createPodSafe(admin.address, POD_ID, labelhash("test"), "test.pod.eth");
     const ethersSafe = await createSafeSigner(podSafe, admin);
 
     return { memberToken, ethersSafe, gnosisSafeProxyFactory, gnosisSafeMaster };
@@ -108,7 +108,7 @@ describe("Controller safe integration test", () => {
 
       await controller
         .connect(alice)
-        .createPodWithSafe(admin.address, safe.address, labelhash("test2"), "test2.pod.xyz");
+        .createPodWithSafe(admin.address, safe.address, labelhash("test2"), "test2.pod.eth");
 
       // should set admin
       expect(await controller.podAdmin(POD_ID + 1)).to.equal(admin.address);
@@ -118,7 +118,7 @@ describe("Controller safe integration test", () => {
 
       // should throw on subsequent create
       await expect(
-        controller.connect(alice).createPodWithSafe(admin.address, safe.address, labelhash("test2"), "test2.pod.xyz"),
+        controller.connect(alice).createPodWithSafe(admin.address, safe.address, labelhash("test2"), "test2.pod.eth"),
       ).to.be.revertedWith("safe already in use");
     });
   });
@@ -146,7 +146,7 @@ describe("Controller safe integration test", () => {
   describe("when a pod has no admin", () => {
     it("should throw if member updates admin", async () => {
       await setup();
-      await createPodSafe(AddressZero, POD_ID + 1, labelhash("test2"), "test2.pod.xyz");
+      await createPodSafe(AddressZero, POD_ID + 1, labelhash("test2"), "test2.pod.eth");
 
       await expect(controller.connect(alice).updatePodAdmin(POD_ID + 1, alice.address)).to.be.revertedWith(
         "Only safe can add new admin",
@@ -154,7 +154,7 @@ describe("Controller safe integration test", () => {
     });
     it("should let safe update admin", async () => {
       await setup();
-      const podSafe = await createPodSafe(AddressZero, POD_ID + 1, labelhash("test2"), "test2.pod.xyz");
+      const podSafe = await createPodSafe(AddressZero, POD_ID + 1, labelhash("test2"), "test2.pod.eth");
       const ethersSafe = await createSafeSigner(podSafe, alice);
 
       const txArgs = {
@@ -192,7 +192,7 @@ describe("Controller safe integration test", () => {
   describe("when a pod has no admin", () => {
     it("should throw if member updates admin", async () => {
       await setup();
-      await createPodSafe(AddressZero, POD_ID + 1, labelhash("test2"), "test2.pod.xyz");
+      await createPodSafe(AddressZero, POD_ID + 1, labelhash("test2"), "test2.pod.eth");
 
       await expect(controller.connect(alice).updatePodAdmin(POD_ID + 1, alice.address)).to.be.revertedWith(
         "Only safe can add new admin",
@@ -200,7 +200,7 @@ describe("Controller safe integration test", () => {
     });
     it("should let safe update admin", async () => {
       await setup();
-      const podSafe = await createPodSafe(AddressZero, POD_ID + 1, labelhash("test2"), "test2.pod.xyz");
+      const podSafe = await createPodSafe(AddressZero, POD_ID + 1, labelhash("test2"), "test2.pod.eth");
       const ethersSafe = await createSafeSigner(podSafe, alice);
 
       const txArgs = {
