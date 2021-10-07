@@ -135,7 +135,6 @@ contract SafeTeller {
         }
     }
 
-    //TODO: could probably do all this as a delegate call
     /**
      * @param to The account address to add as an owner
      * @param safe The address of the safe
@@ -235,6 +234,13 @@ contract SafeTeller {
         require(success, "Module Transaction Failed");
     }
 
+
+    /**
+     * @dev This will execute a tx from the safe that will update the safe's ENS in the reverse resolver
+     * @param safe safe address
+     * @param reverseRegistrar The ENS default reverseRegistar 
+     * @param _ensString string of pod ens name (i.e.'mypod.pod.xyz')
+     */
     function setupSafeReverseResolver(
         address safe,
         address reverseRegistrar,
