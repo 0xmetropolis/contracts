@@ -192,7 +192,7 @@ describe("Controller safe integration test", () => {
   describe("when a pod has no admin", () => {
     it("should throw if member updates admin", async () => {
       await setup();
-      await createPodSafe(AddressZero, POD_ID + 1);
+      await createPodSafe(AddressZero, POD_ID + 1, labelhash("test2"), "test2.pod.xyz");
 
       await expect(controller.connect(alice).updatePodAdmin(POD_ID + 1, alice.address)).to.be.revertedWith(
         "Only safe can add new admin",
@@ -200,7 +200,7 @@ describe("Controller safe integration test", () => {
     });
     it("should let safe update admin", async () => {
       await setup();
-      const podSafe = await createPodSafe(AddressZero, POD_ID + 1);
+      const podSafe = await createPodSafe(AddressZero, POD_ID + 1, labelhash("test2"), "test2.pod.xyz");
       const ethersSafe = await createSafeSigner(podSafe, alice);
 
       const txArgs = {
@@ -216,45 +216,39 @@ describe("Controller safe integration test", () => {
   });
 
   describe("managing pod owners with membership NFTs", () => {
-    let memberToken;
-    let ethersSafe;
+    describe("when managing pod owners with membership NFTs", () => {
+      it("should be able to transfer memberships", async () => {
+        const { memberToken, ethersSafe } = await setup();
 
-    beforeEach(async () => {
-      ({ memberToken, ethersSafe } = await setup());
-    });
+        await memberToken
+          .connect(alice)
+          .safeTransferFrom(alice.address, charlie.address, POD_ID, 1, HashZero, TX_OPTIONS);
+        // check token balance
+        expect(await memberToken.balanceOf(alice.address, POD_ID)).to.equal(0);
+        expect(await memberToken.balanceOf(charlie.address, POD_ID)).to.equal(1);
+        // check safe owners
+        expect(await ethersSafe.getOwners()).to.deep.equal([charlie.address, bob.address]);
+      });
 
-  describe("when managing pod owners with membership NFTs", () => {
-    it("should be able to transfer memberships", async () => {
-      const { memberToken, ethersSafe } = await setup();
+      it("should be able to burn memberships", async () => {
+        const { memberToken, ethersSafe } = await setup();
 
-      await memberToken
-        .connect(alice)
-        .safeTransferFrom(alice.address, charlie.address, POD_ID, 1, HashZero, TX_OPTIONS);
-      // check token balance
-      expect(await memberToken.balanceOf(alice.address, POD_ID)).to.equal(0);
-      expect(await memberToken.balanceOf(charlie.address, POD_ID)).to.equal(1);
-      // check safe owners
-      expect(await ethersSafe.getOwners()).to.deep.equal([charlie.address, bob.address]);
-    });
+        await memberToken.connect(admin).burn(alice.address, POD_ID, TX_OPTIONS);
+        // check token balance
+        expect(await memberToken.balanceOf(alice.address, POD_ID)).to.equal(0);
+        // check safe owners
+        expect(await ethersSafe.getOwners()).to.deep.equal([bob.address]);
+      });
 
-    it("should be able to burn memberships", async () => {
-      const { memberToken, ethersSafe } = await setup();
+      it("should be able to mint memberships", async () => {
+        const { memberToken, ethersSafe } = await setup();
 
-      await memberToken.connect(admin).burn(alice.address, POD_ID, TX_OPTIONS);
-      // check token balance
-      expect(await memberToken.balanceOf(alice.address, POD_ID)).to.equal(0);
-      // check safe owners
-      expect(await ethersSafe.getOwners()).to.deep.equal([bob.address]);
-    });
-
-    it("should be able to mint memberships", async () => {
-      const { memberToken, ethersSafe } = await setup();
-
-      await memberToken.connect(admin).mint(charlie.address, POD_ID, HashZero);
-      // check token balance
-      expect(await memberToken.balanceOf(charlie.address, POD_ID)).to.equal(1);
-      // check safe owners
-      expect(await ethersSafe.getOwners()).to.deep.equal([charlie.address, alice.address, bob.address]);
+        await memberToken.connect(admin).mint(charlie.address, POD_ID, HashZero);
+        // check token balance
+        expect(await memberToken.balanceOf(charlie.address, POD_ID)).to.equal(1);
+        // check safe owners
+        expect(await ethersSafe.getOwners()).to.deep.equal([charlie.address, alice.address, bob.address]);
+      });
     });
   });
 });
