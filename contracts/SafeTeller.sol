@@ -135,7 +135,6 @@ contract SafeTeller {
         }
     }
 
-    //TODO: could probably do all this as a delegate call
     /**
      * @param to The account address to add as an owner
      * @param safe The address of the safe
@@ -228,6 +227,32 @@ contract SafeTeller {
 
         bool success = IGnosisSafe(safe).execTransactionFromModule(
             safe,
+            0,
+            data,
+            IGnosisSafe.Operation.Call
+        );
+        require(success, "Module Transaction Failed");
+    }
+
+
+    /**
+     * @dev This will execute a tx from the safe that will update the safe's ENS in the reverse resolver
+     * @param safe safe address
+     * @param reverseRegistrar The ENS default reverseRegistar 
+     * @param _ensString string of pod ens name (i.e.'mypod.pod.xyz')
+     */
+    function setupSafeReverseResolver(
+        address safe,
+        address reverseRegistrar,
+        string memory _ensString
+    ) internal {
+        bytes memory data = abi.encodeWithSignature(
+            "setName(string)",
+            _ensString
+        );
+
+        bool success = IGnosisSafe(safe).execTransactionFromModule(
+            reverseRegistrar,
             0,
             data,
             IGnosisSafe.Operation.Call

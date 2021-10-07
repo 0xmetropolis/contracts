@@ -6,6 +6,7 @@ import "./interfaces/IController.sol";
 import "./interfaces/IMemberToken.sol";
 import "./interfaces/IControllerRegistry.sol";
 import "./SafeTeller.sol";
+import "./ens/IPodENSRegistrar.sol";
 
 contract Controller is IController, SafeTeller {
     event CreatePod(uint256 podId, address safe, address admin);
@@ -13,6 +14,7 @@ contract Controller is IController, SafeTeller {
 
     IMemberToken public immutable memberToken;
     IControllerRegistry public immutable controllerRegistry;
+    IPodENSRegistrar public podENSRegistrar;
 
     mapping(address => uint256) public safeToPodId;
     mapping(uint256 => address) public podIdToSafe;
@@ -31,38 +33,53 @@ contract Controller is IController, SafeTeller {
         address _memberToken,
         address _controllerRegistry,
         address _proxyFactoryAddress,
-        address _gnosisMasterAddress
+        address _gnosisMasterAddress,
+        address _podENSRegisrar
     ) SafeTeller(_proxyFactoryAddress, _gnosisMasterAddress) {
         require(_memberToken != address(0), "Invalid address");
         require(_controllerRegistry != address(0), "Invalid address");
         require(_proxyFactoryAddress != address(0), "Invalid address");
         require(_gnosisMasterAddress != address(0), "Invalid address");
+        require(_podENSRegisrar != address(0), "Invalid address");
 
         memberToken = IMemberToken(_memberToken);
         controllerRegistry = IControllerRegistry(_controllerRegistry);
+        podENSRegistrar = IPodENSRegistrar(_podENSRegisrar);
     }
 
     /**
      * @param _members The addresses of the members of the pod
      * @param threshold The number of members that are required to sign a transaction
      * @param _admin The address of the pod admin
+     * @param _label label hash of pod name (i.e labelhash('mypod'))
+     * @param _ensString string of pod ens name (i.e.'mypod.pod.xyz')
      */
     function createPod(
         address[] memory _members,
         uint256 threshold,
-        address _admin
+        address _admin,
+        bytes32 _label,
+        string memory _ensString
     ) external {
         address safe = createSafe(_members, threshold);
-        _createPod(_members, safe, _admin);
+
+        _createPod(_members, safe, _admin, _label, _ensString);
     }
 
     /**
      * @dev Used to create a pod with an existing safe
      * @dev Will automatically distribute membership NFTs to current safe members
-     * @param _safe The address of existing safe
      * @param _admin The address of the pod admin
+     * @param _safe The address of existing safe
+     * @param _label label hash of pod name (i.e labelhash('mypod'))
+     * @param _ensString string of pod ens name (i.e.'mypod.pod.xyz')
      */
-    function createPodWithSafe(address _admin, address _safe) external {
+    function createPodWithSafe(
+        address _admin,
+        address _safe,
+        bytes32 _label,
+        string memory _ensString
+    ) external {
         require(_safe != address(0), "invalid safe address");
         require(safeToPodId[_safe] == 0, "safe already in use");
         require(isSafeModuleEnabled(_safe), "safe module must be enabled");
@@ -72,19 +89,24 @@ contract Controller is IController, SafeTeller {
         );
 
         address[] memory members = getSafeMembers(_safe);
-        _createPod(members, _safe, _admin);
+
+        _createPod(members, _safe, _admin, _label, _ensString);
     }
 
     /**
      * @param _members The addresses of the members of the pod
      * @param _admin The address of the pod admin
      * @param _safe The address of existing safe
+     * @param _label label hash of pod name (i.e labelhash('mypod'))
+     * @param _ensString string of pod ens name (i.e.'mypod.pod.xyz')
      */
     function _createPod(
         address[] memory _members,
         address _safe,
-        address _admin
-    ) internal {
+        address _admin,
+        bytes32 _label,
+        string memory _ensString
+    ) private {
         // add create event flag to token data
         bytes memory data = new bytes(1);
         data[0] = bytes1(uint8(CREATE_EVENT));
@@ -97,6 +119,10 @@ contract Controller is IController, SafeTeller {
         if (_admin != address(0)) podAdmin[podId] = _admin;
         podIdToSafe[podId] = _safe;
         safeToPodId[_safe] = podId;
+
+        // setup pod ENS
+        address reverseRegistrar = podENSRegistrar.registerPod(_label, _safe);
+        setupSafeReverseResolver(_safe, reverseRegistrar, _ensString);
     }
 
     /**
@@ -121,8 +147,12 @@ contract Controller is IController, SafeTeller {
     }
 
     /**
+     * @dev This will nullify all pod state on this controller
+     * @dev Update state on _newController
+     * @dev Update controller to _newController in Safe and MemberToken
      * @param _podId The id number of the pod
      * @param _newController The address of the new pod controller
+     * @param _prevModule The module that points to the orca module in the safe's ModuleManager linked list
      */
     function migratePodController(
         uint256 _podId,
@@ -145,12 +175,15 @@ contract Controller is IController, SafeTeller {
 
         Controller newController = Controller(_newController);
 
+        // nullify current pod state
         podAdmin[_podId] = address(0);
         podIdToSafe[_podId] = address(0);
         safeToPodId[safe] = 0;
-
+        // update controller in MemberToken
         memberToken.migrateMemberController(_podId, _newController);
+        // update safe module to _newController
         migrateSafeTeller(safe, _newController, _prevModule);
+        // update pod state in _newController
         newController.updatePodState(_podId, admin, safe);
     }
 
@@ -173,7 +206,9 @@ contract Controller is IController, SafeTeller {
             "Controller not registered"
         );
         require(
-            podAdmin[_podId] == address(0) && podIdToSafe[_podId] == address(0),
+            podAdmin[_podId] == address(0) &&
+                podIdToSafe[_podId] == address(0) &&
+                safeToPodId[_safeAddress] == 0,
             "Pod already exists"
         );
         podAdmin[_podId] = _podAdmin;

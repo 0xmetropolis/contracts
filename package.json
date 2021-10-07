@@ -4,7 +4,6 @@
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers@^0.3.0-beta.10",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
-    "@tenderly/hardhat-tenderly": "^1.0.12",
     "chai": "^4.2.0",
     "eslint": "^7.18.0",
     "eslint-config-airbnb": "^18.2.1",
@@ -39,6 +38,8 @@
     }
   },
   "dependencies": {
+    "@ensdomains/ens-contracts": "0.0.7",
+    "@ensdomains/ensjs": "^2.0.1",
     "@gnosis.pm/safe-contracts": "^1.2.0",
     "@gnosis.pm/safe-core-sdk": "^0.2.0",
     "@gnosis.pm/safe-deployments": "^1.1.0",

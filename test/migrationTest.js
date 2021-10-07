@@ -1,7 +1,9 @@
 const { expect, use } = require("chai");
 const { waffle, ethers, deployments } = require("hardhat");
+const { labelhash } = require("@ensdomains/ensjs");
 
 const GnosisSafe = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/GnosisSafe.sol/GnosisSafe.json");
+
 const Controller = require("../artifacts/contracts/Controller.sol/Controller.json");
 
 const { deployContract, solidity, provider } = waffle;
@@ -25,9 +27,10 @@ describe("pod migration test", () => {
 
   const controller = {};
 
-  const createPodSafe = async (podId, members, ownerAddress = AddressZero) => {
+  const createPodSafe = async (podId, members, ownerAddress = AddressZero, label) => {
     const threshold = 1;
-    await controller.V1.createPod(members, threshold, ownerAddress, TX_OPTIONS);
+
+    await controller.V1.createPod(members, threshold, ownerAddress, label, TX_OPTIONS);
     const safeAddress = await controller.V1.podIdToSafe(podId);
     return new ethers.Contract(safeAddress, GnosisSafe.abi, owner);
   };
@@ -42,6 +45,7 @@ describe("pod migration test", () => {
 
     memberToken = await ethers.getContract("MemberToken", admin);
     controllerRegistry = await ethers.getContract("ControllerRegistry", admin);
+    const podENSRegistrar = await ethers.getContract("PodENSRegistrar", admin);
 
     // V2
     // deploy V2 contract
@@ -50,14 +54,15 @@ describe("pod migration test", () => {
       controllerRegistry.address,
       gnosisSafeProxyFactory.address,
       gnosisSafeMaster.address,
+      podENSRegistrar.address,
     ]);
 
     // register V2 contracts
     await controllerRegistry.connect(admin).registerController(controller.V2.address);
 
     // create V1 pods
-    const legacyPod = await createPodSafe(LEGACY_POD_ID, MEMBERS, owner.address);
-    const upgradePod = await createPodSafe(UPGRADE_POD_ID, MEMBERS, owner.address);
+    const legacyPod = await createPodSafe(LEGACY_POD_ID, MEMBERS, owner.address, labelhash("test"), "test.pod.eth");
+    const upgradePod = await createPodSafe(UPGRADE_POD_ID, MEMBERS, owner.address, labelhash("test2"), "test2.pod.eth");
 
     // migrate pod to V2
     await controller.V1.connect(owner).migratePodController(
