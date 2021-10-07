@@ -20,7 +20,7 @@ describe("Controller safe integration test", () => {
 
   const TX_OPTIONS = { gasLimit: 4000000 };
 
-  const THRESHOLD = 2;
+  const THRESHOLD = 1;
   const MEMBERS = [alice.address, bob.address];
   const POD_ID = 0;
 
@@ -39,10 +39,10 @@ describe("Controller safe integration test", () => {
     });
   };
 
-  const createPodSafe = async () => {
-    await controller.connect(admin).createPod(MEMBERS, THRESHOLD, admin.address, TX_OPTIONS);
+  const createPodSafe = async (adminAddress, podId) => {
+    await controller.connect(admin).createPod(MEMBERS, THRESHOLD, adminAddress, TX_OPTIONS);
     // query the new gnosis safe
-    const safeAddress = await controller.safeAddress(POD_ID);
+    const safeAddress = await controller.podIdToSafe(podId);
     return new ethers.Contract(safeAddress, GnosisSafe.abi, admin);
   };
 
@@ -57,7 +57,7 @@ describe("Controller safe integration test", () => {
     const gnosisSafeProxyFactory = await ethers.getContract("GnosisSafeProxyFactory", admin);
     const gnosisSafeMaster = await ethers.getContract("GnosisSafe", admin);
 
-    const podSafe = await createPodSafe();
+    const podSafe = await createPodSafe(admin.address, POD_ID);
     const ethersSafe = await createSafeSigner(podSafe, admin);
 
     return { memberToken, ethersSafe, gnosisSafeProxyFactory, gnosisSafeMaster };
@@ -86,7 +86,7 @@ describe("Controller safe integration test", () => {
   });
 
   describe("new pod creation with existing safe", () => {
-    it("should create a new safe with safe teller module", async () => {
+    it("should create a new pod with safe teller module", async () => {
       const { memberToken, gnosisSafeProxyFactory, gnosisSafeMaster } = await setup();
 
       const safeAddress = await gnosisSafeProxyFactory.callStatic.createProxy(gnosisSafeMaster.address, HashZero);
@@ -112,6 +112,57 @@ describe("Controller safe integration test", () => {
       // should mint member tokens
       expect(await memberToken.balanceOf(alice.address, POD_ID + 1)).to.equal(1);
       expect(await memberToken.balanceOf(bob.address, POD_ID + 1)).to.equal(1);
+
+      // should throw on subsequent create
+      await expect(controller.connect(alice).createPodWithSafe(admin.address, safe.address)).to.be.revertedWith(
+        "safe already in use",
+      );
+    });
+  });
+
+  describe("when a pod has an admin", () => {
+    it("should let admin set new admin", async () => {
+      await setup();
+
+      await controller.updatePodAdmin(POD_ID, alice.address);
+      expect(await controller.podAdmin(POD_ID)).to.equal(alice.address);
+    });
+    it("should throw if safe updates admin", async () => {
+      const { ethersSafe } = await setup();
+
+      const txArgs = {
+        to: controller.address,
+        data: controller.interface.encodeFunctionData("updatePodAdmin", [POD_ID, alice.address]),
+        value: 0,
+      };
+
+      await expect(ethersSafe.createTransaction(txArgs)).to.be.revertedWith("Only admin can update admin");
+    });
+  });
+
+  describe("when a pod has no admin", () => {
+    it("should throw if member updates admin", async () => {
+      await setup();
+      await createPodSafe(AddressZero, POD_ID + 1);
+
+      await expect(controller.connect(alice).updatePodAdmin(POD_ID + 1, alice.address)).to.be.revertedWith(
+        "Only safe can add new admin",
+      );
+    });
+    it("should let safe update admin", async () => {
+      await setup();
+      const podSafe = await createPodSafe(AddressZero, POD_ID + 1);
+      const ethersSafe = await createSafeSigner(podSafe, alice);
+
+      const txArgs = {
+        to: controller.address,
+        data: controller.interface.encodeFunctionData("updatePodAdmin", [POD_ID + 1, alice.address]),
+        value: 0,
+      };
+      const tx = await ethersSafe.createTransaction(txArgs);
+      await ethersSafe.executeTransaction(tx);
+
+      expect(await controller.podAdmin(POD_ID + 1)).to.equal(alice.address);
     });
   });
 

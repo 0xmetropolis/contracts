@@ -28,7 +28,7 @@ describe("pod migration test", () => {
   const createPodSafe = async (podId, members, ownerAddress = AddressZero) => {
     const threshold = 1;
     await controller.V1.createPod(members, threshold, ownerAddress, TX_OPTIONS);
-    const safeAddress = await controller.V1.safeAddress(podId);
+    const safeAddress = await controller.V1.podIdToSafe(podId);
     return new ethers.Contract(safeAddress, GnosisSafe.abi, owner);
   };
 
@@ -79,11 +79,13 @@ describe("pod migration test", () => {
     const { upgradePod } = await setup();
 
     // should clear pod state on old controller
-    expect(await controller.V1.safeAddress(UPGRADE_POD_ID)).to.equal(AddressZero);
+    expect(await controller.V1.podIdToSafe(UPGRADE_POD_ID)).to.equal(AddressZero);
     expect(await controller.V1.podAdmin(UPGRADE_POD_ID)).to.equal(AddressZero);
+    expect(await controller.V1.safeToPodId(upgradePod.address)).to.equal(0);
     // should update state in new controller
-    expect(await controller.V2.safeAddress(UPGRADE_POD_ID)).to.equal(upgradePod.address);
+    expect(await controller.V2.podIdToSafe(UPGRADE_POD_ID)).to.equal(upgradePod.address);
     expect(await controller.V2.podAdmin(UPGRADE_POD_ID)).to.equal(owner.address);
+    expect(await controller.V2.safeToPodId(upgradePod.address)).to.equal(UPGRADE_POD_ID);
   });
 
   it("should migrate safe to new controller version", async () => {

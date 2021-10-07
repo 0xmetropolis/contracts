@@ -55,9 +55,9 @@ describe("SafeTeller test", () => {
     const controllerRegistry = await ethers.getContract("ControllerRegistry", admin);
 
     const res = await controller.connect(alice).createPod(MEMBERS, THRESHOLD, alice.address);
-    const { args } = (await res.wait()).events.find(elem => elem.event === "CreateSafe");
+    const { args } = (await res.wait()).events.find(elem => elem.event === "CreatePod");
 
-    const safe = new ethers.Contract(args.safeAddress, GnosisSafe.abi, alice);
+    const safe = new ethers.Contract(args.safe, GnosisSafe.abi, alice);
 
     const ethersSafe = await createSafeSigner(safe, alice);
 
@@ -69,8 +69,8 @@ describe("SafeTeller test", () => {
       const { controller } = await setup();
 
       const res = await controller.connect(alice).createPod(MEMBERS, THRESHOLD, alice.address);
-      const { args } = (await res.wait()).events.find(elem => elem.event === "CreateSafe");
-      const safe = new ethers.Contract(args.safeAddress, GnosisSafe.abi, alice);
+      const { args } = (await res.wait()).events.find(elem => elem.event === "CreatePod");
+      const safe = new ethers.Contract(args.safe, GnosisSafe.abi, alice);
 
       const ethersSafe = await createSafeSigner(safe, alice);
 

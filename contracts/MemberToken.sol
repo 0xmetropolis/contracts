@@ -8,8 +8,6 @@ import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "./interfaces/IControllerRegistry.sol";
 import "./interfaces/IController.sol";
 
-string constant beforeTokenTransferSig = "beforeTokenTransfer(address,address,address,uint256[],uint256[],bytes)";
-
 contract MemberToken is ERC1155Supply {
     using Address for address;
 
@@ -17,7 +15,6 @@ contract MemberToken is ERC1155Supply {
 
     mapping(uint256 => address) public memberController;
 
-    uint8 internal constant CREATE_EVENT = 0x01;
     uint256 public nextAvailablePodId = 0;
 
     event MigrateMemberController(uint256 podId, address newController);
@@ -65,7 +62,6 @@ contract MemberToken is ERC1155Supply {
         uint256 _id,
         bytes memory data
     ) external {
-        require(_account != address(0), "Invalid address");
         _mint(_account, _id, 1, data);
     }
 
@@ -80,7 +76,6 @@ contract MemberToken is ERC1155Supply {
         bytes memory data
     ) public {
         for (uint256 index = 0; index < _accounts.length; index += 1) {
-            require(_accounts[index] != address(0), "Invalid address");
             _mint(_accounts[index], _id, 1, data);
         }
     }
@@ -100,10 +95,7 @@ contract MemberToken is ERC1155Supply {
         memberController[id] = msg.sender;
 
         if (_accounts.length != 0) {
-            // Can't call mintSingleBatch because of its require
-            for (uint256 index = 0; index < _accounts.length; index += 1) {
-                _mint(_accounts[index], id, 1, data);
-            }
+            mintSingleBatch(_accounts, id, data);
         }
 
         return id;
@@ -114,7 +106,6 @@ contract MemberToken is ERC1155Supply {
      * @param _id The id of the membership token to destroy
      */
     function burn(address _account, uint256 _id) external {
-        require(balanceOf(_account, _id) >= 1, "User is not a member");
         _burn(_account, _id, 1);
     }
 
@@ -152,16 +143,13 @@ contract MemberToken is ERC1155Supply {
         }
 
         // perform orca token transfer validations
-        controller.functionCall(
-            abi.encodeWithSignature(
-                beforeTokenTransferSig,
-                operator,
-                from,
-                to,
-                ids,
-                amounts,
-                data
-            )
+        IController(controller).beforeTokenTransfer(
+            operator,
+            from,
+            to,
+            ids,
+            amounts,
+            data
         );
     }
 }
