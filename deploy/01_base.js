@@ -38,7 +38,7 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
     network === "31337" ? (await deployments.get("ReverseRegistrar")).address : ens.reverseRegistrar[network];
 
   const ensResolver =
-    network === "31337" ? (await deployments.get("PublicResolver")).address : ens.reverseRegistrar[network];
+    network === "31337" ? (await deployments.get("PublicResolver")).address : ens.publicResolver[network];
 
   const { address: controllerRegistryAddress } = await deploy("ControllerRegistry", {
     from: deployer,
