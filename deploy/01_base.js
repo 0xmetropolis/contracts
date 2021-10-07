@@ -1,5 +1,6 @@
 const { getSafeSingletonDeployment, getProxyFactoryDeployment } = require("@gnosis.pm/safe-deployments");
 const { getEnsAddress } = require("@ensdomains/ensjs");
+const { ENSRegistry } = require("@ensdomains/ens-contracts");
 
 module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) => {
   const { deploy } = deployments;
@@ -10,6 +11,15 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
   // Rinkeby network ID is 4
   // Localhost network ID is 31337
   const network = await getChainId();
+
+  const ens = {
+    reverseRegistrar: {
+      4: "0x6F628b68b30Dc3c17f345c9dbBb1E483c2b7aE5c",
+    },
+    publicResolver: {
+      4: "0xf6305c19e814d2a75429Fd637d01F7ee0E77d615",
+    },
+  };
 
   const proxyFactoryAddress =
     network === "31337"
@@ -24,8 +34,11 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
   const ensRegistryAddress =
     network === "31337" ? (await deployments.get("ENSRegistry")).address : getEnsAddress(network);
 
-  const ensReverseRegistrar = (await deployments.get("ReverseRegistrar")).address;
-  const ensResolver = (await deployments.get("PublicResolver")).address;
+  const ensReverseRegistrar =
+    network === "31337" ? (await deployments.get("ReverseRegistrar")).address : ens.reverseRegistrar[network];
+
+  const ensResolver =
+    network === "31337" ? (await deployments.get("PublicResolver")).address : ens.reverseRegistrar[network];
 
   const { address: controllerRegistryAddress } = await deploy("ControllerRegistry", {
     from: deployer,
@@ -67,7 +80,7 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
 
   await controllerRegistry.registerController(controllerAddress);
 
-  const ensRegistry = await ethers.getContract("ENSRegistry", ensHolderSigner);
+  const ensRegistry = new ethers.Contract(ensRegistryAddress, ENSRegistry, ensHolderSigner);
   // approve podENSRegistry to make pod.eth changes on behalf of ensHolder
   await ensRegistry.setApprovalForAll(podENSRegistrarAddress, true);
 };

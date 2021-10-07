@@ -35,6 +35,10 @@ INFURA_API_KEY= ""
 
 You can run `npx hardhat --network rinkeby deploy` to deploy contracts to the testnet. This will deploy all our contracts and connect them to the official Gnosis Safe contracts.
 
+Run `npx hardhat etherscan-verify` to verify contracts on etherscan
+
+Run `npx hardhat tenderly-verify` to verify contracts on tenderly
+
 ## Architecture
 
 The high level architecture of orca protocol is a permission wrapper around a gnosis safe that uses 1155 NFT membership to manage access.
