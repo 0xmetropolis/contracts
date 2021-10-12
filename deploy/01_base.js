@@ -61,7 +61,7 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
   const { address: memberTokenAddress } = await deploy("MemberToken", {
     from: deployer,
     gasLimit: 8000000,
-    args: [controllerRegistryAddress],
+    args: [controllerRegistryAddress, "https://orcaprotocol-nft.vercel.app/assets/{id}.json"],
   });
 
   const { address: controllerAddress } = await deploy("Controller", {

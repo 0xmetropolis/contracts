@@ -234,11 +234,10 @@ contract SafeTeller {
         require(success, "Module Transaction Failed");
     }
 
-
     /**
      * @dev This will execute a tx from the safe that will update the safe's ENS in the reverse resolver
      * @param safe safe address
-     * @param reverseRegistrar The ENS default reverseRegistar 
+     * @param reverseRegistrar The ENS default reverseRegistar
      * @param _ensString string of pod ens name (i.e.'mypod.pod.xyz')
      */
     function setupSafeReverseResolver(

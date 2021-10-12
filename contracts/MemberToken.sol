@@ -2,13 +2,14 @@ pragma solidity 0.8.7;
 
 /* solhint-disable indent */
 
-import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "./interfaces/IControllerRegistry.sol";
 import "./interfaces/IController.sol";
 
-contract MemberToken is ERC1155Supply {
+contract MemberToken is ERC1155Supply, Ownable {
     using Address for address;
 
     IControllerRegistry public controllerRegistry;
@@ -22,7 +23,7 @@ contract MemberToken is ERC1155Supply {
     /**
      * @param _controllerRegistry The address of the ControllerRegistry contract
      */
-    constructor(address _controllerRegistry) ERC1155("POD") {
+    constructor(address _controllerRegistry, string memory uri) ERC1155(uri) {
         require(_controllerRegistry != address(0), "Invalid address");
         controllerRegistry = IControllerRegistry(_controllerRegistry);
     }
@@ -50,6 +51,10 @@ contract MemberToken is ERC1155Supply {
 
     function getNextAvailablePodId() external view returns (uint256) {
         return nextAvailablePodId;
+    }
+
+    function setUri(string memory uri) external onlyOwner {
+        _setURI(uri);
     }
 
     /**

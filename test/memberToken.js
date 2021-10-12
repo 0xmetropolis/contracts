@@ -93,6 +93,31 @@ describe("Member Token Test", () => {
     });
   });
 
+  describe("URI creation and modification", () => {
+    const uri = "https://orcaprotocol-nft.vercel.app/assets/{id}.json";
+
+    it("should have the correct URI on deployment", async () => {
+      const { memberToken } = await setup();
+
+      expect(await memberToken.connect(admin).uri(1)).to.equal(uri);
+    });
+
+    it("should have the correct URI after an edit", async () => {
+      const { memberToken } = await setup();
+
+      await memberToken.setUri("new URI!");
+
+      expect(await memberToken.connect(admin).uri(1)).to.equal("new URI!");
+    });
+
+    it("should prevent non-owners from editing the URI", async () => {
+      const { memberToken } = await setup();
+
+      await expect(memberToken.connect(alice).setUri("not right")).to.revertedWith("Ownable: caller is not the owner");
+      expect(await memberToken.connect(alice).uri(1)).to.equal(uri);
+    });
+  });
+
   describe("when upgrading controller", () => {
     it("should transfer different memberships with the same controller", async () => {
       const { memberToken, controller, safeSigner } = await setup();
