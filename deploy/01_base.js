@@ -46,7 +46,7 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
     args: [],
   });
 
-  const { address: podENSRegistrarAddress } = await deploy("PodENSRegistrar", {
+  const { address: podEnsRegistrarAddress } = await deploy("PodEnsRegistrar", {
     from: deployer,
     gasLimit: 4000000,
     args: [
@@ -72,7 +72,7 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
       controllerRegistryAddress,
       proxyFactoryAddress,
       gnosisSafeAddress,
-      podENSRegistrarAddress,
+      podEnsRegistrarAddress,
     ],
   });
 
@@ -82,7 +82,7 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
 
   const ensRegistry = new ethers.Contract(ensRegistryAddress, ENSRegistry, ensHolderSigner);
   // approve podENSRegistry to make pod.eth changes on behalf of ensHolder
-  await ensRegistry.setApprovalForAll(podENSRegistrarAddress, true);
+  await ensRegistry.setApprovalForAll(podEnsRegistrarAddress, true);
 };
 
 module.exports.tags = ["Base"];

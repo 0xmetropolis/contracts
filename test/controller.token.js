@@ -3,6 +3,7 @@ const { waffle, ethers, network, deployments } = require("hardhat");
 
 const Safe = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/GnosisSafe.sol/GnosisSafe.json");
 const { labelhash } = require("@ensdomains/ensjs");
+const { AddressOne } = require("@gnosis.pm/safe-contracts");
 
 const { deployMockContract, solidity, provider } = waffle;
 
@@ -64,6 +65,24 @@ describe("Controller beforeTokenTransfer Test", () => {
     await expect(
       controller.beforeTokenTransfer(admin.address, admin.address, alice.address, [POD_ID], [1], HashZero),
     ).to.be.revertedWith("Not Authorized");
+  });
+
+  describe("Pod Registrar functions", () => {
+    it("should allow the owner to change the pod registrar", async () => {
+      await setup();
+
+      await controller.updatePodEnsRegistrar(AddressOne);
+      expect(await controller.podEnsRegistrar()).to.equal(AddressOne);
+    });
+
+    it("should prevent non-owners to change the pod registrar", async () => {
+      await setup();
+
+      await expect(controller.connect(alice).updatePodEnsRegistrar(AddressOne)).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
+      expect(await controller.podEnsRegistrar()).to.not.equal(AddressOne);
+    });
   });
 
   describe("when minting membership tokens without rules", () => {
