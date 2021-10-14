@@ -3,6 +3,7 @@ pragma solidity 0.8.7;
 import "@ensdomains/ens-contracts/contracts/registry/ENS.sol";
 import "@ensdomains/ens-contracts/contracts/resolvers/Resolver.sol";
 import "../interfaces/IControllerRegistry.sol";
+import "../interfaces/IInviteToken.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
@@ -14,6 +15,8 @@ contract PodEnsRegistrar is Ownable {
     address reverseRegistrar;
     IControllerRegistry controllerRegistry;
     bytes32 rootNode;
+    IInviteToken inviteToken;
+    bool public burning = false; // Whether ship tokens need to be burnt or not
 
     //TODO: add whitelist    
 
@@ -22,15 +25,20 @@ contract PodEnsRegistrar is Ownable {
      * @param ensAddr The address of the ENS registry.
      * @param node The node that this registrar administers.
      */
-    constructor(ENS ensAddr, Resolver resolverAddr, address _reverseRegistrar, IControllerRegistry controllerRegistryAddr, bytes32 node) {
+    constructor(ENS ensAddr, Resolver resolverAddr, address _reverseRegistrar, IControllerRegistry controllerRegistryAddr, bytes32 node, IInviteToken inviteTokenAddr) {
         ens = ensAddr;
         resolver = resolverAddr;
         controllerRegistry = controllerRegistryAddr;
         rootNode = node;
         reverseRegistrar = _reverseRegistrar;
+        inviteToken = inviteTokenAddr;
     }
 
     function registerPod(bytes32 label, address podSafe) public returns(address) {
+        if (burning) {
+            require(inviteToken.balanceOf(podSafe) > 0, "safe must have SHIP token");
+            inviteToken.burn(podSafe, 1);
+        }
 
         bytes32 node = keccak256(abi.encodePacked(rootNode, label));
 
@@ -79,5 +87,9 @@ contract PodEnsRegistrar is Ownable {
 
     function setAddr(bytes32 node, address newAddress) public onlyOwner {
         resolver.setAddr(node, newAddress);
+    }
+
+    function setBurning(bool status) public onlyOwner {
+        burning = status;
     }
 }

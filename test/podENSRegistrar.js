@@ -14,7 +14,7 @@ describe("registrar test", () => {
   let ensRegistry;
   let podEnsRegistrar;
   let controllerRegistry;
-
+  let inviteToken;
   let ensReverseRegistrar;
   let ens;
 
@@ -23,6 +23,7 @@ describe("registrar test", () => {
     const { deployer, ensHolder } = await getNamedAccounts();
     ensHolderAddress = ensHolder;
 
+    inviteToken = await ethers.getContract("InviteToken", deployer);
     ensRegistry = await ethers.getContract("ENSRegistry", ensHolder);
     podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", deployer);
     controllerRegistry = await ethers.getContract("ControllerRegistry", deployer);
@@ -79,6 +80,56 @@ describe("registrar test", () => {
 
     it("should revert if called by invalid controller", async () => {
       await expect(podEnsRegistrar.connect(alice).registerPod(labelhash("test1"), safe.address)).to.be.reverted;
+    });
+  });
+
+  describe("burning behavior", async () => {
+    let admin;
+    let minterRole;
+    let burnerRole;
+
+    before(async () => {
+      await setup();
+      await podEnsRegistrar.setBurning(true);
+      admin = (await getNamedAccounts()).deployer;
+
+      // Grant roles
+      minterRole = inviteToken.MINTER_ROLE();
+      burnerRole = inviteToken.BURNER_ROLE();
+      await inviteToken.grantRole(minterRole, admin);
+      await inviteToken.grantRole(burnerRole, podEnsRegistrar.address);
+
+      // Set up registration prereqs
+      await ensReverseRegistrar.setName("alice.eth");
+      await ensRegistry.setApprovalForAll(podEnsRegistrar.address, true);
+    });
+
+    it("should prevent a safe with no token from registering a pod", async () => {
+      await expect(
+        podEnsRegistrar.connect(mockController).registerPod(labelhash("test"), safe.address),
+      ).to.be.revertedWith("safe must have SHIP token");
+    });
+
+    it("should allow a safe with a SHIP token to register a pod", async () => {
+      await inviteToken.mint(safe.address, 1);
+
+      await podEnsRegistrar.connect(mockController).registerPod(labelhash("test"), safe.address);
+      expect(await inviteToken.balanceOf(safe.address)).to.equal(0);
+      expect(await ens.name("test.pod.eth").getOwner()).to.equal(podEnsRegistrar.address);
+      expect(await ens.name("test.pod.eth").getAddress()).to.equal(safe.address);
+    });
+
+    it("should prevent owners owner from changing the burning state", async () => {
+      expect(await podEnsRegistrar.burning()).to.equal(true);
+      await expect(podEnsRegistrar.connect(alice).setBurning(false)).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
+    });
+
+    it("should allow the pod owner to change the burning state", async () => {
+      expect(await podEnsRegistrar.burning()).to.equal(true);
+      await podEnsRegistrar.setBurning(false);
+      expect(await podEnsRegistrar.burning()).to.equal(false);
     });
   });
 });
