@@ -2,19 +2,20 @@ pragma solidity 0.8.7;
 
 /* solhint-disable indent */
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./interfaces/IController.sol";
 import "./interfaces/IMemberToken.sol";
 import "./interfaces/IControllerRegistry.sol";
 import "./SafeTeller.sol";
-import "./ens/IPodENSRegistrar.sol";
+import "./ens/IPodEnsRegistrar.sol";
 
-contract Controller is IController, SafeTeller {
+contract Controller is IController, SafeTeller, Ownable {
     event CreatePod(uint256 podId, address safe, address admin);
     event UpdatePodAdmin(uint256 podId, address admin);
 
     IMemberToken public immutable memberToken;
     IControllerRegistry public immutable controllerRegistry;
-    IPodENSRegistrar public podENSRegistrar;
+    IPodEnsRegistrar public podEnsRegistrar;
 
     mapping(address => uint256) public safeToPodId;
     mapping(uint256 => address) public podIdToSafe;
@@ -34,17 +35,25 @@ contract Controller is IController, SafeTeller {
         address _controllerRegistry,
         address _proxyFactoryAddress,
         address _gnosisMasterAddress,
-        address _podENSRegisrar
+        address _podEnsRegistrar
     ) SafeTeller(_proxyFactoryAddress, _gnosisMasterAddress) {
         require(_memberToken != address(0), "Invalid address");
         require(_controllerRegistry != address(0), "Invalid address");
         require(_proxyFactoryAddress != address(0), "Invalid address");
         require(_gnosisMasterAddress != address(0), "Invalid address");
-        require(_podENSRegisrar != address(0), "Invalid address");
+        require(_podEnsRegistrar != address(0), "Invalid address");
 
         memberToken = IMemberToken(_memberToken);
         controllerRegistry = IControllerRegistry(_controllerRegistry);
-        podENSRegistrar = IPodENSRegistrar(_podENSRegisrar);
+        podEnsRegistrar = IPodEnsRegistrar(_podEnsRegistrar);
+    }
+
+    function updatePodEnsRegistrar(address _podEnsRegistrar)
+        external
+        onlyOwner
+    {
+        require(_podEnsRegistrar != address(0), "Invalid address");
+        podEnsRegistrar = IPodEnsRegistrar(_podEnsRegistrar);
     }
 
     /**
@@ -121,7 +130,7 @@ contract Controller is IController, SafeTeller {
         safeToPodId[_safe] = podId;
 
         // setup pod ENS
-        address reverseRegistrar = podENSRegistrar.registerPod(_label, _safe);
+        address reverseRegistrar = podEnsRegistrar.registerPod(_label, _safe);
         setupSafeReverseResolver(_safe, reverseRegistrar, _ensString);
     }
 

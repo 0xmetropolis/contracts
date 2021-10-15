@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 /**
  * A registrar that allocates subdomains to the first person to claim them.
  */
-contract PodENSRegistrar is Ownable {
+contract PodEnsRegistrar is Ownable {
     ENS ens;
     Resolver resolver;
     address reverseRegistrar;

@@ -55,7 +55,7 @@ describe("SafeTeller test", () => {
     const gnosisSafeMaster = await ethers.getContract("GnosisSafe", admin);
 
     const controllerRegistry = await ethers.getContract("ControllerRegistry", admin);
-    const podENSRegistrar = await ethers.getContract("PodENSRegistrar", admin);
+    const podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", admin);
     const ensRegistry = await ethers.getContract("ENSRegistry", admin);
 
     ens = new ENS({ provider, ensAddress: ensRegistry.address });
@@ -78,7 +78,7 @@ describe("SafeTeller test", () => {
       gnosisSafeProxyFactory,
       gnosisSafeMaster,
       memberToken,
-      podENSRegistrar,
+      podEnsRegistrar,
     };
   };
 
@@ -150,7 +150,7 @@ describe("SafeTeller test", () => {
         controllerRegistry,
         gnosisSafeMaster,
         gnosisSafeProxyFactory,
-        podENSRegistrar,
+        podEnsRegistrar,
       } = await setup();
 
       // safeSdk.getEnableModuleTx doesn't work so creating tx manually
@@ -172,7 +172,7 @@ describe("SafeTeller test", () => {
         controllerRegistry.address,
         gnosisSafeProxyFactory.address,
         gnosisSafeMaster.address,
-        podENSRegistrar.address,
+        podEnsRegistrar.address,
       ]);
 
       await controllerRegistry.connect(admin).registerController(controller2.address);

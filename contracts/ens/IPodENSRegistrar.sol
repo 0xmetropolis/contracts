@@ -1,6 +1,6 @@
 pragma solidity 0.8.7;
 
-interface IPodENSRegistrar { 
+interface IPodEnsRegistrar { 
 
     function registerPod(bytes32 label, address podSafe) external returns (address);
 

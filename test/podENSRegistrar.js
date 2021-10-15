@@ -24,7 +24,7 @@ describe("registrar test", () => {
     ensHolderAddress = ensHolder;
 
     ensRegistry = await ethers.getContract("ENSRegistry", ensHolder);
-    podEnsRegistrar = await ethers.getContract("PodENSRegistrar", deployer);
+    podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", deployer);
     controllerRegistry = await ethers.getContract("ControllerRegistry", deployer);
 
     ensReverseRegistrar = await ethers.getContract("ReverseRegistrar", alice);

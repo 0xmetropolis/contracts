@@ -45,7 +45,7 @@ describe("pod migration test", () => {
 
     memberToken = await ethers.getContract("MemberToken", admin);
     controllerRegistry = await ethers.getContract("ControllerRegistry", admin);
-    const podENSRegistrar = await ethers.getContract("PodENSRegistrar", admin);
+    const podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", admin);
 
     // V2
     // deploy V2 contract
@@ -54,7 +54,7 @@ describe("pod migration test", () => {
       controllerRegistry.address,
       gnosisSafeProxyFactory.address,
       gnosisSafeMaster.address,
-      podENSRegistrar.address,
+      podEnsRegistrar.address,
     ]);
 
     // register V2 contracts
