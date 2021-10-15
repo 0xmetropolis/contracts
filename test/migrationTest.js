@@ -46,6 +46,7 @@ describe("pod migration test", () => {
     memberToken = await ethers.getContract("MemberToken", admin);
     controllerRegistry = await ethers.getContract("ControllerRegistry", admin);
     const podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", admin);
+    await podEnsRegistrar.setRestrictionState(2); // 2 == open enrollment
 
     // V2
     // deploy V2 contract

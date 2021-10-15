@@ -46,7 +46,9 @@ describe("Member Token Test", () => {
     const controller = await ethers.getContract("Controller", admin);
     const memberToken = await ethers.getContract("MemberToken", admin);
     const controllerRegistry = await ethers.getContract("ControllerRegistry", admin);
+
     const podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", admin);
+    await podEnsRegistrar.setRestrictionState(2); // 2 == open enrollment
 
     const safe = await deployMockContract(admin, Safe.abi);
     const safeSigner = await setupMockSafe([admin.address], safe);

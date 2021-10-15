@@ -10,15 +10,21 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * A registrar that allocates subdomains to the first person to claim them.
  */
 contract PodEnsRegistrar is Ownable {
+
+    enum State { 
+        onlySafeWithShip, // Only safes with SHIP token
+        onlyShip, // Anyone with SHIP token
+        open, // Anyone can enroll
+        closed // Nobody can enroll, just in case
+    }
+
     ENS ens;
     Resolver resolver;
     address reverseRegistrar;
     IControllerRegistry controllerRegistry;
     bytes32 rootNode;
     IInviteToken inviteToken;
-    bool public burning = false; // Whether ship tokens need to be burnt or not
-
-    //TODO: add whitelist    
+    State public state = State.onlySafeWithShip; 
 
     /**
      * Constructor.
@@ -34,10 +40,26 @@ contract PodEnsRegistrar is Ownable {
         inviteToken = inviteTokenAddr;
     }
 
-    function registerPod(bytes32 label, address podSafe) public returns(address) {
-        if (burning) {
+    function registerPod(bytes32 label, address podSafe, address podCreator) public returns(address) {
+        if (state == State.closed) {
+            revert("registrations are closed");
+        }
+
+        if (state == State.onlySafeWithShip) {
+            // This implicitly prevents safes that were created in this transaction
+            // from registering, as they cannot have a SHIP token balance.
             require(inviteToken.balanceOf(podSafe) > 0, "safe must have SHIP token");
             inviteToken.burn(podSafe, 1);
+        }
+        if (state == State.onlyShip) {
+            // Prefer the safe's token over the user's
+            if (inviteToken.balanceOf(podSafe) > 0) {
+                inviteToken.burn(podSafe, 1);
+            } else if (inviteToken.balanceOf(podCreator) > 0) {
+                inviteToken.burn(podCreator, 1);
+            } else {
+                revert("sender or safe must have SHIP");
+            }
         }
 
         bytes32 node = keccak256(abi.encodePacked(rootNode, label));
@@ -89,7 +111,8 @@ contract PodEnsRegistrar is Ownable {
         resolver.setAddr(node, newAddress);
     }
 
-    function setBurning(bool status) public onlyOwner {
-        burning = status;
+    function setRestrictionState(uint256 _state) public onlyOwner {
+        state = State(_state);
     }
+
 }

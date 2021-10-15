@@ -53,6 +53,9 @@ describe("Controller beforeTokenTransfer Test", () => {
     controller = await ethers.getContract("Controller", admin);
     memberToken = await ethers.getContract("MemberToken", admin);
 
+    const podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", admin);
+    await podEnsRegistrar.setRestrictionState(2); // 2 == open enrollment
+
     safe = await deployMockContract(admin, Safe.abi);
     safeSigner = await setupMockSafe(MEMBERS);
 

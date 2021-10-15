@@ -1,5 +1,5 @@
 const { expect, use } = require("chai");
-const { waffle, deployments } = require("hardhat");
+const { waffle, ethers, deployments } = require("hardhat");
 
 const InviteToken = require("../artifacts/contracts/InviteToken.sol/InviteToken.json");
 
@@ -19,6 +19,9 @@ describe("Invite Token Test", () => {
     burnerRole = inviteToken.BURNER_ROLE();
     await inviteToken.grantRole(minterRole, minter.address);
     await inviteToken.grantRole(burnerRole, burner.address);
+
+    const podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", admin);
+    await podEnsRegistrar.setRestrictionState(2); // 2 == open enrollment
 
     return { inviteToken };
   };
