@@ -85,6 +85,16 @@ contract MemberToken is ERC1155Supply, Ownable {
         }
     }
 
+    /**
+     * @param _accounts The account addresses to burn the membership tokens from
+     * @param _id The membership token id to burn
+     */
+    function burnSingleBatch(address[] memory _accounts, uint256 _id) public {
+        for (uint256 index = 0; index < _accounts.length; index += 1) {
+            _burn(_accounts[index], _id, 1);
+        }
+    }
+
     function createPod(address[] memory _accounts, bytes memory data)
         external
         returns (uint256)
