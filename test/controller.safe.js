@@ -54,6 +54,9 @@ describe("Controller safe integration test", () => {
 
     controller = await ethers.getContract("Controller", admin);
 
+    const podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", admin);
+    await podEnsRegistrar.setRestrictionState(2); // 2 == open enrollment
+
     const memberToken = await ethers.getContract("MemberToken", admin);
     const gnosisSafeProxyFactory = await ethers.getContract("GnosisSafeProxyFactory", admin);
     const gnosisSafeMaster = await ethers.getContract("GnosisSafe", admin);

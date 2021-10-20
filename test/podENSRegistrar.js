@@ -6,6 +6,13 @@ const { provider, solidity } = waffle;
 
 use(solidity);
 
+const stateEnum = {
+  onlySafeWithShip: 0,
+  onlyShip: 1,
+  open: 2,
+  closed: 3,
+};
+
 describe("registrar test", () => {
   const [mockController, safe, alice] = provider.getWallets();
 
@@ -14,7 +21,7 @@ describe("registrar test", () => {
   let ensRegistry;
   let podEnsRegistrar;
   let controllerRegistry;
-
+  let inviteToken;
   let ensReverseRegistrar;
   let ens;
 
@@ -23,8 +30,11 @@ describe("registrar test", () => {
     const { deployer, ensHolder } = await getNamedAccounts();
     ensHolderAddress = ensHolder;
 
+    inviteToken = await ethers.getContract("InviteToken", deployer);
     ensRegistry = await ethers.getContract("ENSRegistry", ensHolder);
     podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", deployer);
+    await podEnsRegistrar.setRestrictionState(stateEnum.open);
+
     controllerRegistry = await ethers.getContract("ControllerRegistry", deployer);
 
     ensReverseRegistrar = await ethers.getContract("ReverseRegistrar", alice);
@@ -55,7 +65,9 @@ describe("registrar test", () => {
 
   describe("when registering a subdomain", () => {
     it("should update owner and address", async () => {
-      await podEnsRegistrar.connect(mockController).registerPod(labelhash("test"), safe.address);
+      await podEnsRegistrar
+        .connect(mockController)
+        .registerPod(labelhash("test"), safe.address, mockController.address);
 
       expect(await ens.name("test.pod.eth").getOwner()).to.equal(podEnsRegistrar.address);
       expect(await ens.name("test.pod.eth").getAddress()).to.equal(safe.address);
@@ -79,6 +91,181 @@ describe("registrar test", () => {
 
     it("should revert if called by invalid controller", async () => {
       await expect(podEnsRegistrar.connect(alice).registerPod(labelhash("test1"), safe.address)).to.be.reverted;
+    });
+  });
+
+  describe("onlySafeWithShip state", async () => {
+    let admin;
+    let minterRole;
+    let burnerRole;
+
+    before(async () => {
+      await setup();
+      await podEnsRegistrar.setRestrictionState(stateEnum.onlySafeWithShip);
+      admin = (await getNamedAccounts()).deployer;
+
+      // Grant roles
+      minterRole = inviteToken.MINTER_ROLE();
+      burnerRole = inviteToken.BURNER_ROLE();
+      await inviteToken.grantRole(minterRole, admin);
+      await inviteToken.grantRole(burnerRole, podEnsRegistrar.address);
+
+      // Set up registration prereqs
+      await ensReverseRegistrar.setName("alice.eth");
+      await ensRegistry.setApprovalForAll(podEnsRegistrar.address, true);
+    });
+
+    it("should prevent a safe with no token from registering a pod", async () => {
+      await expect(
+        podEnsRegistrar.connect(mockController).registerPod(labelhash("test"), safe.address, safe.address),
+      ).to.be.revertedWith("safe must have SHIP token");
+    });
+
+    it("should prevent a user with tokens from registering a pod with none", async () => {
+      await inviteToken.mint(alice.address, 1);
+
+      await expect(
+        podEnsRegistrar.connect(mockController).registerPod(labelhash("test"), safe.address, alice.address),
+      ).to.be.revertedWith("safe must have SHIP token");
+    });
+
+    it("should allow a safe with a SHIP token to register a pod", async () => {
+      await inviteToken.mint(safe.address, 1);
+
+      await podEnsRegistrar.connect(mockController).registerPod(labelhash("test2"), safe.address, safe.address);
+      expect(await inviteToken.balanceOf(safe.address)).to.equal(0);
+      expect(await ens.name("test2.pod.eth").getOwner()).to.equal(podEnsRegistrar.address);
+      expect(await ens.name("test2.pod.eth").getAddress()).to.equal(safe.address);
+    });
+
+    it("should allow a user to register a safe that has a token", async () => {
+      await inviteToken.mint(safe.address, 1);
+
+      await podEnsRegistrar.connect(mockController).registerPod(labelhash("test3"), safe.address, alice.address);
+      expect(await inviteToken.balanceOf(safe.address)).to.equal(0);
+      expect(await ens.name("test3.pod.eth").getOwner()).to.equal(podEnsRegistrar.address);
+      expect(await ens.name("test3.pod.eth").getAddress()).to.equal(safe.address);
+    });
+  });
+
+  describe("onlyShip state", async () => {
+    let admin;
+    let minterRole;
+    let burnerRole;
+
+    before(async () => {
+      await setup();
+      await podEnsRegistrar.setRestrictionState(stateEnum.onlyShip);
+      admin = (await getNamedAccounts()).deployer;
+
+      // Grant roles
+      minterRole = inviteToken.MINTER_ROLE();
+      burnerRole = inviteToken.BURNER_ROLE();
+      await inviteToken.grantRole(minterRole, admin);
+      await inviteToken.grantRole(burnerRole, podEnsRegistrar.address);
+
+      // Set up registration prereqs
+      await ensReverseRegistrar.setName("alice.eth");
+      await ensRegistry.setApprovalForAll(podEnsRegistrar.address, true);
+    });
+
+    it("should prevent a safe with no token from registering a pod", async () => {
+      await expect(
+        podEnsRegistrar.connect(mockController).registerPod(labelhash("test"), safe.address, safe.address),
+      ).to.be.revertedWith("sender or safe must have SHIP");
+    });
+
+    it("should allow a safe with a SHIP token to register a pod", async () => {
+      await inviteToken.mint(safe.address, 1);
+
+      await podEnsRegistrar.connect(mockController).registerPod(labelhash("test"), safe.address, safe.address);
+      expect(await inviteToken.balanceOf(safe.address)).to.equal(0);
+      expect(await ens.name("test.pod.eth").getOwner()).to.equal(podEnsRegistrar.address);
+      expect(await ens.name("test.pod.eth").getAddress()).to.equal(safe.address);
+    });
+
+    it("should allow a user to register a safe that has a token", async () => {
+      await inviteToken.mint(safe.address, 1);
+
+      await podEnsRegistrar.connect(mockController).registerPod(labelhash("test2"), safe.address, alice.address);
+      expect(await inviteToken.balanceOf(safe.address)).to.equal(0);
+      expect(await ens.name("test2.pod.eth").getOwner()).to.equal(podEnsRegistrar.address);
+      expect(await ens.name("test2.pod.eth").getAddress()).to.equal(safe.address);
+    });
+
+    it("should allow a user that has a token to register a safe", async () => {
+      await inviteToken.mint(alice.address, 1);
+
+      await podEnsRegistrar.connect(mockController).registerPod(labelhash("test3"), safe.address, alice.address);
+      expect(await inviteToken.balanceOf(alice.address)).to.equal(0);
+      expect(await ens.name("test3.pod.eth").getOwner()).to.equal(podEnsRegistrar.address);
+      expect(await ens.name("test3.pod.eth").getAddress()).to.equal(safe.address);
+    });
+
+    it("should take the token from the safe, if both the user and a safe have a token", async () => {
+      await inviteToken.batchMint([alice.address, safe.address], 1);
+      expect(await inviteToken.balanceOf(safe.address)).to.equal(1);
+      expect(await inviteToken.balanceOf(alice.address)).to.equal(1);
+
+      await podEnsRegistrar.connect(mockController).registerPod(labelhash("test4"), safe.address, alice.address);
+      expect(await inviteToken.balanceOf(alice.address)).to.equal(1);
+      expect(await inviteToken.balanceOf(safe.address)).to.equal(0);
+      expect(await ens.name("test4.pod.eth").getOwner()).to.equal(podEnsRegistrar.address);
+      expect(await ens.name("test4.pod.eth").getAddress()).to.equal(safe.address);
+    });
+  });
+
+  describe("open state", async () => {
+    let admin;
+    let minterRole;
+    let burnerRole;
+
+    before(async () => {
+      await setup();
+      await podEnsRegistrar.setRestrictionState(stateEnum.open);
+      admin = (await getNamedAccounts()).deployer;
+
+      // Grant roles
+      minterRole = inviteToken.MINTER_ROLE();
+      burnerRole = inviteToken.BURNER_ROLE();
+      await inviteToken.grantRole(minterRole, admin);
+      await inviteToken.grantRole(burnerRole, podEnsRegistrar.address);
+
+      // Set up registration prereqs
+      await ensReverseRegistrar.setName("alice.eth");
+      await ensRegistry.setApprovalForAll(podEnsRegistrar.address, true);
+    });
+
+    it("should allow a safe to register a pod", async () => {
+      await podEnsRegistrar.connect(mockController).registerPod(labelhash("test"), safe.address, safe.address);
+      expect(await ens.name("test.pod.eth").getOwner()).to.equal(podEnsRegistrar.address);
+      expect(await ens.name("test.pod.eth").getAddress()).to.equal(safe.address);
+    });
+
+    it("should allow a user to register a safe", async () => {
+      await podEnsRegistrar.connect(mockController).registerPod(labelhash("test2"), safe.address, alice.address);
+      expect(await ens.name("test2.pod.eth").getOwner()).to.equal(podEnsRegistrar.address);
+      expect(await ens.name("test2.pod.eth").getAddress()).to.equal(safe.address);
+    });
+  });
+
+  describe("open state", async () => {
+    before(async () => {
+      await setup();
+      await podEnsRegistrar.setRestrictionState(stateEnum.open);
+    });
+
+    it("should prevent non-owner from changing state", async () => {
+      expect(await podEnsRegistrar.state()).to.equal(stateEnum.open);
+      await expect(podEnsRegistrar.connect(alice).setRestrictionState(stateEnum.closed)).to.be.revertedWith(
+        "Ownable: caller is not the owner",
+      );
+    });
+
+    it("should allow a user to register a safe", async () => {
+      expect(await podEnsRegistrar.state()).to.equal(stateEnum.open);
+      await podEnsRegistrar.connect(mockController).setRestrictionState(stateEnum.closed);
+      expect(await podEnsRegistrar.state()).to.equal(stateEnum.closed);
     });
   });
 });

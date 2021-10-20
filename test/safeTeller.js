@@ -56,6 +56,8 @@ describe("SafeTeller test", () => {
 
     const controllerRegistry = await ethers.getContract("ControllerRegistry", admin);
     const podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", admin);
+    await podEnsRegistrar.setRestrictionState(2); // 2 == open enrollment
+
     const ensRegistry = await ethers.getContract("ENSRegistry", admin);
 
     ens = new ENS({ provider, ensAddress: ensRegistry.address });

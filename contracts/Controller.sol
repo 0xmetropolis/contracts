@@ -130,7 +130,11 @@ contract Controller is IController, SafeTeller, Ownable {
         safeToPodId[_safe] = podId;
 
         // setup pod ENS
-        address reverseRegistrar = podEnsRegistrar.registerPod(_label, _safe);
+        address reverseRegistrar = podEnsRegistrar.registerPod(
+            _label,
+            _safe,
+            msg.sender
+        );
         setupSafeReverseResolver(_safe, reverseRegistrar, _ensString);
     }
 
