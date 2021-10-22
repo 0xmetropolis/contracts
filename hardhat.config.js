@@ -59,7 +59,13 @@ task("tenderly-verify", "verifies current deployment on tenderly").setAction(asy
  */
 module.exports = {
   solidity: {
-    compilers: [{ version: "0.8.7" }, { version: "0.7.4" }],
+    version: "0.8.7",
+    settings: {
+      optimizer: {
+        enabled: true,
+        runs: 1000,
+      },
+    },
   },
   gasReporter: {
     currency: "USD",
