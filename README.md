@@ -33,7 +33,7 @@ INFURA_API_KEY= ""
 
 ### Deploying
 
-You can run `npx hardhat --network rinkeby deploy` to deploy contracts to the testnet. This will deploy all our contracts and connect them to the official Gnosis Safe contracts.
+You can run `npx hardhat --network rinkeby deploy --reset` to deploy contracts to the testnet. This will deploy all our contracts and connect them to the official Gnosis Safe contracts.
 
 Run `npx hardhat etherscan-verify` to verify contracts on etherscan
 
