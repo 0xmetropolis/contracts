@@ -74,7 +74,7 @@ describe("Invite Token Test", () => {
     it("Prevents non-minters from minting", async () => {
       const { inviteToken } = await setup();
 
-      await expect(inviteToken.connect(admin).mint(alice.address, 1)).to.be.revertedWith("Only minters can mint");
+      await expect(inviteToken.connect(burner).mint(alice.address, 1)).to.be.revertedWith("Only minters can mint");
       expect(await inviteToken.balanceOf(alice.address)).to.equal(0);
     });
 

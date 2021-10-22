@@ -11,6 +11,8 @@ contract InviteToken is ERC20, AccessControl {
 
     constructor() ERC20("Ship Token", "$SHIP") {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _setupRole(MINTER_ROLE, msg.sender);
+        _setupRole(BURNER_ROLE, msg.sender);
     }
 
     function decimals() public view override returns (uint8) {
@@ -24,7 +26,6 @@ contract InviteToken is ERC20, AccessControl {
     }
 
     function mint(address account, uint256 amount) public {
-        require(balanceOf(account) == 0, "Account already has token");
         require(hasRole(MINTER_ROLE, msg.sender), "Only minters can mint");
         _mint(account, amount);
     }
