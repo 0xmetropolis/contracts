@@ -1,4 +1,7 @@
 /* eslint-disable no-undef */
+
+const { task } = require("hardhat/config");
+
 /* eslint-disable import/no-extraneous-dependencies */
 require("@nomiclabs/hardhat-waffle");
 require("hardhat-gas-reporter");
@@ -50,6 +53,42 @@ task("tenderly-verify", "verifies current deployment on tenderly").setAction(asy
   ];
   await tenderly.verify(...contracts);
 });
+
+task("set-ship-state", "sets restrictions to closed, open, onlyShip or onlySafeWithShip")
+  .addPositionalParam("state")
+  .setAction(async args => {
+    const { deployer } = await getNamedAccounts();
+    PodEnsRegistrar = await ethers.getContract("PodEnsRegistrar", deployer);
+
+    const stateEnum = {
+      onlySafeWithShip: 0,
+      onlyShip: 1,
+      open: 2,
+      closed: 3,
+    };
+
+    const { state } = args;
+
+    const currentState = await PodEnsRegistrar.state();
+    if (currentState === stateEnum[state]) {
+      console.log("Contract was already set to that state");
+      return;
+    }
+    await PodEnsRegistrar.setRestrictionState(stateEnum[state]);
+    console.log(`Successfully changed state to ${state}`);
+  });
+
+task("mint", "mints tokens to an address, with an optional amount")
+  .addPositionalParam("recipient")
+  .addOptionalPositionalParam("amount")
+  .setAction(async args => {
+    const { deployer } = await getNamedAccounts();
+    InviteToken = await ethers.getContract("InviteToken", deployer);
+
+    const { recipient, amount } = args;
+    await InviteToken.mint(recipient, amount || 1);
+    console.log(`Minted ${amount || 1} tokens to ${recipient}`);
+  });
 
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
