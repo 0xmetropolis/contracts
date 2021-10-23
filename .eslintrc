@@ -1,13 +1,13 @@
 {
-    "extends": [
-      "airbnb",
-      "plugin:prettier/recommended"
-    ],
-    "plugins": ["prettier"],
-    "env": {
-      "mocha": true
-    },
-    "rules": {
-      "prettier/prettier": "error"
-    }
+  "extends": [
+    "airbnb",
+    "plugin:prettier/recommended"
+  ],
+  "plugins": ["prettier"],
+  "env": {
+    "mocha": true
+  },
+  "rules": {
+    "prettier/prettier": "error"
   }
+}
