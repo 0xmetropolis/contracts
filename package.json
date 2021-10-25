@@ -28,14 +28,14 @@
   },
   "scripts": {
     "lint": "solhint contracts/*.sol",
-    "prettier": "prettier --write contracts/*.sol",
+    "format": "prettier --write contracts/*.sol",
     "test": "hardhat test",
     "compile": "hardhat compile",
     "coverage": "hardhat coverage"
   },
   "husky": {
     "hooks": {
-      "pre-commit": "npm run prettier && npm run lint && npm run test"
+      "pre-commit": "npm run format && npm run lint && npm run test"
     }
   },
   "dependencies": {

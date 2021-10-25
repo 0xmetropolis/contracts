@@ -19,7 +19,7 @@ jobs:
 
       - uses: actions/setup-node@v2
         with:
-          node-version: 14.x
+          node-version: 16.12.0
 
       - name: Reconfigure git to use HTTP authentication
         run: >
@@ -29,7 +29,6 @@ jobs:
       - name: Lint, test and compile
         run: |
           npm ci
-          npm run prettier
           npm run lint
           npm run test
           npm run compile
