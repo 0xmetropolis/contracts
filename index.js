@@ -1,9 +1,16 @@
 const RinkebyController = require("./deployments/rinkeby/Controller.json");
 const RinkebyControllerRegistry = require("./deployments/rinkeby/ControllerRegistry.json");
 const RinkebyMemberToken = require("./deployments/rinkeby/MemberToken.json");
-const RinkebyPodEnsRegistrar = require("./deployments/rinkeby/PodENSRegistrar.json");
+const RinkebyPodEnsRegistrar = require("./deployments/rinkeby/PodEnsRegistrar.json");
+const RinkebyInviteToken = require("./deployments/rinkeby/InviteToken.json");
+const MainnetController = require("./deployments/mainnet/Controller.json");
+const MainnetControllerRegistry = require("./deployments/mainnet/ControllerRegistry.json");
+const MainnetMemberToken = require("./deployments/mainnet/MemberToken.json");
+const MainnetPodEnsRegistrar = require("./deployments/mainnet/PodEnsRegistrar.json");
+const MainnetInviteToken = require("./deployments/mainnet/InviteToken.json");
 
 const networkMap = {
+  1: "mainnet",
   4: "rinkeby",
 };
 
@@ -13,6 +20,14 @@ const deployments = {
     controllerregistry: RinkebyControllerRegistry,
     membertoken: RinkebyMemberToken,
     podensregistrar: RinkebyPodEnsRegistrar,
+    invitetoken: RinkebyInviteToken,
+  },
+  mainnet: {
+    controller: MainnetController,
+    controllerregistry: MainnetControllerRegistry,
+    membertoken: MainnetMemberToken,
+    podensregistrar: MainnetPodEnsRegistrar,
+    invitetoken: MainnetInviteToken,
   },
 };
 
