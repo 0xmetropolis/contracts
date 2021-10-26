@@ -14,11 +14,19 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
 
   const ens = {
     reverseRegistrar: {
+      1: "0x084b1c3C81545d370f3634392De611CaaBFf8148",
       4: "0x6F628b68b30Dc3c17f345c9dbBb1E483c2b7aE5c",
     },
     publicResolver: {
+      1: "0x4976fb03C32e5B8cfe2b6cCB31c09Ba78EBaBa41",
       4: "0xf6305c19e814d2a75429Fd637d01F7ee0E77d615",
     },
+  };
+
+  const TLD = {
+    1: "pod.xyz",
+    4: "pod.eth",
+    31337: "pod.eth",
   };
 
   const proxyFactoryAddress =
@@ -40,16 +48,20 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
   const ensResolver =
     network === "31337" ? (await deployments.get("PublicResolver")).address : ens.publicResolver[network];
 
-  const { address: inviteTokenAddress } = await deploy("InviteToken", {
-    from: deployer,
-    gasLimit: 8000000,
-    args: [],
-  });
-
   const { address: controllerRegistryAddress } = await deploy("ControllerRegistry", {
     from: deployer,
     gasLimit: 8000000,
     args: [],
+    log: true,
+    skipIfAlreadyDeployed: true,
+  });
+
+  const { address: inviteTokenAddress } = await deploy("InviteToken", {
+    from: deployer,
+    gasLimit: 8000000,
+    args: [],
+    log: true,
+    skipIfAlreadyDeployed: true,
   });
 
   const { address: podEnsRegistrarAddress } = await deploy("PodEnsRegistrar", {
@@ -60,15 +72,19 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
       ensResolver,
       ensReverseRegistrar,
       controllerRegistryAddress,
-      ethers.utils.namehash("pod.eth"),
+      ethers.utils.namehash(TLD[network]),
       inviteTokenAddress,
     ],
+    log: true,
+    skipIfAlreadyDeployed: true,
   });
 
   const { address: memberTokenAddress } = await deploy("MemberToken", {
     from: deployer,
     gasLimit: 8000000,
     args: [controllerRegistryAddress, "https://orcaprotocol-nft.vercel.app/assets/{id}.json"],
+    log: true,
+    skipIfAlreadyDeployed: true,
   });
 
   const { address: controllerAddress } = await deploy("Controller", {
@@ -81,6 +97,8 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
       gnosisSafeAddress,
       podEnsRegistrarAddress,
     ],
+    log: true,
+    skipIfAlreadyDeployed: true,
   });
 
   const controllerRegistry = await ethers.getContractAt("ControllerRegistry", controllerRegistryAddress, signer);
