@@ -25,7 +25,7 @@ const networks = {
   rinkeby: {
     url: `https://rinkeby.infura.io/v3/${process.env.INFURA_API_KEY}`,
     accounts,
-    gasPrice: 100000000000,
+    gasPrice: 10000000000,
   },
   mainnet: {
     url: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,

@@ -8,6 +8,7 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
   const signer = ethers.provider.getSigner(deployer);
   const ensHolderSigner = ethers.provider.getSigner(ensHolder);
 
+  // Mainnet network ID is 1
   // Rinkeby network ID is 4
   // Localhost network ID is 31337
   const network = await getChainId();
@@ -79,10 +80,14 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
     skipIfAlreadyDeployed: true,
   });
 
+  const nftUrl =
+    network === 1
+      ? "https://orcaprotocol-nft.vercel.app/assets/{id}.json"
+      : "https://orcaprotocol-nft.vercel.app/assets/testnet/{id}.json";
   const { address: memberTokenAddress } = await deploy("MemberToken", {
     from: deployer,
     gasLimit: 8000000,
-    args: [controllerRegistryAddress, "https://orcaprotocol-nft.vercel.app/assets/{id}.json"],
+    args: [controllerRegistryAddress, nftUrl],
     log: true,
     skipIfAlreadyDeployed: true,
   });
