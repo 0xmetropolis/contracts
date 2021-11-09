@@ -10,7 +10,7 @@ import "./SafeTeller.sol";
 import "./ens/IPodEnsRegistrar.sol";
 
 contract Controller is IController, SafeTeller, Ownable {
-    event CreatePod(uint256 podId, address safe, address admin);
+    event CreatePod(uint256 podId, address safe, address admin, string ensName);
     event UpdatePodAdmin(uint256 podId, address admin);
 
     IMemberToken public immutable memberToken;
@@ -122,7 +122,7 @@ contract Controller is IController, SafeTeller, Ownable {
 
         uint256 podId = memberToken.createPod(_members, data);
 
-        emit CreatePod(podId, _safe, _admin);
+        emit CreatePod(podId, _safe, _admin, _ensString);
         emit UpdatePodAdmin(podId, _admin);
 
         if (_admin != address(0)) podAdmin[podId] = _admin;
