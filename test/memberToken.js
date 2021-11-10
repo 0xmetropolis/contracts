@@ -96,7 +96,7 @@ describe("Member Token Test", () => {
   });
 
   describe("URI creation and modification", () => {
-    const uri = "https://orcaprotocol-nft.vercel.app/assets/{id}.json";
+    const uri = "https://orcaprotocol-nft.vercel.app/assets/testnet/{id}.json";
 
     it("should have the correct URI on deployment", async () => {
       const { memberToken } = await setup();

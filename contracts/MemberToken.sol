@@ -17,6 +17,8 @@ contract MemberToken is ERC1155Supply, Ownable {
     mapping(uint256 => address) public memberController;
 
     uint256 public nextAvailablePodId = 0;
+    string public _contractURI =
+        "https://orcaprotocol-nft.vercel.app/assets/contract-metadata";
 
     event MigrateMemberController(uint256 podId, address newController);
 
@@ -26,6 +28,17 @@ contract MemberToken is ERC1155Supply, Ownable {
     constructor(address _controllerRegistry, string memory uri) ERC1155(uri) {
         require(_controllerRegistry != address(0), "Invalid address");
         controllerRegistry = IControllerRegistry(_controllerRegistry);
+    }
+
+    // Provides metadata value for the opensea wallet. Must be set at construct time
+    // Source: https://www.reddit.com/r/ethdev/comments/q4j5bf/contracturi_not_reflected_in_opensea/
+    function contractURI() public view returns (string memory) {
+        return _contractURI;
+    }
+
+    // Note that OpenSea does not currently update contract metadata when this value is changed. - Nov 2021
+    function setContractURI(string memory newContractURI) public onlyOwner {
+        _contractURI = newContractURI;
     }
 
     /**

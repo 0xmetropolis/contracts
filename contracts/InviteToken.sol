@@ -16,7 +16,7 @@ contract InviteToken is ERC20, AccessControl {
     }
 
     function decimals() public view override returns (uint8) {
-        return 1;
+        return 0;
     }
 
     function batchMint(address[] calldata accounts, uint256 amount) public {
