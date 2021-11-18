@@ -1,6 +1,9 @@
+/* eslint-disable no-console */
 const { ENSRegistry } = require("@ensdomains/ens-contracts");
 const { getEnsAddress } = require("@ensdomains/ensjs");
+const { ethers } = require("ethers");
 const { task } = require("hardhat/config");
+const { utils } = require("web3");
 
 /* eslint-disable import/no-extraneous-dependencies */
 require("@nomiclabs/hardhat-waffle");
@@ -10,8 +13,6 @@ require("hardhat-deploy");
 require("@nomiclabs/hardhat-ethers");
 require("@tenderly/hardhat-tenderly");
 require("dotenv").config();
-
-const accounts = process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [];
 
 const networks = {
   hardhat: {
@@ -24,13 +25,13 @@ const networks = {
   },
   rinkeby: {
     url: `https://rinkeby.infura.io/v3/${process.env.INFURA_API_KEY}`,
-    accounts,
+    accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     gasPrice: 10000000000,
   },
   mainnet: {
     url: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
-    accounts,
-    gasPrice: 100000000000,
+    accounts: process.env.MAINNET_PRIVATE_KEY ? [process.env.MAINNET_PRIVATE_KEY] : [],
+    gasPrice: 200000000000,
     timeout: 1200000, // 20 minute timeout in ms
   },
 };
@@ -95,9 +96,23 @@ task("mint", "mints tokens to an address, with an optional amount")
     const inviteToken = await ethers.getContract("InviteToken", deployer);
 
     const { recipient, amount } = args;
-    await inviteToken.mint(recipient, amount || 1);
+    const res = await inviteToken.mint(recipient, amount || 1);
+    console.log(res);
     console.log(`Minted ${amount || 1} tokens to ${recipient}`);
   });
+
+task("set-burner", "registers contract as invite burner").setAction(
+  async (args, { getNamedAccounts, ethers, deployments }) => {
+    const { deployer } = await getNamedAccounts();
+    const inviteToken = await ethers.getContract("InviteToken", deployer);
+
+    const contract = (await deployments.get("PodEnsRegistrar", deployer)).address;
+    const tx = await inviteToken.grantRole(inviteToken.BURNER_ROLE(), contract);
+
+    console.log(tx);
+    console.log(`Added ${contract} as burner for ${inviteToken.address}`);
+  },
+);
 
 task("register-controller", "registers controller with controller registry")
   .addOptionalPositionalParam("controller")
@@ -148,7 +163,7 @@ module.exports = {
   },
   gasReporter: {
     currency: "USD",
-    gasPrice: 150,
+    gasPrice: 260,
     coinmarketcap: process.env.COINMARKETCAP_KEY,
   },
   networks,
