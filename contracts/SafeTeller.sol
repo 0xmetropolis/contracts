@@ -12,6 +12,7 @@ contract SafeTeller {
 
     // mainnet: 0x34CfAC646f301356fAa8B21e94227e3583Fe3F5F;
     address public immutable gnosisMasterAddress;
+    address public immutable fallbackHandlerAddress;
 
     string public constant FUNCTION_SIG_SETUP =
         "setup(address[],uint256,address,bytes,address,address,uint256,address)";
@@ -26,9 +27,14 @@ contract SafeTeller {
      * @param _proxyFactoryAddress The proxy factory address
      * @param _gnosisMasterAddress The gnosis master address
      */
-    constructor(address _proxyFactoryAddress, address _gnosisMasterAddress) {
+    constructor(
+        address _proxyFactoryAddress,
+        address _gnosisMasterAddress,
+        address _fallbackHanderAddress
+    ) {
         proxyFactoryAddress = _proxyFactoryAddress;
         gnosisMasterAddress = _gnosisMasterAddress;
+        fallbackHandlerAddress = _fallbackHanderAddress;
     }
 
     /**
@@ -117,7 +123,7 @@ contract SafeTeller {
             _threshold,
             this,
             data,
-            address(0),
+            fallbackHandlerAddress,
             address(0),
             uint256(0),
             address(0)

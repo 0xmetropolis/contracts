@@ -40,6 +40,7 @@ describe("pod migration test", () => {
 
     const gnosisSafeProxyFactory = await ethers.getContract("GnosisSafeProxyFactory", admin);
     const gnosisSafeMaster = await ethers.getContract("GnosisSafe", admin);
+    const fallbackHandler = await ethers.getContract("CompatibilityFallbackHandler", admin);
 
     controller.V1 = await ethers.getContract("Controller", admin);
 
@@ -56,6 +57,7 @@ describe("pod migration test", () => {
       gnosisSafeProxyFactory.address,
       gnosisSafeMaster.address,
       podEnsRegistrar.address,
+      fallbackHandler.address,
     ]);
 
     // register V2 contracts

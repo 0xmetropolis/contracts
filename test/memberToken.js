@@ -46,6 +46,7 @@ describe("Member Token Test", () => {
     const controller = await ethers.getContract("Controller", admin);
     const memberToken = await ethers.getContract("MemberToken", admin);
     const controllerRegistry = await ethers.getContract("ControllerRegistry", admin);
+    const fallbackHandler = await ethers.getContract("CompatibilityFallbackHandler", admin);
 
     const podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", admin);
     await podEnsRegistrar.setRestrictionState(2); // 2 == open enrollment
@@ -53,7 +54,16 @@ describe("Member Token Test", () => {
     const safe = await deployMockContract(admin, Safe.abi);
     const safeSigner = await setupMockSafe([admin.address], safe);
 
-    return { memberToken, controller, controllerRegistry, proxyFactory, safeMaster, safeSigner, podEnsRegistrar };
+    return {
+      memberToken,
+      controller,
+      controllerRegistry,
+      proxyFactory,
+      safeMaster,
+      safeSigner,
+      podEnsRegistrar,
+      fallbackHandler,
+    };
   };
 
   describe("when minting and creation", () => {
@@ -140,7 +150,7 @@ describe("Member Token Test", () => {
     });
 
     it("should NOT let user call migrate function directly", async () => {
-      const { memberToken, controllerRegistry, podEnsRegistrar } = await setup();
+      const { memberToken, controllerRegistry, podEnsRegistrar, fallbackHandler } = await setup();
 
       const controllerV2 = await deployContract(admin, Controller, [
         memberToken.address,
@@ -148,6 +158,7 @@ describe("Member Token Test", () => {
         proxyFactory.address,
         safeMaster.address,
         podEnsRegistrar.address,
+        fallbackHandler.address,
       ]);
 
       await expect(memberToken.connect(admin).migrateMemberController(POD_ID, controllerV2.address)).to.revertedWith(
@@ -156,14 +167,15 @@ describe("Member Token Test", () => {
     });
 
     it("should NOT migrate to an unregistered controller version", async () => {
-      const { memberToken, controller, controllerRegistry, safeSigner, podEnsRegistrar } = await setup();
-
+      const { memberToken, controller, controllerRegistry, safeSigner, podEnsRegistrar, fallbackHandler } =
+        await setup();
       const controllerV2 = await deployContract(admin, Controller, [
         memberToken.address,
         controllerRegistry.address,
         proxyFactory.address,
         safeMaster.address,
         podEnsRegistrar.address,
+        fallbackHandler.address,
       ]);
       await controller
         .connect(admin)
@@ -175,7 +187,8 @@ describe("Member Token Test", () => {
     });
 
     it("should NOT be able to transfer memberships associate with different controllers", async () => {
-      const { memberToken, controller, controllerRegistry, safeSigner, podEnsRegistrar } = await setup();
+      const { memberToken, controller, controllerRegistry, safeSigner, podEnsRegistrar, fallbackHandler } =
+        await setup();
 
       const controllerV2 = await deployContract(admin, Controller, [
         memberToken.address,
@@ -183,6 +196,7 @@ describe("Member Token Test", () => {
         proxyFactory.address,
         safeMaster.address,
         podEnsRegistrar.address,
+        fallbackHandler.address,
       ]);
 
       await controllerRegistry.connect(admin).registerController(controllerV2.address);

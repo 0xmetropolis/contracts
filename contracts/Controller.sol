@@ -35,13 +35,21 @@ contract Controller is IController, SafeTeller, Ownable {
         address _controllerRegistry,
         address _proxyFactoryAddress,
         address _gnosisMasterAddress,
-        address _podEnsRegistrar
-    ) SafeTeller(_proxyFactoryAddress, _gnosisMasterAddress) {
+        address _podEnsRegistrar,
+        address _fallbackHandlerAddress
+    )
+        SafeTeller(
+            _proxyFactoryAddress,
+            _gnosisMasterAddress,
+            _fallbackHandlerAddress
+        )
+    {
         require(_memberToken != address(0), "Invalid address");
         require(_controllerRegistry != address(0), "Invalid address");
         require(_proxyFactoryAddress != address(0), "Invalid address");
         require(_gnosisMasterAddress != address(0), "Invalid address");
         require(_podEnsRegistrar != address(0), "Invalid address");
+        require(_fallbackHandlerAddress != address(0), "Invalid address");
 
         memberToken = IMemberToken(_memberToken);
         controllerRegistry = IControllerRegistry(_controllerRegistry);
