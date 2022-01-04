@@ -1,4 +1,8 @@
-const { getSafeSingletonDeployment, getProxyFactoryDeployment } = require("@gnosis.pm/safe-deployments");
+const {
+  getSafeSingletonDeployment,
+  getProxyFactoryDeployment,
+  getDefaultCallbackHandlerDeployment,
+} = require("@gnosis.pm/safe-deployments");
 const { getEnsAddress } = require("@ensdomains/ensjs");
 const { ENSRegistry } = require("@ensdomains/ens-contracts");
 
@@ -39,6 +43,11 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
     network === "31337"
       ? (await deployments.get("GnosisSafe")).address
       : getSafeSingletonDeployment({ network }).defaultAddress;
+
+  const fallbackHandlerAddress =
+    network === "31337"
+      ? (await deployments.get("CompatibilityFallbackHandler")).address
+      : getDefaultCallbackHandlerDeployment({ network }).defaultAddress;
 
   const ensRegistryAddress =
     network === "31337" ? (await deployments.get("ENSRegistry")).address : getEnsAddress(network);
@@ -101,6 +110,7 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
       proxyFactoryAddress,
       gnosisSafeAddress,
       podEnsRegistrarAddress,
+      fallbackHandlerAddress,
     ],
     log: true,
     skipIfAlreadyDeployed: true,

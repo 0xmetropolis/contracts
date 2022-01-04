@@ -53,6 +53,7 @@ describe("SafeTeller test", () => {
     const memberToken = await ethers.getContract("MemberToken", admin);
     const gnosisSafeProxyFactory = await ethers.getContract("GnosisSafeProxyFactory", admin);
     const gnosisSafeMaster = await ethers.getContract("GnosisSafe", admin);
+    const fallbackHandler = await ethers.getContract("CompatibilityFallbackHandler", admin);
 
     const controllerRegistry = await ethers.getContract("ControllerRegistry", admin);
     const podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", admin);
@@ -81,6 +82,7 @@ describe("SafeTeller test", () => {
       gnosisSafeMaster,
       memberToken,
       podEnsRegistrar,
+      fallbackHandler,
     };
   };
 
@@ -153,6 +155,7 @@ describe("SafeTeller test", () => {
         gnosisSafeMaster,
         gnosisSafeProxyFactory,
         podEnsRegistrar,
+        fallbackHandler,
       } = await setup();
 
       // safeSdk.getEnableModuleTx doesn't work so creating tx manually
@@ -175,6 +178,7 @@ describe("SafeTeller test", () => {
         gnosisSafeProxyFactory.address,
         gnosisSafeMaster.address,
         podEnsRegistrar.address,
+        fallbackHandler.address,
       ]);
 
       await controllerRegistry.connect(admin).registerController(controller2.address);

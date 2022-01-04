@@ -24,6 +24,11 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
     gasLimit: 8000000,
   });
 
+  await deploy("CompatibilityFallbackHandler", {
+    from: gnosisDeployer,
+    gasLimit: 8000000,
+  });
+
   // deploy ens dependencies
   const { address: ensRegistryAddress } = await deploy("ENSRegistry", {
     from: ensDeployer,
