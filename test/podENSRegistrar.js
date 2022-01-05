@@ -48,6 +48,27 @@ describe("registrar test", () => {
     await setup();
   });
 
+  it("should return the rootNode hash", async () => {
+    // This is the hash of pod.eth
+    expect(await podEnsRegistrar.getRootNode()).to.equal(
+      "0xa74c8b4e0e15dcc91024ac3999fc5df0e6669b98308ddf55dee349ca1e642d08",
+    );
+  });
+
+  it("should prevent prevent non-controllers/owners from calling setText", async () => {
+    await expect(
+      podEnsRegistrar.connect(alice).setText(ethers.utils.namehash("node"), "key", "value"),
+    ).to.be.revertedWith("sender must be controller/owner");
+  });
+
+  it("the onlyControllerOrOwner modifier should allow owners to call", async () => {
+    // The testing of controllers is handled by another test below.
+    const { deployer } = await getNamedAccounts();
+    await expect(
+      podEnsRegistrar.connect(deployer).setText(ethers.utils.namehash("node"), "key", "value"),
+    ).to.not.be.revertedWith("sender must be controller/owner");
+  });
+
   describe("when setting up PodENS registrar", () => {
     it("should be able to set reverse resolver name", async () => {
       expect(await ensRegistry.owner(ethers.utils.namehash("addr.reverse"))).to.equal(ensReverseRegistrar.address);
