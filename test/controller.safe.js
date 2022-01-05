@@ -1,6 +1,6 @@
 const { expect, use } = require("chai");
 const { waffle, ethers, deployments } = require("hardhat");
-const { labelhash } = require("@ensdomains/ensjs");
+const { labelhash, namehash } = require("@ensdomains/ensjs");
 
 const EthersSafe = require("@gnosis.pm/safe-core-sdk").default;
 
@@ -82,6 +82,8 @@ describe("Controller safe integration test", () => {
 
     controller = await ethers.getContract("Controller", admin);
 
+    const publicResolver = await ethers.getContract("PublicResolver", admin);
+
     const podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", admin);
     await podEnsRegistrar.setRestrictionState(2); // 2 == open enrollment
 
@@ -92,8 +94,21 @@ describe("Controller safe integration test", () => {
     const podSafe = await createPodSafe(admin.address, POD_ID, labelhash("test"), "test.pod.eth");
     const ethersSafe = await createSafeSigner(podSafe, admin);
 
-    return { memberToken, ethersSafe, gnosisSafeProxyFactory, gnosisSafeMaster, podSafe };
+    return {
+      memberToken,
+      publicResolver,
+      ethersSafe,
+      gnosisSafeProxyFactory,
+      podEnsRegistrar,
+      gnosisSafeMaster,
+      podSafe,
+    };
   };
+
+  it("should be able to provide an ens node value given a label", async () => {
+    await setup();
+    expect(await controller.getEnsNode(labelhash("test"))).to.equal(namehash("test.pod.eth"));
+  });
 
   describe("when creating new pod with safe deployment", () => {
     it("should create a new safe with safe teller module", async () => {
@@ -114,6 +129,16 @@ describe("Controller safe integration test", () => {
       // should mint member tokens
       expect(await memberToken.balanceOf(alice.address, POD_ID)).to.equal(1);
       expect(await memberToken.balanceOf(bob.address, POD_ID)).to.equal(1);
+    });
+
+    it("should set ENS text for controller and podId", async () => {
+      const { publicResolver } = await setup();
+
+      expect(await publicResolver.text(namehash("test.pod.eth"), "podId")).to.equal(POD_ID.toString());
+      // Address on ENS is saved without a prepending 0x.
+      expect(await publicResolver.text(namehash("test.pod.eth"), "controller")).to.equal(
+        controller.address.substr(2).toLowerCase(),
+      );
     });
   });
 

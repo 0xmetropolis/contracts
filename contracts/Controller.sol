@@ -3,6 +3,7 @@ pragma solidity 0.8.7;
 /* solhint-disable indent */
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 import "./interfaces/IController.sol";
 import "./interfaces/IMemberToken.sol";
 import "./interfaces/IControllerRegistry.sol";
@@ -111,6 +112,15 @@ contract Controller is IController, SafeTeller, Ownable {
     }
 
     /**
+     * Generates a node hash from the Registrar's root node + the label hash.
+     * @param label - label hash of pod name (i.e., labelhash('mypod'))
+     */
+    function getEnsNode(bytes32 label) public view returns (bytes32) {
+        return
+            keccak256(abi.encodePacked(podEnsRegistrar.getRootNode(), label));
+    }
+
+    /**
      * @param _members The addresses of the members of the pod
      * @param _admin The address of the pod admin
      * @param _safe The address of existing safe
@@ -144,6 +154,11 @@ contract Controller is IController, SafeTeller, Ownable {
             msg.sender
         );
         setupSafeReverseResolver(_safe, reverseRegistrar, _ensString);
+
+        // Node is how ENS identifies names, we need that to setText
+        bytes32 node = getEnsNode(_label);
+        podEnsRegistrar.setText(node, "podId", Strings.toString(podId));
+        podEnsRegistrar.setPodController(node, address(this));
     }
 
     /**
@@ -193,6 +208,16 @@ contract Controller is IController, SafeTeller, Ownable {
             msg.sender == admin || msg.sender == safe,
             "User not authorized"
         );
+
+        // Update ENS controller data
+        // TODO: Uncomment this john
+        // bytes32 node = podEnsRegistrar.addressToNode(safe);
+        // require(node != bytes32(0), "safe was not ens registered");
+        // podEnsRegistrar.setText(
+        //     node,
+        //     "controller",
+        //     toAsciiString(_newController)
+        // );
 
         Controller newController = Controller(_newController);
 
