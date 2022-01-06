@@ -77,11 +77,21 @@ contract Controller is IController, SafeTeller, Ownable {
         uint256 threshold,
         address _admin,
         bytes32 _label,
-        string memory _ensString
+        string memory _ensString,
+        uint256 expectedPodId,
+        string memory _imageUrl
     ) external {
         address safe = createSafe(_members, threshold);
 
-        _createPod(_members, safe, _admin, _label, _ensString);
+        _createPod(
+            _members,
+            safe,
+            _admin,
+            _label,
+            _ensString,
+            expectedPodId,
+            _imageUrl
+        );
     }
 
     /**
@@ -96,7 +106,9 @@ contract Controller is IController, SafeTeller, Ownable {
         address _admin,
         address _safe,
         bytes32 _label,
-        string memory _ensString
+        string memory _ensString,
+        uint256 expectedPodId,
+        string memory _imageUrl
     ) external {
         require(_safe != address(0), "invalid safe address");
         require(safeToPodId[_safe] == 0, "safe already in use");
@@ -108,7 +120,15 @@ contract Controller is IController, SafeTeller, Ownable {
 
         address[] memory members = getSafeMembers(_safe);
 
-        _createPod(members, _safe, _admin, _label, _ensString);
+        _createPod(
+            members,
+            _safe,
+            _admin,
+            _label,
+            _ensString,
+            expectedPodId,
+            _imageUrl
+        );
     }
 
     /**
@@ -132,13 +152,17 @@ contract Controller is IController, SafeTeller, Ownable {
         address _safe,
         address _admin,
         bytes32 _label,
-        string memory _ensString
+        string memory _ensString,
+        uint256 expectedPodId,
+        string memory _imageUrl
     ) private {
         // add create event flag to token data
         bytes memory data = new bytes(1);
         data[0] = bytes1(uint8(CREATE_EVENT));
 
         uint256 podId = memberToken.createPod(_members, data);
+        // The imageUrl has an expected pod ID, but we need to make sure it aligns with the actual pod ID
+        require(podId == expectedPodId, "pod id didn't match, try again");
 
         emit CreatePod(podId, _safe, _admin, _ensString);
         emit UpdatePodAdmin(podId, _admin);
@@ -157,6 +181,7 @@ contract Controller is IController, SafeTeller, Ownable {
 
         // Node is how ENS identifies names, we need that to setText
         bytes32 node = getEnsNode(_label);
+        podEnsRegistrar.setText(node, "avatar", _imageUrl);
         podEnsRegistrar.setText(node, "podId", Strings.toString(podId));
         podEnsRegistrar.setPodController(node, address(this));
     }
@@ -213,9 +238,8 @@ contract Controller is IController, SafeTeller, Ownable {
         // TODO: Uncomment this john
         // bytes32 node = podEnsRegistrar.addressToNode(safe);
         // require(node != bytes32(0), "safe was not ens registered");
-        // podEnsRegistrar.setText(
+        // podEnsRegistrar.setPodController(
         //     node,
-        //     "controller",
         //     toAsciiString(_newController)
         // );
 

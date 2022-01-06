@@ -28,6 +28,7 @@ describe("SafeTeller test", () => {
   const THRESHOLD = 1;
   const MEMBERS = [alice.address, bob.address];
   const POD_ID = 0;
+  const IMAGE_URL = "https://testurl.com/";
 
   const createSafeSigner = async (safe, signer) => {
     const { chainId } = await provider.getNetwork();
@@ -65,7 +66,7 @@ describe("SafeTeller test", () => {
 
     const res = await controller
       .connect(alice)
-      .createPod(MEMBERS, THRESHOLD, alice.address, labelhash("test"), "test.pod.eth");
+      .createPod(MEMBERS, THRESHOLD, alice.address, labelhash("test"), "test.pod.eth", 0, "https://testUrl/");
 
     const { args } = (await res.wait()).events.find(elem => elem.event === "CreatePod");
 
@@ -92,7 +93,7 @@ describe("SafeTeller test", () => {
 
       const res = await controller
         .connect(alice)
-        .createPod(MEMBERS, THRESHOLD, alice.address, labelhash("test2"), "test2.pod.eth");
+        .createPod(MEMBERS, THRESHOLD, alice.address, labelhash("test2"), "test2.pod.eth", POD_ID + 1, IMAGE_URL);
 
       const { args } = (await res.wait()).events.find(elem => elem.event === "CreatePod");
       const safe = new ethers.Contract(args.safe, GnosisSafe.abi, alice);
@@ -112,7 +113,9 @@ describe("SafeTeller test", () => {
       const { controller } = await setup();
 
       await expect(
-        controller.connect(admin).createPod(MEMBERS, 0, admin.address, labelhash("test2"), "test2.pod.eth"),
+        controller
+          .connect(admin)
+          .createPod(MEMBERS, 0, admin.address, labelhash("test2"), "test2.pod.eth", POD_ID + 1, IMAGE_URL),
       ).to.be.revertedWith("Create Proxy With Data Failed");
     });
   });

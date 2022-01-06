@@ -140,6 +140,10 @@ contract PodEnsRegistrar is Ownable {
         resolver.setText(node, key, value);
     }
 
+    /**
+     * Converts address to string
+     * @param node - ENS node
+     */
     function setPodController(bytes32 node, address controllerAddress)
         external
         onlyControllerOrOwner

@@ -20,6 +20,7 @@ describe("Controller beforeTokenTransfer Test", () => {
   const POD_ID = 0;
   const MEMBERS = [alice.address, bob.address];
   const POD_LABEL = labelhash("test");
+  const IMAGE_URL = "https://testurl/";
 
   let controller;
   let memberToken;
@@ -59,7 +60,7 @@ describe("Controller beforeTokenTransfer Test", () => {
     safe = await deployMockContract(admin, Safe.abi);
     safeSigner = await setupMockSafe(MEMBERS);
 
-    await controller.createPodWithSafe(admin.address, safe.address, POD_LABEL, TX_OPTIONS);
+    await controller.createPodWithSafe(admin.address, safe.address, POD_LABEL, TX_OPTIONS, POD_ID, IMAGE_URL);
   };
 
   it("should not let a user call beforeTokenTransfer function", async () => {
