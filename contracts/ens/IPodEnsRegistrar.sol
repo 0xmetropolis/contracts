@@ -18,4 +18,6 @@ interface IPodEnsRegistrar {
     ) external;
 
     function addressToNode(address input) external returns (bytes32);
+
+    function getEnsNode(bytes32 label) external view returns (bytes32);
 }

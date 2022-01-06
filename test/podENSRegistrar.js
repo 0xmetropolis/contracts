@@ -1,6 +1,6 @@
 const { expect, use } = require("chai");
 const { waffle, ethers, deployments, getNamedAccounts } = require("hardhat");
-const { default: ENS, labelhash } = require("@ensdomains/ensjs");
+const { default: ENS, labelhash, namehash } = require("@ensdomains/ensjs");
 
 const { provider, solidity } = waffle;
 
@@ -53,6 +53,11 @@ describe("registrar test", () => {
     expect(await podEnsRegistrar.getRootNode()).to.equal(
       "0xa74c8b4e0e15dcc91024ac3999fc5df0e6669b98308ddf55dee349ca1e642d08",
     );
+  });
+
+  it("should be able to provide an ens node value given a label", async () => {
+    await setup();
+    expect(await podEnsRegistrar.getEnsNode(labelhash("test"))).to.equal(namehash("test.pod.eth"));
   });
 
   it("should prevent prevent non-controllers/owners from calling setText", async () => {

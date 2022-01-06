@@ -106,6 +106,14 @@ contract PodEnsRegistrar is Ownable {
     }
 
     /**
+     * Generates a node hash from the Registrar's root node + the label hash.
+     * @param label - label hash of pod name (i.e., labelhash('mypod'))
+     */
+    function getEnsNode(bytes32 label) public view returns (bytes32) {
+        return keccak256(abi.encodePacked(getRootNode(), label));
+    }
+
+    /**
      * Returns the ENS Node of a given address
      * @param input - an ENS registered address
      */
