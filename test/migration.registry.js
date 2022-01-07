@@ -21,7 +21,6 @@ describe("pod migration test", () => {
   const MEMBERS = [alice.address, bob.address];
   const LEGACY_POD_ID = 0;
   const UPGRADE_POD_ID = 1;
-  const IMAGE_URL = "https://testnet.com/";
 
   let controllerRegistry;
   let memberToken;
@@ -31,13 +30,13 @@ describe("pod migration test", () => {
   const createPodSafe = async (podId, members, ownerAddress = AddressZero, label) => {
     const threshold = 1;
 
-    await controller.V1.createPod(members, threshold, ownerAddress, label, "ENSSTRING", podId, IMAGE_URL, TX_OPTIONS);
+    await controller.V1.createPod(members, threshold, ownerAddress, label, TX_OPTIONS);
     const safeAddress = await controller.V1.podIdToSafe(podId);
     return new ethers.Contract(safeAddress, GnosisSafe.abi, owner);
   };
 
   const setup = async () => {
-    await deployments.fixture(["Base"]);
+    await deployments.fixture(["Base", "Registry", "Controller"]);
 
     const gnosisSafeProxyFactory = await ethers.getContract("GnosisSafeProxyFactory", admin);
     const gnosisSafeMaster = await ethers.getContract("GnosisSafe", admin);

@@ -42,7 +42,7 @@ describe("Member Token Test", () => {
   };
 
   const setup = async () => {
-    await deployments.fixture(["Base"]);
+    await deployments.fixture(["Base", "Registry", "Controller"]);
 
     const controller = await ethers.getContract("Controller", admin);
     const memberToken = await ethers.getContract("MemberToken", admin);
