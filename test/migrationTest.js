@@ -36,7 +36,7 @@ describe("pod migration test", () => {
   };
 
   const setup = async () => {
-    await deployments.fixture(["Base"]);
+    await deployments.fixture(["Base", "Registrar", "Controller"]);
 
     const gnosisSafeProxyFactory = await ethers.getContract("GnosisSafeProxyFactory", admin);
     const gnosisSafeMaster = await ethers.getContract("GnosisSafe", admin);
