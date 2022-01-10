@@ -13,7 +13,7 @@ describe("Invite Token Test", () => {
   let burnerRole;
 
   const setup = async () => {
-    await deployments.fixture(["Base"]);
+    await deployments.fixture(["Base", "Registrar", "Controller"]);
     const inviteToken = await deployContract(admin, InviteToken, []);
     minterRole = inviteToken.MINTER_ROLE();
     burnerRole = inviteToken.BURNER_ROLE();

@@ -75,7 +75,7 @@ describe("Controller safe integration test", () => {
   };
 
   const setup = async () => {
-    await deployments.fixture(["Base"]);
+    await deployments.fixture(["Base", "Registrar", "Controller"]);
     // Deploy the master safe contract and multisend
     multiSend = await deployContract(admin, MultiSend);
     fallbackHandler = await deployContract(admin, FallbackHandler);
