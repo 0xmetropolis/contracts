@@ -85,12 +85,12 @@ describe("Controller safe integration test", () => {
   };
 
   const setup = async () => {
-    await deployments.fixture(["Base", "Registrar", "Controller"]);
+    await deployments.fixture(["Base", "Registrar", "Controller", "ControllerV1"]);
     // Deploy the master safe contract and multisend
     multiSend = await deployContract(admin, MultiSend);
     fallbackHandler = await deployContract(admin, FallbackHandler);
 
-    controller = await ethers.getContract("Controller", admin);
+    controller = await ethers.getContract("ControllerV1", admin);
 
     const publicResolver = await ethers.getContract("PublicResolver", admin);
 

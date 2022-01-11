@@ -4,9 +4,7 @@ const { labelhash } = require("@ensdomains/ensjs");
 
 const GnosisSafe = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/GnosisSafe.sol/GnosisSafe.json");
 
-const Controller = require("../artifacts/contracts/Controller.sol/Controller.json");
-
-const { deployContract, solidity, provider } = waffle;
+const { solidity, provider } = waffle;
 
 const { AddressZero, HashZero } = ethers.constants;
 
@@ -31,35 +29,21 @@ describe("pod migration test", () => {
   const createPodSafe = async (podId, members, ownerAddress = AddressZero, label) => {
     const threshold = 1;
 
-    await controller.V1.createPod(members, threshold, ownerAddress, label, "ENSSTRING", podId, IMAGE_URL, TX_OPTIONS);
+    await controller.V1.createPod(members, threshold, ownerAddress, label, IMAGE_URL, podId, TX_OPTIONS);
     const safeAddress = await controller.V1.podIdToSafe(podId);
     return new ethers.Contract(safeAddress, GnosisSafe.abi, owner);
   };
 
   const setup = async () => {
-    await deployments.fixture(["Base", "Registrar", "Controller"]);
-
-    const gnosisSafeProxyFactory = await ethers.getContract("GnosisSafeProxyFactory", admin);
-    const gnosisSafeMaster = await ethers.getContract("GnosisSafe", admin);
-    const fallbackHandler = await ethers.getContract("CompatibilityFallbackHandler", admin);
+    await deployments.fixture(["Base", "Registry", "Controller", "ControllerV1"]);
 
     controller.V1 = await ethers.getContract("Controller", admin);
+    controller.V2 = await ethers.getContract("ControllerV1", admin);
 
     memberToken = await ethers.getContract("MemberToken", admin);
     controllerRegistry = await ethers.getContract("ControllerRegistry", admin);
     const podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", admin);
     await podEnsRegistrar.setRestrictionState(2); // 2 == open enrollment
-
-    // V2
-    // deploy V2 contract
-    controller.V2 = await deployContract(admin, Controller, [
-      memberToken.address,
-      controllerRegistry.address,
-      gnosisSafeProxyFactory.address,
-      gnosisSafeMaster.address,
-      podEnsRegistrar.address,
-      fallbackHandler.address,
-    ]);
 
     // register V2 contracts
     await controllerRegistry.connect(admin).registerController(controller.V2.address);
@@ -114,6 +98,11 @@ describe("pod migration test", () => {
     await expect(memberToken.connect(owner).mint(charlie.address, UPGRADE_POD_ID, HashZero, TX_OPTIONS))
       .to.emit(memberToken, "TransferSingle")
       .withArgs(owner.address, AddressZero, charlie.address, UPGRADE_POD_ID, 1);
+
+    const safeAddress = controller.V2.podIdToSafe(UPGRADE_POD_ID);
+    const safe = new ethers.Contract(safeAddress, GnosisSafe.abi, owner);
+    const owners = await safe.getOwners();
+    expect(owners).to.include(charlie.address);
   });
 
   it("should be able to mint memberships for legacy pod", async () => {
@@ -122,5 +111,10 @@ describe("pod migration test", () => {
     await expect(memberToken.connect(owner).mint(charlie.address, LEGACY_POD_ID, HashZero, TX_OPTIONS))
       .to.emit(memberToken, "TransferSingle")
       .withArgs(owner.address, AddressZero, charlie.address, LEGACY_POD_ID, 1);
+
+    const safeAddress = controller.V1.podIdToSafe(LEGACY_POD_ID);
+    const safe = new ethers.Contract(safeAddress, GnosisSafe.abi, owner);
+    const owners = await safe.getOwners();
+    expect(owners).to.include(charlie.address);
   });
 });

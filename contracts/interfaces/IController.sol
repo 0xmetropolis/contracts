@@ -1,7 +1,6 @@
 pragma solidity 0.8.7;
 
-interface IController{
-
+interface IController {
     /**
      * @param operator The account address that initiated the action
      * @param from The account address sending the membership token
@@ -19,4 +18,9 @@ interface IController{
         bytes memory data
     ) external;
 
+    function updatePodState(
+        uint256 _podId,
+        address _podAdmin,
+        address _safeAddress
+    ) external;
 }

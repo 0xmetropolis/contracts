@@ -3,7 +3,7 @@ const { waffle, ethers, network, deployments } = require("hardhat");
 const { labelhash } = require("@ensdomains/ensjs");
 
 const Safe = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/GnosisSafe.sol/GnosisSafe.json");
-const Controller = require("../artifacts/contracts/Controller.sol/Controller.json");
+const ControllerV1 = require("../artifacts/contracts/ControllerV1.sol/ControllerV1.json");
 
 const { provider, solidity, deployContract, deployMockContract } = waffle;
 
@@ -42,9 +42,9 @@ describe("Member Token Test", () => {
   };
 
   const setup = async () => {
-    await deployments.fixture(["Base", "Registrar", "Controller"]);
+    await deployments.fixture(["Base", "Registrar", "Controller", "ControllerV1"]);
 
-    const controller = await ethers.getContract("Controller", admin);
+    const controller = await ethers.getContract("ControllerV1", admin);
     const memberToken = await ethers.getContract("MemberToken", admin);
     const controllerRegistry = await ethers.getContract("ControllerRegistry", admin);
     const fallbackHandler = await ethers.getContract("CompatibilityFallbackHandler", admin);
@@ -160,7 +160,7 @@ describe("Member Token Test", () => {
     it("should NOT let user call migrate function directly", async () => {
       const { memberToken, controllerRegistry, podEnsRegistrar, fallbackHandler } = await setup();
 
-      const controllerV2 = await deployContract(admin, Controller, [
+      const controllerV2 = await deployContract(admin, ControllerV1, [
         memberToken.address,
         controllerRegistry.address,
         proxyFactory.address,
@@ -177,7 +177,7 @@ describe("Member Token Test", () => {
     it("should NOT migrate to an unregistered controller version", async () => {
       const { memberToken, controller, controllerRegistry, safeSigner, podEnsRegistrar, fallbackHandler } =
         await setup();
-      const controllerV2 = await deployContract(admin, Controller, [
+      const controllerV1 = await deployContract(admin, ControllerV1, [
         memberToken.address,
         controllerRegistry.address,
         proxyFactory.address,
@@ -190,15 +190,15 @@ describe("Member Token Test", () => {
         .createPodWithSafe(admin.address, safeSigner.address, labelhash("test"), "test.pod.eth", POD_ID, IMAGE_URL);
 
       await expect(
-        controller.connect(admin).migratePodController(POD_ID, controllerV2.address, AddressOne),
+        controller.connect(admin).migratePodController(POD_ID, controllerV1.address, AddressOne),
       ).to.revertedWith("Controller not registered");
     });
 
-    it("should NOT be able to transfer memberships associate with different controllers", async () => {
+    it("should NOT be able to transfer memberships associated with different controllers", async () => {
       const { memberToken, controller, controllerRegistry, safeSigner, podEnsRegistrar, fallbackHandler } =
         await setup();
 
-      const controllerV2 = await deployContract(admin, Controller, [
+      const controllerV1 = await deployContract(admin, ControllerV1, [
         memberToken.address,
         controllerRegistry.address,
         proxyFactory.address,
@@ -207,13 +207,13 @@ describe("Member Token Test", () => {
         fallbackHandler.address,
       ]);
 
-      await controllerRegistry.connect(admin).registerController(controllerV2.address);
+      await controllerRegistry.connect(admin).registerController(controllerV1.address);
 
-      // create 2 pods from the same controller
+      // create 2 pods from the same controller. They can be the same version.
       await controller
         .connect(admin)
         .createPodWithSafe(admin.address, safeSigner.address, labelhash("test"), "test.pod.eth", POD_ID, IMAGE_URL);
-      await controllerV2
+      await controllerV1
         .connect(admin)
         .createPodWithSafe(
           admin.address,

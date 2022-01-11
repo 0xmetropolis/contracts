@@ -10,7 +10,7 @@ import "./interfaces/IControllerRegistry.sol";
 import "./SafeTeller.sol";
 import "./ens/IPodEnsRegistrar.sol";
 
-contract Controller is IController, SafeTeller, Ownable {
+contract ControllerV1 is IController, SafeTeller, Ownable {
     event CreatePod(uint256 podId, address safe, address admin, string ensName);
     event UpdatePodAdmin(uint256 podId, address admin);
 
@@ -224,7 +224,7 @@ contract Controller is IController, SafeTeller, Ownable {
             "User not authorized"
         );
 
-        Controller newController = Controller(_newController);
+        IController newController = IController(_newController);
 
         // nullify current pod state
         podAdmin[_podId] = address(0);
