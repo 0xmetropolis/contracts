@@ -1,6 +1,6 @@
 const { expect, use } = require("chai");
 const { waffle, ethers, deployments } = require("hardhat");
-const { labelhash } = require("@ensdomains/ensjs");
+const { labelhash, namehash } = require("@ensdomains/ensjs");
 
 const EthersSafe = require("@gnosis.pm/safe-core-sdk").default;
 
@@ -26,6 +26,7 @@ describe("Controller safe integration test", () => {
   const THRESHOLD = 1;
   const MEMBERS = [alice.address, bob.address];
   const POD_ID = 0;
+  const IMAGE_URL = "https://orcaprotocol-nft.vercel.app/assets/testnet/00000001";
 
   const createSafeSigner = async (safe, signer) => {
     const { chainId } = await provider.getNetwork();
@@ -43,13 +44,15 @@ describe("Controller safe integration test", () => {
   };
 
   const createPodSafe = async (adminAddress, podId, label, ensString) => {
-    await controller.connect(admin).createPod(MEMBERS, THRESHOLD, adminAddress, label, ensString, TX_OPTIONS);
+    await controller
+      .connect(admin)
+      .createPod(MEMBERS, THRESHOLD, adminAddress, label, ensString, podId, IMAGE_URL, TX_OPTIONS);
     // query the new gnosis safe
     const safeAddress = await controller.podIdToSafe(podId);
     return new ethers.Contract(safeAddress, GnosisSafe.abi, admin);
   };
 
-  const createPodWithExistingSafe = async (gnosisSafeProxyFactory, gnosisSafeMaster, ensName) => {
+  const createPodWithExistingSafe = async (gnosisSafeProxyFactory, gnosisSafeMaster, ensName, expectedPodId) => {
     const existingSafeAddress = await gnosisSafeProxyFactory.callStatic.createProxy(gnosisSafeMaster.address, HashZero);
     await gnosisSafeProxyFactory.createProxy(gnosisSafeMaster.address, HashZero);
     const safe = gnosisSafeMaster.attach(existingSafeAddress);
@@ -68,7 +71,14 @@ describe("Controller safe integration test", () => {
 
     await controller
       .connect(alice)
-      .createPodWithSafe(admin.address, safe.address, labelhash(ensName), `${ensName}.pod.eth}`);
+      .createPodWithSafe(
+        admin.address,
+        safe.address,
+        labelhash(ensName),
+        `${ensName}.pod.eth`,
+        expectedPodId,
+        IMAGE_URL,
+      );
     const podId = await controller.connect(admin).safeToPodId(existingSafeAddress);
 
     return { safeAddress: existingSafeAddress, podId };
@@ -82,6 +92,8 @@ describe("Controller safe integration test", () => {
 
     controller = await ethers.getContract("Controller", admin);
 
+    const publicResolver = await ethers.getContract("PublicResolver", admin);
+
     const podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", admin);
     await podEnsRegistrar.setRestrictionState(2); // 2 == open enrollment
 
@@ -92,7 +104,15 @@ describe("Controller safe integration test", () => {
     const podSafe = await createPodSafe(admin.address, POD_ID, labelhash("test"), "test.pod.eth");
     const ethersSafe = await createSafeSigner(podSafe, admin);
 
-    return { memberToken, ethersSafe, gnosisSafeProxyFactory, gnosisSafeMaster, podSafe };
+    return {
+      memberToken,
+      publicResolver,
+      ethersSafe,
+      gnosisSafeProxyFactory,
+      podEnsRegistrar,
+      gnosisSafeMaster,
+      podSafe,
+    };
   };
 
   describe("when creating new pod with safe deployment", () => {
@@ -115,6 +135,13 @@ describe("Controller safe integration test", () => {
       expect(await memberToken.balanceOf(alice.address, POD_ID)).to.equal(1);
       expect(await memberToken.balanceOf(bob.address, POD_ID)).to.equal(1);
     });
+
+    it("should set ENS text for podId", async () => {
+      const { publicResolver } = await setup();
+
+      expect(await publicResolver.text(namehash("test.pod.eth"), "podId")).to.equal(POD_ID.toString());
+      expect(await publicResolver.text(namehash("test.pod.eth"), "avatar")).to.equal(IMAGE_URL);
+    });
   });
 
   describe("when creating a new pod and safe simultaneously", () => {
@@ -129,8 +156,21 @@ describe("Controller safe integration test", () => {
 
     it("should be able to add an existing pod as a member", async () => {
       const { memberToken, gnosisSafeProxyFactory, gnosisSafeMaster } = await setup();
-      const pod1 = await createPodWithExistingSafe(gnosisSafeProxyFactory, gnosisSafeMaster, "test2");
-      const pod2 = await createPodWithExistingSafe(gnosisSafeProxyFactory, gnosisSafeMaster, "test3");
+      const nextId = (await memberToken.nextAvailablePodId()).toNumber();
+      const pod1 = await createPodWithExistingSafe(
+        gnosisSafeProxyFactory,
+        gnosisSafeMaster,
+        "test2",
+        nextId,
+        IMAGE_URL,
+      );
+      const pod2 = await createPodWithExistingSafe(
+        gnosisSafeProxyFactory,
+        gnosisSafeMaster,
+        "test3",
+        nextId + 1,
+        IMAGE_URL,
+      );
 
       // Add the existingSafeAddress to the fresh safe + pod
       await memberToken.connect(admin).mint(pod2.safeAddress, pod1.podId, HashZero);
@@ -160,7 +200,7 @@ describe("Controller safe integration test", () => {
 
       await controller
         .connect(alice)
-        .createPodWithSafe(admin.address, safe.address, labelhash("test2"), "test2.pod.eth");
+        .createPodWithSafe(admin.address, safe.address, labelhash("test2"), "test2.pod.eth", 1, IMAGE_URL);
 
       // should set admin
       expect(await controller.podAdmin(POD_ID + 1)).to.equal(admin.address);
@@ -170,7 +210,9 @@ describe("Controller safe integration test", () => {
 
       // should throw on subsequent create
       await expect(
-        controller.connect(alice).createPodWithSafe(admin.address, safe.address, labelhash("test2"), "test2.pod.eth"),
+        controller
+          .connect(alice)
+          .createPodWithSafe(admin.address, safe.address, labelhash("test2"), "test2.pod.eth", 2, IMAGE_URL),
       ).to.be.revertedWith("safe already in use");
     });
   });
