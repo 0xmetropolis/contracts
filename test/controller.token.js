@@ -49,9 +49,9 @@ describe("Controller beforeTokenTransfer Test", () => {
   };
 
   const setup = async () => {
-    await deployments.fixture(["Base", "Registrar", "Controller"]);
+    await deployments.fixture(["Base", "Registrar", "Controller", "ControllerV1"]);
 
-    controller = await ethers.getContract("Controller", admin);
+    controller = await ethers.getContract("ControllerV1", admin);
     memberToken = await ethers.getContract("MemberToken", admin);
 
     const podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", admin);

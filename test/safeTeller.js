@@ -45,11 +45,11 @@ describe("SafeTeller test", () => {
   };
 
   const setup = async () => {
-    await deployments.fixture(["Base", "Registrar", "Controller"]);
+    await deployments.fixture(["Base", "Registrar", "Controller", "ControllerV1"]);
     // Deploy the master safe contract and multisend
     multiSend = await deployContract(admin, MultiSend);
 
-    const controller = await ethers.getContract("Controller", admin);
+    const controller = await ethers.getContract("ControllerV1", admin);
 
     const memberToken = await ethers.getContract("MemberToken", admin);
     const gnosisSafeProxyFactory = await ethers.getContract("GnosisSafeProxyFactory", admin);
