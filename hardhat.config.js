@@ -1,6 +1,8 @@
 /* eslint-disable no-console */
-const { ENSRegistry } = require("@ensdomains/ens-contracts");
-const { getEnsAddress } = require("@ensdomains/ensjs");
+const { ENSRegistry, PublicResolver, ReverseRegistrar } = require("@ensdomains/ens-contracts");
+const { getEnsAddress, getResolverContract, getName } = require("@ensdomains/ensjs");
+const ENS = require("@ensdomains/ensjs").default;
+const { namehash } = require("@ensdomains/ensjs/dist/utils");
 const { ethers } = require("ethers");
 const { task } = require("hardhat/config");
 const { utils } = require("web3");
@@ -143,6 +145,41 @@ task("ens-setApproval", "sets ens approval for podEnsRegistrar with ensHolder ac
     await ensRegistry.setApprovalForAll(podEnsRegistrarAddress, true);
 
     console.log(`Set ${ensHolder} approvalForAll for ${podEnsRegistrarAddress} with ens ${ensRegistryAddress}`);
+  });
+
+task("update-subnode-owner", "updates the ENS owner for a list of pod IDs")
+  .addPositionalParam("newRegistrar")
+  .addPositionalParam("startPod")
+  .addOptionalPositionalParam("endPod")
+  .setAction(async (args, { getChainId, ethers }) => {
+    const { newRegistrar, startPod, endPod } = args;
+    const network = await getChainId();
+    const ens = new ENS({ provider: ethers.provider, ensAddress: getEnsAddress(network) });
+    const controller = await ethers.getContract("Controller");
+
+    // Generate an array of pod IDs.
+    const podIds = [];
+    if (!endPod) {
+      podIds.push(startPod);
+    } else {
+      for (let i = parseInt(startPod, 10); i <= parseInt(endPod, 10); i += 1) {
+        console.log("podId", i);
+        podIds.push(i);
+      }
+    }
+
+    const labels = await Promise.all(
+      podIds.map(async podId => {
+        const safe = await controller.podIdToSafe(podId);
+        const name = await ens.getName(safe);
+        return name.name.split(".")[0];
+      }),
+    );
+
+    labels.map(async label => {
+      const root = ens.name("pod.xyz");
+      root.setSubnodeOwner(label, newRegistrar);
+    });
   });
 
 // You need to export an object to set up your config
