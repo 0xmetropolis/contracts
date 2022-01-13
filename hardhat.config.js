@@ -58,6 +58,7 @@ task("tenderly-verify", "verifies current deployment on tenderly").setAction(
   async (args, { tenderly, deployments }) => {
     const contracts = [
       { name: "Controller", address: (await deployments.get("Controller")).address },
+      { name: "ControllerV1", address: (await deployments.get("ControllerV1")).address },
       { name: "MemberToken", address: (await deployments.get("MemberToken")).address },
       { name: "ControllerRegistry", address: (await deployments.get("ControllerRegistry")).address },
       { name: "PodEnsRegistrar", address: (await deployments.get("PodEnsRegistrar")).address },
@@ -156,6 +157,7 @@ task("update-subnode-owner", "updates the ENS owner for a list of pod IDs")
     const network = await getChainId();
     const ens = new ENS({ provider: ethers.provider, ensAddress: getEnsAddress(network) });
     const controller = await ethers.getContract("Controller");
+    const ROOT = network === "1" ? "pod.xyz" : "pod.eth";
 
     // Generate an array of pod IDs.
     const podIds = [];
@@ -177,7 +179,7 @@ task("update-subnode-owner", "updates the ENS owner for a list of pod IDs")
     );
 
     labels.map(async label => {
-      const root = ens.name("pod.xyz");
+      const root = ens.name(ROOT);
       root.setSubnodeOwner(label, newRegistrar);
     });
   });
