@@ -2,7 +2,7 @@
 const { ENSRegistry, PublicResolver, ReverseRegistrar } = require("@ensdomains/ens-contracts");
 const { getEnsAddress, getResolverContract, getName } = require("@ensdomains/ensjs");
 const ENS = require("@ensdomains/ensjs").default;
-const { namehash } = require("@ensdomains/ensjs/dist/utils");
+const namehash = require("@ensdomains/eth-ens-namehash");
 const { ethers } = require("ethers");
 const { task } = require("hardhat/config");
 const { utils } = require("web3");
@@ -153,7 +153,7 @@ task("update-registrar", "upgrade controller to new registrar").setAction(
     const { deployer } = await getNamedAccounts();
     const { address: podEnsRegistrarAddress } = await ethers.getContract("PodEnsRegistrar", deployer);
 
-    const controller = await deployments.get("ControllerV1", deployer);
+    const controller = await ethers.getContract("Controller", deployer);
 
     await controller.updatePodEnsRegistrar(podEnsRegistrarAddress);
     console.log(`Updated ${controller} with PodEnsRegistrar ${podEnsRegistrarAddress}`);
@@ -161,14 +161,15 @@ task("update-registrar", "upgrade controller to new registrar").setAction(
 );
 
 task("update-subnode-owner", "updates the ENS owner for a list of pod IDs")
-  .addPositionalParam("newRegistrar")
   .addPositionalParam("startPod")
   .addOptionalPositionalParam("endPod")
   .setAction(async (args, { getChainId, ethers }) => {
-    const { newRegistrar, startPod, endPod } = args;
+    const { startPod, endPod } = args;
     const network = await getChainId();
     const ens = new ENS({ provider: ethers.provider, ensAddress: getEnsAddress(network) });
     const controller = await ethers.getContract("Controller");
+    const { address: newRegistrar } = await ethers.getContract("PodEnsRegistrar");
+    console.log("newRegistrar", newRegistrar);
     const ROOT = network === "1" ? "pod.xyz" : "pod.eth";
 
     // Generate an array of pod IDs.
@@ -177,7 +178,6 @@ task("update-subnode-owner", "updates the ENS owner for a list of pod IDs")
       podIds.push(startPod);
     } else {
       for (let i = parseInt(startPod, 10); i <= parseInt(endPod, 10); i += 1) {
-        console.log("podId", i);
         podIds.push(i);
       }
     }
@@ -189,11 +189,13 @@ task("update-subnode-owner", "updates the ENS owner for a list of pod IDs")
         return name.name.split(".")[0];
       }),
     );
+    console.log("labels", labels);
+    const root = ens.name(ROOT);
 
-    labels.map(async label => {
-      const root = ens.name(ROOT);
-      root.setSubnodeOwner(label, newRegistrar);
-    });
+    for (let i = 0; i < labels.length; i += 1) {
+      if (labels[i].includes("'")) continue;
+      await root.setSubnodeOwner(namehash.normalize(labels[i]), newRegistrar);
+    }
   });
 
 // You need to export an object to set up your config
