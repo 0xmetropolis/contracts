@@ -123,7 +123,7 @@ task("register-controller", "registers controller with controller registry")
     const { deployer } = await getNamedAccounts();
     const controllerRegistry = await ethers.getContract("ControllerRegistry", deployer);
 
-    const controller = args.controller || (await deployments.get("Controller", deployer)).address;
+    const controller = args.controller || (await deployments.get("ControllerV1", deployer)).address;
 
     await controllerRegistry.registerController(controller);
     console.log(`Registered ${controller} with controller Registry`);
@@ -147,6 +147,18 @@ task("ens-setApproval", "sets ens approval for podEnsRegistrar with ensHolder ac
 
     console.log(`Set ${ensHolder} approvalForAll for ${podEnsRegistrarAddress} with ens ${ensRegistryAddress}`);
   });
+
+task("update-registrar", "upgrade controller to new registrar").setAction(
+  async (args, { getNamedAccounts, ethers, deployments }) => {
+    const { deployer } = await getNamedAccounts();
+    const { address: podEnsRegistrarAddress } = await ethers.getContract("PodEnsRegistrar", deployer);
+
+    const controller = await deployments.get("ControllerV1", deployer);
+
+    await controller.updatePodEnsRegistrar(podEnsRegistrarAddress);
+    console.log(`Updated ${controller} with PodEnsRegistrar ${podEnsRegistrarAddress}`);
+  },
+);
 
 task("update-subnode-owner", "updates the ENS owner for a list of pod IDs")
   .addPositionalParam("newRegistrar")
