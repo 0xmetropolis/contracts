@@ -39,7 +39,7 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
   const controllerRegistryAddress = (await deployments.get("ControllerRegistry")).address;
   const inviteToken = (await deployments.get("InviteToken")).address;
 
-  const { address: podEnsRegistrarAddress } = await deploy("PodEnsRegistrar", {
+  const { address: podEnsRegistrarAddress, newlyDeployed } = await deploy("PodEnsRegistrar", {
     from: deployer,
     gasLimit: 4000000,
     args: [
@@ -54,9 +54,11 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
     skipIfAlreadyDeployed: false,
   });
 
-  const ensRegistry = new ethers.Contract(ensRegistryAddress, ENSRegistry, ensHolderSigner);
-  // approve podENSRegistry to make pod.eth changes on behalf of ensHolder
-  await ensRegistry.setApprovalForAll(podEnsRegistrarAddress, true);
+  if (newlyDeployed) {
+    const ensRegistry = new ethers.Contract(ensRegistryAddress, ENSRegistry, ensHolderSigner);
+    // approve podENSRegistry to make pod.eth changes on behalf of ensHolder
+    await ensRegistry.setApprovalForAll(podEnsRegistrarAddress, true);
+  }
 };
 
 module.exports.tags = ["Registrar"];

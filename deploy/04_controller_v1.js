@@ -35,9 +35,9 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
   const controllerRegistryAddress = (await deployments.get("ControllerRegistry")).address;
   const podEnsRegistrarAddress = (await deployments.get("PodEnsRegistrar")).address;
 
-  const { address: controllerAddress } = await deploy("ControllerV1", {
+  const { address: controllerAddress, newlyDeployed } = await deploy("ControllerV1", {
     from: deployer,
-    gasLimit: 8000000,
+    gasLimit: 10000000,
     args: [
       memberTokenAddress,
       controllerRegistryAddress,
@@ -50,9 +50,11 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
     skipIfAlreadyDeployed: true,
   });
 
-  const controllerRegistry = await ethers.getContractAt("ControllerRegistry", controllerRegistryAddress, signer);
+  if (newlyDeployed) {
+    const controllerRegistry = await ethers.getContractAt("ControllerRegistry", controllerRegistryAddress, signer);
 
-  await controllerRegistry.registerController(controllerAddress);
+    await controllerRegistry.registerController(controllerAddress);
+  }
 };
 
 module.exports.tags = ["ControllerV1"];
