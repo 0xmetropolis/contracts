@@ -48,6 +48,13 @@ contract PodEnsRegistrar is Ownable {
         bytes32 node,
         IInviteToken inviteTokenAddr
     ) {
+        require(address(ensAddr) != address(0), "Invalid address");
+        require(address(resolverAddr) != address(0), "Invalid address");
+        require(address(_reverseRegistrar)!= address(0), "Invalid address");
+        require(address(controllerRegistryAddr) != address(0), "Invalid address");
+        require(node != bytes32(0), "Invalid node");
+        require(address(inviteTokenAddr) != address(0), "Invalid address");
+
         ens = ensAddr;
         resolver = resolverAddr;
         controllerRegistry = controllerRegistryAddr;
