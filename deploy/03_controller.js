@@ -47,7 +47,7 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
       fallbackHandlerAddress,
     ],
     log: true,
-    skipIfAlreadyDeployed: false,
+    skipIfAlreadyDeployed: true,
   });
 
   const controllerRegistry = await ethers.getContractAt("ControllerRegistry", controllerRegistryAddress, signer);
