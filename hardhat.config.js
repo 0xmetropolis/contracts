@@ -156,7 +156,7 @@ task("update-registrar", "upgrade controller to new registrar").setAction(
     const controller = await ethers.getContract("Controller", deployer);
 
     await controller.updatePodEnsRegistrar(podEnsRegistrarAddress);
-    console.log(`Updated ${controller} with PodEnsRegistrar ${podEnsRegistrarAddress}`);
+    console.log(`Updated ${controller.address} with PodEnsRegistrar ${podEnsRegistrarAddress}`);
   },
 );
 
@@ -193,8 +193,62 @@ task("update-subnode-owner", "updates the ENS owner for a list of pod IDs")
     const root = ens.name(ROOT);
 
     for (let i = 0; i < labels.length; i += 1) {
+      // TODO: filter malformed ENS names
       if (labels[i].includes("'")) continue;
-      await root.setSubnodeOwner(namehash.normalize(labels[i]), newRegistrar);
+      console.log(`migrating subnode ${labels[i]} to ${newRegistrar}`);
+      try {
+        const res = await root.setSubnodeOwner(namehash.normalize(labels[i]), newRegistrar);
+        await res.wait(1);
+      } catch (err) {
+        console.log(err);
+        console.log(`Failed on index ${i} - ${labels[i]}`);
+        break;
+      }
+    }
+  });
+
+task("add-ens-podid", "updates the ENS owner for a list of pod IDs")
+  .addPositionalParam("startPod")
+  .addOptionalPositionalParam("endPod")
+  .setAction(async (args, { getChainId, ethers }) => {
+    const { startPod, endPod } = args;
+    const network = await getChainId();
+    const ens = new ENS({ provider: ethers.provider, ensAddress: getEnsAddress(network) });
+    const controller = await ethers.getContract("Controller");
+    const ensRegistrar = await ethers.getContract("PodEnsRegistrar");
+    const ROOT = network === "1" ? "pod.xyz" : "pod.eth";
+
+    // Generate an array of pod IDs.
+    const podIds = [];
+    if (!endPod) {
+      podIds.push(startPod);
+    } else {
+      for (let i = parseInt(startPod, 10); i <= parseInt(endPod, 10); i += 1) {
+        podIds.push(i);
+      }
+    }
+
+    const ensNames = await Promise.all(
+      podIds.map(async podId => {
+        const safe = await controller.podIdToSafe(podId);
+        const { name } = await ens.getName(safe);
+        return name;
+      }),
+    );
+    console.log("ensNames", ensNames);
+
+    for (let i = 0; i < ensNames.length; i += 1) {
+      // TODO: filter malformed ENS names
+      if (ensNames[i].includes("'")) continue;
+      console.log(`${ensNames[i]} podId to ${podIds[i].toString()}`);
+      try {
+        const res = await ensRegistrar.setText(ethers.utils.namehash(ensNames[i]), "podId", podIds[i].toString());
+        await res.wait(1);
+      } catch (err) {
+        console.log(err);
+        console.log(`Failed on index ${i} - ${ensNames[i]}`);
+        break;
+      }
     }
   });
 
