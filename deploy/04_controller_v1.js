@@ -37,7 +37,7 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
 
   const { address: controllerAddress, newlyDeployed } = await deploy("ControllerV1", {
     from: deployer,
-    gasLimit: 10000000,
+    gasLimit: 8000000,
     args: [
       memberTokenAddress,
       controllerRegistryAddress,
