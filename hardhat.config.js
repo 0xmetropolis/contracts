@@ -57,7 +57,7 @@ const namedAccounts = {
 task("tenderly-verify", "verifies current deployment on tenderly").setAction(
   async (args, { tenderly, deployments }) => {
     const contracts = [
-      { name: "Controller", address: (await deployments.get("Controller")).address },
+      // { name: "Controller", address: (await deployments.get("Controller")).address },
       { name: "ControllerV1", address: (await deployments.get("ControllerV1")).address },
       { name: "MemberToken", address: (await deployments.get("MemberToken")).address },
       { name: "ControllerRegistry", address: (await deployments.get("ControllerRegistry")).address },
