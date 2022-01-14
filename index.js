@@ -19,6 +19,7 @@ const networkMap = {
 const deployments = {
   rinkeby: {
     controller: RinkebyController,
+    controllerv1: RinkebyControllerV1,
     controllerregistry: RinkebyControllerRegistry,
     membertoken: RinkebyMemberToken,
     podensregistrar: RinkebyPodEnsRegistrar,
