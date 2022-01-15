@@ -5,7 +5,7 @@ const RinkebyMemberToken = require("./deployments/rinkeby/MemberToken.json");
 const RinkebyPodEnsRegistrar = require("./deployments/rinkeby/PodEnsRegistrar.json");
 const RinkebyInviteToken = require("./deployments/rinkeby/InviteToken.json");
 const MainnetController = require("./deployments/mainnet/Controller.json");
-// const MainnetControllerV1 = require("./deployments/mainnet/ControllerV1.json");
+const MainnetControllerV1 = require("./deployments/mainnet/ControllerV1.json");
 const MainnetControllerRegistry = require("./deployments/mainnet/ControllerRegistry.json");
 const MainnetMemberToken = require("./deployments/mainnet/MemberToken.json");
 const MainnetPodEnsRegistrar = require("./deployments/mainnet/PodEnsRegistrar.json");
@@ -27,6 +27,7 @@ const deployments = {
   },
   mainnet: {
     controller: MainnetController,
+    controllerv1: MainnetControllerV1,
     controllerregistry: MainnetControllerRegistry,
     membertoken: MainnetMemberToken,
     podensregistrar: MainnetPodEnsRegistrar,
@@ -66,7 +67,7 @@ function getControllerByAddress(address, network) {
   }
   if (networkName === "mainnet") {
     if (address === MainnetController.address) return MainnetController;
-    // if (address === MainnetControllerV1.address) return MainnetControllerV1;
+    if (address === MainnetControllerV1.address) return MainnetControllerV1;
     throw new Error("Address did not match any mainnet deployments");
   }
   throw new Error("Network not found, currently only support rinkeby and mainnet");
