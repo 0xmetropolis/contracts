@@ -1,6 +1,8 @@
+/* eslint-disable no-continue */
+/* eslint-disable no-await-in-loop */
 /* eslint-disable no-console */
 const { ENSRegistry, PublicResolver, ReverseRegistrar } = require("@ensdomains/ens-contracts");
-const { getEnsAddress, getResolverContract, getName } = require("@ensdomains/ensjs");
+const { getEnsAddress, getResolverContract } = require("@ensdomains/ensjs");
 const ENS = require("@ensdomains/ensjs").default;
 const namehash = require("@ensdomains/eth-ens-namehash");
 const { ethers } = require("ethers");
@@ -160,6 +162,81 @@ task("update-registrar", "upgrade controller to new registrar").setAction(
   },
 );
 
+async function getLabelsAndPodIds(startPod, endPod, { getChainId, ethers }) {
+  const network = await getChainId();
+  const ens = new ENS({ provider: ethers.provider, ensAddress: getEnsAddress(network) });
+  const controller = await ethers.getContract("Controller");
+  const controllerV1 = await ethers.getContract("ControllerV1");
+
+  // Generate an array of pod IDs.
+  const podIds = [];
+  if (!endPod) {
+    podIds.push(startPod);
+  } else {
+    for (let i = parseInt(startPod, 10); i <= parseInt(endPod, 10); i += 1) {
+      podIds.push(i);
+    }
+  }
+
+  const safes = [];
+
+  const labels = await Promise.all(
+    podIds.map(async podId => {
+      let safe = await controller.podIdToSafe(podId);
+      if (safe === "0x0000000000000000000000000000000000000000") {
+        safe = await controllerV1.podIdToSafe(podId);
+      }
+      safes.push(safe);
+      const name = await ens.getName(safe);
+      return name.name.split(".")[0];
+    }),
+  );
+
+  return { labels, podIds, safes };
+}
+
+task("check-ens-record", "fetches ens info for a given pod id")
+  .addPositionalParam("startPod")
+  .addOptionalPositionalParam("endPod")
+  .setAction(async (args, { getChainId, ethers }) => {
+    const { startPod, endPod } = args;
+    const network = await getChainId();
+    const ens = new ENS({ provider: ethers.provider, ensAddress: getEnsAddress(network) });
+    const ensRegistrar = await ethers.getContract("PodEnsRegistrar");
+    const ROOT = network === "1" ? "pod.xyz" : "pod.eth";
+
+    const { labels, podIds, safes } = await getLabelsAndPodIds(startPod, endPod, { getChainId, ethers });
+    console.log("labels", labels);
+    console.log("podIds", podIds);
+    console.log("safes", safes);
+    // const root = ens.name(ROOT);
+
+    async function batchCalls(label, safe, podId) {
+      const { name: ensName } = await ens.getName(safe);
+      // This is the name object which allows queries
+      const name = await ens.name(ensName);
+
+      const ensPodId = await name.getText("podId");
+      const avatar = await name.getText("avatar");
+      console.log("name", ensName);
+      console.log("label", label);
+      console.log("podId (from us)", podId);
+      console.log("podId (from ENS)", ensPodId);
+      console.log("safe", safe);
+      console.log("avatar", avatar);
+      console.log();
+      return { ensPodId, avatar, podId };
+    }
+
+    // TODO: This doesn't batch things together properly, so it really only works with one podId at a time. - WK
+    const results = await Promise.all(
+      labels.map((label, index) => {
+        return batchCalls(label, safes[index], podIds[index]);
+      }),
+    );
+    console.log("results", results);
+  });
+
 task("update-subnode-owner", "updates the ENS owner for a list of pod IDs")
   .addPositionalParam("startPod")
   .addOptionalPositionalParam("endPod")
@@ -167,29 +244,11 @@ task("update-subnode-owner", "updates the ENS owner for a list of pod IDs")
     const { startPod, endPod } = args;
     const network = await getChainId();
     const ens = new ENS({ provider: ethers.provider, ensAddress: getEnsAddress(network) });
-    const controller = await ethers.getContract("Controller");
     const { address: newRegistrar } = await ethers.getContract("PodEnsRegistrar");
     console.log("newRegistrar", newRegistrar);
     const ROOT = network === "1" ? "pod.xyz" : "pod.eth";
 
-    // Generate an array of pod IDs.
-    const podIds = [];
-    if (!endPod) {
-      podIds.push(startPod);
-    } else {
-      for (let i = parseInt(startPod, 10); i <= parseInt(endPod, 10); i += 1) {
-        podIds.push(i);
-      }
-    }
-
-    const labels = await Promise.all(
-      podIds.map(async podId => {
-        const safe = await controller.podIdToSafe(podId);
-        const name = await ens.getName(safe);
-        return name.name.split(".")[0];
-      }),
-    );
-    console.log("labels", labels);
+    const { labels } = await getLabelsAndPodIds(startPod, endPod, { getChainId, ethers });
     const root = ens.name(ROOT);
 
     for (let i = 0; i < labels.length; i += 1) {
@@ -214,41 +273,39 @@ task("add-ens-podid", "updates the ENS owner for a list of pod IDs")
     const { startPod, endPod } = args;
     const network = await getChainId();
     const ens = new ENS({ provider: ethers.provider, ensAddress: getEnsAddress(network) });
-    const controller = await ethers.getContract("Controller");
     const ensRegistrar = await ethers.getContract("PodEnsRegistrar");
     const ROOT = network === "1" ? "pod.xyz" : "pod.eth";
 
-    // Generate an array of pod IDs.
-    const podIds = [];
-    if (!endPod) {
-      podIds.push(startPod);
-    } else {
-      for (let i = parseInt(startPod, 10); i <= parseInt(endPod, 10); i += 1) {
-        podIds.push(i);
-      }
+    const { podIds, labels } = await getLabelsAndPodIds(startPod, endPod, { getChainId, ethers });
+
+    for (let i = 0; i < labels.length; i += 1) {
+      if (labels[i].includes("'")) continue;
+      const ensName = ens.name(`${labels[i]}.${ROOT}`);
+      console.log(`${ensName.name} podId to ${podIds[i].toString()}`);
+      await ensRegistrar.setText(ethers.utils.namehash(`${labels[i]}.pod.eth`), "podId", podIds[i].toString());
     }
+  });
 
-    const ensNames = await Promise.all(
-      podIds.map(async podId => {
-        const safe = await controller.podIdToSafe(podId);
-        const { name } = await ens.getName(safe);
-        return name;
-      }),
-    );
-    console.log("ensNames", ensNames);
+task("add-ens-nft", "updates the ens 'avatar' field for a list of pod IDs")
+  .addPositionalParam("startPod")
+  .addOptionalPositionalParam("endPod")
+  .setAction(async (args, { getChainId, ethers }) => {
+    const { startPod, endPod } = args;
+    const network = await getChainId();
+    const ens = new ENS({ provider: ethers.provider, ensAddress: getEnsAddress(network) });
+    const ensRegistrar = await ethers.getContract("PodEnsRegistrar");
+    const ROOT = network === "1" ? "pod.xyz" : "pod.eth";
 
-    for (let i = 0; i < ensNames.length; i += 1) {
-      // TODO: filter malformed ENS names
-      if (ensNames[i].includes("'")) continue;
-      console.log(`${ensNames[i]} podId to ${podIds[i].toString()}`);
-      try {
-        const res = await ensRegistrar.setText(ethers.utils.namehash(ensNames[i]), "podId", podIds[i].toString());
-        await res.wait(1);
-      } catch (err) {
-        console.log(err);
-        console.log(`Failed on index ${i} - ${ensNames[i]}`);
-        break;
-      }
+    const { podIds, labels } = await getLabelsAndPodIds(startPod, endPod, { getChainId, ethers });
+
+    const baseUrl = `https://nft-wtk219-orca-protocol.vercel.app${network === "4" ? "/assets/testnet/" : "/assets/"}`;
+
+    for (let i = 0; i < labels.length; i += 1) {
+      if (labels[i].includes("'")) continue;
+      const ensName = ens.name(`${labels[i]}.${ROOT}`);
+      const avatarUrl = `${baseUrl}${parseInt(podIds[i], 10).toString(16).padStart(64, "0")}-image-no-text`;
+      console.log(`setting ${ensName.name} avatar to ${avatarUrl}`);
+      await ensRegistrar.setText(ethers.utils.namehash(`${labels[i]}.pod.eth`), "avatar", avatarUrl);
     }
   });
 
