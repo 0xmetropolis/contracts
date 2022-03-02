@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import "@openzeppelin/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 import "./interfaces/IControllerRegistry.sol";
-import "./interfaces/IController.sol";
+import "./interfaces/IControllerBase.sol";
 
 contract MemberToken is ERC1155Supply, Ownable {
     using Address for address;
@@ -171,7 +171,7 @@ contract MemberToken is ERC1155Supply, Ownable {
         }
 
         // perform orca token transfer validations
-        IController(controller).beforeTokenTransfer(
+        IControllerBase(controller).beforeTokenTransfer(
             operator,
             from,
             to,
