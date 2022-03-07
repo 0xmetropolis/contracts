@@ -4,13 +4,13 @@ pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "./interfaces/IController.sol";
+import "./interfaces/IControllerV1.sol";
 import "./interfaces/IMemberToken.sol";
 import "./interfaces/IControllerRegistry.sol";
 import "./SafeTeller.sol";
 import "./ens/IPodEnsRegistrar.sol";
 
-contract ControllerV1 is IController, SafeTeller, Ownable {
+contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
     event CreatePod(uint256 podId, address safe, address admin, string ensName);
     event UpdatePodAdmin(uint256 podId, address admin);
 
@@ -59,6 +59,7 @@ contract ControllerV1 is IController, SafeTeller, Ownable {
 
     function updatePodEnsRegistrar(address _podEnsRegistrar)
         external
+        override
         onlyOwner
     {
         require(_podEnsRegistrar != address(0), "Invalid address");
@@ -80,7 +81,7 @@ contract ControllerV1 is IController, SafeTeller, Ownable {
         string memory _ensString,
         uint256 expectedPodId,
         string memory _imageUrl
-    ) external {
+    ) external override {
         address safe = createSafe(_members, threshold);
 
         _createPod(
@@ -109,7 +110,7 @@ contract ControllerV1 is IController, SafeTeller, Ownable {
         string memory _ensString,
         uint256 expectedPodId,
         string memory _imageUrl
-    ) external {
+    ) external override {
         require(_safe != address(0), "invalid safe address");
         require(safeToPodId[_safe] == 0, "safe already in use");
         require(isSafeModuleEnabled(_safe), "safe module must be enabled");
@@ -180,7 +181,10 @@ contract ControllerV1 is IController, SafeTeller, Ownable {
      * @param _podId The id number of the pod
      * @param _newAdmin The address of the new pod admin
      */
-    function updatePodAdmin(uint256 _podId, address _newAdmin) external {
+    function updatePodAdmin(uint256 _podId, address _newAdmin)
+        external
+        override
+    {
         address admin = podAdmin[_podId];
         address safe = podIdToSafe[_podId];
 
@@ -209,7 +213,7 @@ contract ControllerV1 is IController, SafeTeller, Ownable {
         uint256 _podId,
         address _newController,
         address _prevModule
-    ) external {
+    ) external override {
         require(_newController != address(0), "Invalid address");
         require(
             controllerRegistry.isRegistered(_newController),
@@ -224,7 +228,7 @@ contract ControllerV1 is IController, SafeTeller, Ownable {
             "User not authorized"
         );
 
-        IController newController = IController(_newController);
+        IControllerBase newController = IControllerBase(_newController);
 
         // nullify current pod state
         podAdmin[_podId] = address(0);

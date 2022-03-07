@@ -4,13 +4,13 @@ pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
-import "./interfaces/IController.sol";
+import "./interfaces/IControllerBase.sol";
 import "./interfaces/IMemberToken.sol";
 import "./interfaces/IControllerRegistry.sol";
 import "./SafeTeller.sol";
 import "./ens/IPodEnsRegistrar.sol";
 
-contract Controller is IController, SafeTeller, Ownable {
+contract Controller is IControllerBase, SafeTeller, Ownable {
     event CreatePod(uint256 podId, address safe, address admin, string ensName);
     event UpdatePodAdmin(uint256 podId, address admin);
 

@@ -1,6 +1,6 @@
 pragma solidity 0.8.7;
 
-interface IController {
+interface IControllerBase {
     /**
      * @param operator The account address that initiated the action
      * @param from The account address sending the membership token
