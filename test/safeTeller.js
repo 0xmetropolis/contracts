@@ -7,8 +7,6 @@ const EthersSafe = require("@gnosis.pm/safe-core-sdk").default;
 const GnosisSafe = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/GnosisSafe.sol/GnosisSafe.json");
 const MultiSend = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/libraries/MultiSend.sol/MultiSend.json");
 
-const Controller = require("../artifacts/contracts/Controller.sol/Controller.json");
-
 const { deployContract, provider, solidity } = waffle;
 
 const AddressOne = "0x0000000000000000000000000000000000000001";
@@ -147,6 +145,7 @@ describe("SafeTeller test", () => {
     });
   });
 
+  // Test forward compatibility
   describe("when migrating safeTeller", () => {
     it("should migrate to a new version of the safeTeller with multiple modules", async () => {
       const {
@@ -174,6 +173,8 @@ describe("SafeTeller test", () => {
       const txRes = await safeSignerAlice.executeTransaction(safeTransaction);
       await txRes.wait();
       expect(await ethersSafe.isModuleEnabled(mockModule.address)).to.equal(true);
+
+      const Controller = await deployments.getArtifact("ControllerV1");
 
       const controller2 = await deployContract(admin, Controller, [
         memberToken.address,
