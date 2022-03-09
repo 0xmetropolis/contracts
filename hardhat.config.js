@@ -281,6 +281,9 @@ module.exports = {
         artifacts: "node_modules/@gnosis.pm/safe-contracts/build/artifacts",
       },
       {
+        artifacts: "node_modules/@gnosis.pm/zodiac/build/artifacts",
+      },
+      {
         artifacts: "node_modules/@ensdomains/ens-contracts/artifacts",
       },
     ],

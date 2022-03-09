@@ -10,6 +10,7 @@ const MultiSend = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/l
 const { deployContract, provider, solidity } = waffle;
 
 const AddressOne = "0x0000000000000000000000000000000000000001";
+const GUARD_STORAGE_SLOT = "0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8";
 
 use(solidity);
 
@@ -19,7 +20,7 @@ describe("SafeTeller test", () => {
   let multiSend;
   let ens;
 
-  const { HashZero } = ethers.constants;
+  const { HashZero, AddressZero } = ethers.constants;
 
   const TX_OPTIONS = { gasLimit: 4000000 };
 
@@ -42,12 +43,18 @@ describe("SafeTeller test", () => {
     });
   };
 
+  const createTxArgs = (safe, functionSig, args) => ({
+    to: safe.address,
+    data: safe.interface.encodeFunctionData(functionSig, args),
+    value: 0,
+  });
+
   const setup = async () => {
-    await deployments.fixture(["Base", "Registrar", "Controller", "ControllerV1"]);
+    await deployments.fixture(["Base", "Registrar", "ControllerV1.1"]);
     // Deploy the master safe contract and multisend
     multiSend = await deployContract(admin, MultiSend);
 
-    const controller = await ethers.getContract("ControllerV1", admin);
+    const controller = await ethers.getContract("ControllerV1.1", admin);
 
     const memberToken = await ethers.getContract("MemberToken", admin);
     const gnosisSafeProxyFactory = await ethers.getContract("GnosisSafeProxyFactory", admin);
@@ -86,7 +93,7 @@ describe("SafeTeller test", () => {
   };
 
   describe("new safe setup", () => {
-    it("should create a new safe with safe teller module", async () => {
+    it("should create a new safe with safe teller module and guard", async () => {
       const { controller } = await setup();
 
       const res = await controller
@@ -103,6 +110,9 @@ describe("SafeTeller test", () => {
       expect(await ethersSafe.getOwners()).to.deep.equal(MEMBERS);
       // check to see if module has been enabled
       expect(await ethersSafe.isModuleEnabled(controller.address)).to.equal(true);
+      // check to see if guard has been enabled
+      // strip off the address 0x for comparison
+      expect(await safe.getStorageAt(GUARD_STORAGE_SLOT, 1)).to.include(controller.address.substring(2).toLowerCase());
       // check reverse resolver
       expect(await ens.getName(args.safe)).to.deep.equal({ name: "test2.pod.eth" });
     });
@@ -145,6 +155,52 @@ describe("SafeTeller test", () => {
     });
   });
 
+  describe("when controller module is locked", () => {
+    it("should prevent owners from removing controller module", async () => {
+      const { safe, controller } = await setup();
+      const txArgs = createTxArgs(safe, "disableModule", [AddressOne, controller.address]);
+
+      const safeSignerAlice = await createSafeSigner(safe, alice);
+      const safeTransaction = await safeSignerAlice.createTransaction(txArgs);
+      // execute onchain
+      await expect(safeSignerAlice.executeTransaction(safeTransaction)).to.be.revertedWith("Cannot Disable Modules");
+    });
+
+    it("should prevent owners from enable module", async () => {
+      const { safe } = await setup();
+      const txArgs = createTxArgs(safe, "enableModule", [mockModule.address]);
+
+      const safeSignerAlice = await createSafeSigner(safe, alice);
+      const safeTransaction = await safeSignerAlice.createTransaction(txArgs);
+      // execute onchain
+      await expect(safeSignerAlice.executeTransaction(safeTransaction)).to.be.revertedWith("Cannot Enable Modules");
+    });
+
+    it("should prevent owners from removing controller guard", async () => {
+      const { safe } = await setup();
+      const txArgs = createTxArgs(safe, "setGuard", [AddressZero]);
+
+      const safeSignerAlice = await createSafeSigner(safe, alice);
+      const safeTransaction = await safeSignerAlice.createTransaction(txArgs);
+      // execute onchain
+      await expect(safeSignerAlice.executeTransaction(safeTransaction)).to.be.revertedWith("Cannot Change Guard");
+    });
+  });
+
+  describe("when controller module is unlocked", () => {
+    it("should alow owners to enable module", async () => {
+      const { safe, controller, ethersSafe } = await setup();
+      const txArgs = createTxArgs(safe, "enableModule", [mockModule.address]);
+
+      await controller.connect(alice).setPodModuleLock(POD_ID, false);
+
+      const safeSignerAlice = await createSafeSigner(safe, alice);
+      const safeTransaction = await safeSignerAlice.createTransaction(txArgs);
+      // execute onchain
+      await safeSignerAlice.executeTransaction(safeTransaction);
+      expect(await ethersSafe.isModuleEnabled(mockModule.address)).to.equal(true);
+    });
+  });
   // Test forward compatibility
   describe("when migrating safeTeller", () => {
     it("should migrate to a new version of the safeTeller with multiple modules", async () => {
@@ -160,12 +216,9 @@ describe("SafeTeller test", () => {
         fallbackHandler,
       } = await setup();
 
-      // safeSdk.getEnableModuleTx doesn't work so creating tx manually
-      const txArgs = {
-        to: safe.address,
-        data: safe.interface.encodeFunctionData("enableModule", [mockModule.address]),
-        value: 0,
-      };
+      const txArgs = createTxArgs(safe, "enableModule", [mockModule.address]);
+
+      await controller.connect(alice).setPodModuleLock(POD_ID, false);
 
       const safeSignerAlice = await createSafeSigner(safe, alice);
       const safeTransaction = await safeSignerAlice.createTransaction(txArgs);
@@ -174,8 +227,8 @@ describe("SafeTeller test", () => {
       await txRes.wait();
       expect(await ethersSafe.isModuleEnabled(mockModule.address)).to.equal(true);
 
+      // will get latest V1 artifacts
       const Controller = await deployments.getArtifact("ControllerV1");
-
       const controller2 = await deployContract(admin, Controller, [
         memberToken.address,
         controllerRegistry.address,
@@ -192,6 +245,9 @@ describe("SafeTeller test", () => {
       await controller.connect(alice).migratePodController(POD_ID, controller2.address, modules.array[0], TX_OPTIONS);
       expect(await ethersSafe.isModuleEnabled(controller2.address)).to.equal(true);
       expect(await ethersSafe.isModuleEnabled(controller.address)).to.equal(false);
+      // check to see if guard has been enabled
+      // strip off the address 0x for comparison
+      expect(await safe.getStorageAt(GUARD_STORAGE_SLOT, 1)).to.include(controller2.address.substring(2).toLowerCase());
     });
   });
 });

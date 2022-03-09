@@ -85,12 +85,12 @@ describe("Controller safe integration test", () => {
   };
 
   const setup = async () => {
-    await deployments.fixture(["Base", "Registrar", "Controller", "ControllerV1"]);
+    await deployments.fixture(["Base", "Registrar", "ControllerV1.1"]);
     // Deploy the master safe contract and multisend
     multiSend = await deployContract(admin, MultiSend);
     fallbackHandler = await deployContract(admin, FallbackHandler);
 
-    controller = await ethers.getContract("ControllerV1", admin);
+    controller = await ethers.getContract("ControllerV1.1", admin);
 
     const publicResolver = await ethers.getContract("PublicResolver", admin);
 
@@ -223,6 +223,24 @@ describe("Controller safe integration test", () => {
 
       await controller.updatePodAdmin(POD_ID, alice.address);
       expect(await controller.podAdmin(POD_ID)).to.equal(alice.address);
+      const safe = await controller.podIdToSafe(POD_ID);
+      expect(await controller.areModulesLocked(safe)).to.equal(true);
+    });
+    it("should let admin remove admin", async () => {
+      await setup();
+
+      await controller.updatePodAdmin(POD_ID, AddressZero);
+      expect(await controller.podAdmin(POD_ID)).to.equal(AddressZero);
+      const safe = await controller.podIdToSafe(POD_ID);
+      expect(await controller.areModulesLocked(safe)).to.equal(false);
+    });
+    it("should let admin unlock modules", async () => {
+      await setup();
+
+      await controller.setPodModuleLock(POD_ID, false);
+
+      const safe = await controller.podIdToSafe(POD_ID);
+      expect(await controller.areModulesLocked(safe)).to.equal(false);
     });
     it("should throw if safe updates admin", async () => {
       const { ethersSafe } = await setup();
@@ -234,6 +252,13 @@ describe("Controller safe integration test", () => {
       };
 
       await expect(ethersSafe.createTransaction(txArgs)).to.be.revertedWith("Only admin can update admin");
+    });
+    it("should throw if user updates module lock", async () => {
+      await setup();
+
+      await expect(controller.connect(bob).setPodModuleLock(POD_ID, false)).to.be.revertedWith(
+        "Must be admin to set module lock",
+      );
     });
   });
 
@@ -260,6 +285,8 @@ describe("Controller safe integration test", () => {
       await ethersSafe.executeTransaction(tx);
 
       expect(await controller.podAdmin(POD_ID + 1)).to.equal(alice.address);
+      const safe = await controller.podIdToSafe(POD_ID + 1);
+      expect(await controller.areModulesLocked(safe)).to.equal(true);
     });
   });
 

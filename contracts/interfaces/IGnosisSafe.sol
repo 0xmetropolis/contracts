@@ -37,4 +37,8 @@ interface IGnosisSafe {
     /// @dev Returns if an module is enabled
     /// @return True if the module is enabled
     function isModuleEnabled(address module) external view returns (bool);
+
+    /// @dev Set a guard that checks transactions before execution
+    /// @param guard The address of the guard to be used or the 0 address to disable the guard
+    function setGuard(address guard) external;
 }

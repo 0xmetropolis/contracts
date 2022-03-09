@@ -49,9 +49,9 @@ describe("Controller beforeTokenTransfer Test", () => {
   };
 
   const setup = async () => {
-    await deployments.fixture(["Base", "Registrar", "Controller", "ControllerV1"]);
+    await deployments.fixture(["Base", "Registrar", "ControllerV1.1"]);
 
-    controller = await ethers.getContract("ControllerV1", admin);
+    controller = await ethers.getContract("ControllerV1.1", admin);
     memberToken = await ethers.getContract("MemberToken", admin);
 
     const podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", admin);
@@ -150,58 +150,4 @@ describe("Controller beforeTokenTransfer Test", () => {
         .withArgs(bob.address, bob.address, charlie.address, POD_ID, 1);
     });
   });
-
-  // describe("managing membership tokens of rule compliant user", () => {
-  //   beforeEach(async () => {
-  //     await setup();
-  //     await ruleManager.mock.hasRules.returns(true);
-  //     await ruleManager.mock.isRuleCompliant.returns(true);
-  //   });
-
-  //   it("should allow rule compliant user to mint membership token", async () => {
-  //     await expect(memberToken.connect(charlie).mint(charlie.address, POD_ID, HashZero, TX_OPTIONS))
-  //       .to.emit(memberToken, "TransferSingle")
-  //       .withArgs(charlie.address, AddressZero, charlie.address, POD_ID, 1);
-  //   });
-
-  //   it("should allow rule compliant user to be transferred membership token", async () => {
-  //     await expect(
-  //       memberToken.connect(bob).safeTransferFrom(bob.address, charlie.address, POD_ID, 1, HashZero, TX_OPTIONS),
-  //     )
-  //       .to.emit(memberToken, "TransferSingle")
-  //       .withArgs(bob.address, bob.address, charlie.address, POD_ID, 1);
-  //   });
-
-  //   it("should NOT allow a user to burn membership token with no rules", async () => {
-  //     await expect(memberToken.connect(charlie).burn(bob.address, POD_ID, TX_OPTIONS)).to.be.revertedWith(
-  //       "Rule Compliant",
-  //     );
-  //   });
-  // });
-
-  // describe("managing membership tokens of rule non-compliant user", () => {
-  //   beforeEach(async () => {
-  //     await setup();
-  //     await ruleManager.mock.hasRules.returns(true);
-  //     await ruleManager.mock.isRuleCompliant.returns(false);
-  //   });
-
-  //   it("should NOT allow rule non-compliant user to mint membership token", async () => {
-  //     await expect(memberToken.connect(charlie).mint(charlie.address, POD_ID, HashZero, TX_OPTIONS)).to.be.revertedWith(
-  //       "Not Rule Compliant",
-  //     );
-  //   });
-
-  //   it("should NOT allow rule non-compliant user to be transferred a membership token", async () => {
-  //     await expect(
-  //       memberToken.connect(bob).safeTransferFrom(bob.address, charlie.address, POD_ID, 1, HashZero, TX_OPTIONS),
-  //     ).to.be.revertedWith("Not Rule Compliant");
-  //   });
-
-  //   it("should allow a user to burn membership token of a rule non-compliant user", async () => {
-  //     await expect(memberToken.connect(charlie).burn(bob.address, POD_ID, TX_OPTIONS))
-  //       .to.emit(memberToken, "TransferSingle")
-  //       .withArgs(charlie.address, bob.address, AddressZero, POD_ID, 1);
-  //   });
-  // });
 });

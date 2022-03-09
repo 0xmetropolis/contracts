@@ -40,6 +40,13 @@ interface IControllerV1 is IControllerBase {
     ) external;
 
     /**
+     * @dev Allows admin to unlock the safe modules and allow them to be edited by members
+     * @param _podId The id number of the pod
+     * @param _isLocked true - pod modules cannot be added/removed
+     */
+    function setPodModuleLock(uint256 _podId, bool _isLocked) external;
+
+    /**
      * @param _podId The id number of the pod
      * @param _newAdmin The address of the new pod admin
      */

@@ -4,8 +4,6 @@ const {
   getDefaultCallbackHandlerDeployment,
 } = require("@gnosis.pm/safe-deployments");
 
-const ControllerV1 = require("../deployments/mainnet/ControllerV1.json");
-
 module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
@@ -37,11 +35,8 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
   const controllerRegistryAddress = (await deployments.get("ControllerRegistry")).address;
   const podEnsRegistrarAddress = (await deployments.get("PodEnsRegistrar")).address;
 
-  const { address: controllerAddress, newlyDeployed } = await deploy("ControllerV1", {
-    contract: {
-      abi: ControllerV1.abi,
-      bytecode: ControllerV1.bytecode,
-    },
+  const { address: controllerAddress, newlyDeployed } = await deploy("ControllerV1.1", {
+    contract: "ControllerV1",
     from: deployer,
     gasLimit: 8000000,
     args: [
@@ -63,5 +58,5 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
   }
 };
 
-module.exports.tags = ["ControllerV1"];
+module.exports.tags = ["ControllerV1.1"];
 module.exports.dependencies = ["Registrar"];
