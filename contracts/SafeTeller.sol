@@ -3,8 +3,9 @@ pragma solidity 0.8.7;
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./interfaces/IGnosisSafe.sol";
 import "./interfaces/IGnosisSafeProxyFactory.sol";
+import "@gnosis.pm/zodiac/contracts/guard/BaseGuard.sol";
 
-contract SafeTeller {
+contract SafeTeller is BaseGuard {
     using Address for address;
 
     // mainnet: 0x76E2cFc1F5Fa8F6a5b3fC4c8F4788F0116861F9B;
@@ -21,7 +22,17 @@ contract SafeTeller {
 
     string public constant FUNCTION_SIG_ENABLE = "delegateSetup(address)";
 
+    bytes4 public constant ENCODED_SIG_ENABLE_MOD =
+        bytes4(keccak256("enableModule(address)"));
+    bytes4 public constant ENCODED_SIG_DISABLE_MOD =
+        bytes4(keccak256("disableModule(address,address)"));
+    bytes4 public constant ENCODED_SIG_SET_GUARD =
+        bytes4(keccak256("setGuard(address)"));
+
     address internal constant SENTINEL = address(0x1);
+
+    // pods with admin have modules locked by default
+    mapping(address => bool) public areModulesLocked;
 
     /**
      * @param _proxyFactoryAddress The proxy factory address
@@ -81,6 +92,25 @@ contract SafeTeller {
         require(disableSuccess, "Migration failed on disable");
     }
 
+    /**
+     * @dev sets the safeteller as safe guard, called after migration
+     * @param _safe The address of the safe
+     */
+    function setSafeTellerAsGuard(address _safe) internal {
+        bytes memory transferData = abi.encodeWithSignature(
+            "setGuard(address)",
+            address(this)
+        );
+
+        bool guardSuccess = IGnosisSafe(_safe).execTransactionFromModule(
+            _safe,
+            0,
+            transferData,
+            IGnosisSafe.Operation.Call
+        );
+        require(guardSuccess, "Could not enable guard");
+    }
+
     function getSafeMembers(address safe)
         public
         view
@@ -135,6 +165,9 @@ contract SafeTeller {
                 setupData
             )
         returns (address newSafeAddress) {
+            // add safe teller as guard
+            setSafeTellerAsGuard(newSafeAddress);
+
             return newSafeAddress;
         } catch (bytes memory) {
             revert("Create Proxy With Data Failed");
@@ -264,6 +297,63 @@ contract SafeTeller {
         );
         require(success, "Module Transaction Failed");
     }
+
+    /**
+     * @dev This will be called by the safe at tx time and prevent module disable on pods with admins
+     * @param safe safe address
+     * @param isLocked safe address
+     */
+    function setModuleLock(address safe, bool isLocked) internal {
+        areModulesLocked[safe] = isLocked;
+    }
+
+    /**
+     * @dev This will be called by the safe at execution time time
+     * @param to Destination address of Safe transaction.
+     * @param value Ether value of Safe transaction.
+     * @param data Data payload of Safe transaction.
+     * @param operation Operation type of Safe transaction.
+     * @param safeTxGas Gas that should be used for the Safe transaction.
+     * @param baseGas Gas costs that are independent of the transaction execution(e.g. base transaction fee, signature check, payment of the refund)
+     * @param gasPrice Gas price that should be used for the payment calculation.
+     * @param gasToken Token address (or 0 if ETH) that is used for the payment.
+     * @param refundReceiver Address of receiver of gas payment (or 0 if tx.origin).
+     * @param signatures Packed signature data ({bytes32 r}{bytes32 s}{uint8 v})
+     * @param msgSender Account executing safe transaction
+     */
+    function checkTransaction(
+        address to,
+        uint256 value,
+        bytes memory data,
+        Enum.Operation operation,
+        uint256 safeTxGas,
+        uint256 baseGas,
+        uint256 gasPrice,
+        address gasToken,
+        address payable refundReceiver,
+        bytes memory signatures,
+        address msgSender
+    ) external view override {
+        address safe = msg.sender;
+        // if safe isn't locked return
+        if (!areModulesLocked[safe]) return;
+        if (data.length >= 4) {
+            require(
+                bytes4(data) != ENCODED_SIG_ENABLE_MOD,
+                "Cannot Enable Modules"
+            );
+            require(
+                bytes4(data) != ENCODED_SIG_DISABLE_MOD,
+                "Cannot Disable Modules"
+            );
+            require(
+                bytes4(data) != ENCODED_SIG_SET_GUARD,
+                "Cannot Change Guard"
+            );
+        }
+    }
+
+    function checkAfterExecution(bytes32, bool) external view override {}
 
     // TODO: move to library
     // Used in a delegate call to enable module add on setup

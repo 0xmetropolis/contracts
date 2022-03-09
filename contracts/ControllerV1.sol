@@ -159,7 +159,11 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
         emit CreatePod(podId, _safe, _admin, _ensString);
         emit UpdatePodAdmin(podId, _admin);
 
-        if (_admin != address(0)) podAdmin[podId] = _admin;
+        if (_admin != address(0)) {
+            // will lock safe modules if admin exists
+            setModuleLock(_safe, true);
+            podAdmin[podId] = _admin;
+        }
         podIdToSafe[podId] = _safe;
         safeToPodId[_safe] = podId;
 
@@ -175,6 +179,22 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
         bytes32 node = podEnsRegistrar.getEnsNode(_label);
         podEnsRegistrar.setText(node, "avatar", _imageUrl);
         podEnsRegistrar.setText(node, "podId", Strings.toString(podId));
+    }
+
+    /**
+     * @dev Allows admin to unlock the safe modules and allow them to be edited by members
+     * @param _podId The id number of the pod
+     * @param _isLocked true - pod modules cannot be added/removed
+     */
+    function setPodModuleLock(uint256 _podId, bool _isLocked)
+        external
+        override
+    {
+        require(
+            msg.sender == podAdmin[_podId],
+            "Must be admin to set module lock"
+        );
+        setModuleLock(podIdToSafe[_podId], _isLocked);
     }
 
     /**
@@ -196,6 +216,9 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
         } else {
             require(msg.sender == admin, "Only admin can update admin");
         }
+        // set module lock to true for non zero _newAdmin
+        setModuleLock(safe, _newAdmin != address(0));
+
         podAdmin[_podId] = _newAdmin;
 
         emit UpdatePodAdmin(_podId, _newAdmin);
@@ -266,9 +289,15 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
                 safeToPodId[_safeAddress] == 0,
             "Pod already exists"
         );
-        podAdmin[_podId] = _podAdmin;
+        // if there is a pod admin, set state and lock modules
+        if (_podAdmin != address(0)) {
+            podAdmin[_podId] = _podAdmin;
+            setModuleLock(_safeAddress, true);
+        }
         podIdToSafe[_podId] = _safeAddress;
         safeToPodId[_safeAddress] = _podId;
+
+        setSafeTellerAsGuard(_safeAddress);
 
         emit UpdatePodAdmin(_podId, _podAdmin);
     }

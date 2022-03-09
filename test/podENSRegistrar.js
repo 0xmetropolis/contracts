@@ -26,7 +26,7 @@ describe("registrar test", () => {
   let ens;
 
   async function setup() {
-    await deployments.fixture(["Base", "Registrar", "Controller", "ControllerV1"]);
+    await deployments.fixture(["Base", "Registrar"]);
     const { deployer, ensHolder } = await getNamedAccounts();
     ensHolderAddress = ensHolder;
 

@@ -42,9 +42,9 @@ describe("Member Token Test", () => {
   };
 
   const setup = async () => {
-    await deployments.fixture(["Base", "Registrar", "Controller", "ControllerV1"]);
+    await deployments.fixture(["Base", "Registrar", "ControllerV1.1"]);
 
-    const controller = await ethers.getContract("ControllerV1", admin);
+    const controller = await ethers.getContract("ControllerV1.1", admin);
     const memberToken = await ethers.getContract("MemberToken", admin);
     const controllerRegistry = await ethers.getContract("ControllerRegistry", admin);
     const fallbackHandler = await ethers.getContract("CompatibilityFallbackHandler", admin);

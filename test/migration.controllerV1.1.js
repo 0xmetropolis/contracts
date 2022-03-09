@@ -10,16 +10,19 @@ const { AddressZero, HashZero } = ethers.constants;
 
 use(solidity);
 
-// Test Backwards compatibility
+/// ///// THESE TEST ARE MEANT TO TEST BACKWARDS COMPATIBILITY OF MIGRATIONS //////////
+
 describe("pod migration test", () => {
   const [admin, owner, alice, bob, charlie] = provider.getWallets();
 
   const TX_OPTIONS = { gasLimit: 4000000 };
+  const GUARD_STORAGE_SLOT = "0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8";
 
   // create pod args
   const MEMBERS = [alice.address, bob.address];
   const LEGACY_POD_ID = 0;
   const UPGRADE_POD_ID = 1;
+  const IMAGE_URL = "img";
 
   const createSafe = async (controller, podId) =>
     new ethers.Contract(await controller.podIdToSafe(podId), GnosisSafe.abi, owner);
@@ -34,10 +37,10 @@ describe("pod migration test", () => {
   };
 
   const setupV0 = async () => {
-    await deployments.fixture(["Base", "Registry", "Controller", "ControllerV1"]);
+    await deployments.fixture(["Base", "Registry", "Controller", "ControllerV1", "ControllerV1.1"]);
     const controller = {};
     controller.VPrev = await ethers.getContract("Controller", admin);
-    controller.VNext = await ethers.getContract("ControllerV1", admin);
+    controller.VNext = await ethers.getContract("ControllerV1.1", admin);
 
     const { memberToken, controllerRegistry } = await setDependancies(controller);
     // register VNext contracts
@@ -46,6 +49,47 @@ describe("pod migration test", () => {
     // create VPrev pods
     await controller.VPrev.createPod(MEMBERS, 1, owner.address, labelhash("test"), "test.pod.eth", TX_OPTIONS);
     await controller.VPrev.createPod(MEMBERS, 1, owner.address, labelhash("test2"), "test2.pod.eth", TX_OPTIONS);
+
+    return {
+      upgradePod: await createSafe(controller.VPrev, UPGRADE_POD_ID),
+      legacyPod: await createSafe(controller.VPrev, LEGACY_POD_ID),
+      controllerRegistry,
+      memberToken,
+      controller,
+    };
+  };
+
+  const setupV1 = async () => {
+    await deployments.fixture(["Base", "Registry", "Controller", "ControllerV1", "ControllerV1.1"]);
+    const controller = {};
+    controller.VPrev = await ethers.getContract("ControllerV1", admin);
+    controller.VNext = await ethers.getContract("ControllerV1.1", admin);
+
+    const { memberToken, controllerRegistry } = await setDependancies(controller);
+    // register VNext contracts
+    await controllerRegistry.connect(admin).registerController(controller.VNext.address);
+
+    // create VPrev pods
+    await controller.VPrev.createPod(
+      MEMBERS,
+      1,
+      owner.address,
+      labelhash("test"),
+      "test.pod.eth",
+      LEGACY_POD_ID,
+      IMAGE_URL,
+      TX_OPTIONS,
+    );
+    await controller.VPrev.createPod(
+      MEMBERS,
+      1,
+      owner.address,
+      labelhash("test2"),
+      "test2.pod.eth",
+      UPGRADE_POD_ID,
+      IMAGE_URL,
+      TX_OPTIONS,
+    );
 
     return {
       upgradePod: await createSafe(controller.VPrev, UPGRADE_POD_ID),
@@ -99,8 +143,15 @@ describe("pod migration test", () => {
       );
 
       // check upgraded pod
-      expect(await upgradePod.isModuleEnabled(controller.VNext.address)).to.equal(true);
       expect(await upgradePod.isModuleEnabled(controller.VPrev.address)).to.equal(false);
+      expect(await upgradePod.isModuleEnabled(controller.VNext.address)).to.equal(true);
+      // check to see if guard has been enabled
+      // strip off the address 0x for comparison
+      expect(await upgradePod.getStorageAt(GUARD_STORAGE_SLOT, 1)).to.include(
+        controller.VNext.address.substring(2).toLowerCase(),
+      );
+      expect(await controller.VNext.areModulesLocked(upgradePod.address)).to.equal(true);
+
       // check legacy pod
       expect(await legacyPod.isModuleEnabled(controller.VPrev.address)).to.equal(true);
       expect(await legacyPod.isModuleEnabled(controller.VNext.address)).to.equal(false);
@@ -145,5 +196,6 @@ describe("pod migration test", () => {
     });
   };
 
-  describe("should test Controller to ControllerV1", async () => migrationTests(setupV0));
+  describe("should test Controller to ControllerV1.1", async () => migrationTests(setupV0));
+  describe("should test ControllerV1 to ControllerV1.1", async () => migrationTests(setupV1));
 });
