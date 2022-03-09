@@ -1,5 +1,7 @@
+/* eslint-disable camelcase */
 const RinkebyController = require("./deployments/rinkeby/Controller.json");
 const RinkebyControllerV1 = require("./deployments/rinkeby/ControllerV1.json");
+const RinkebyControllerV1_1 = require("./deployments/rinkeby/ControllerV1.1.json");
 const RinkebyControllerRegistry = require("./deployments/rinkeby/ControllerRegistry.json");
 const RinkebyMemberToken = require("./deployments/rinkeby/MemberToken.json");
 const RinkebyPodEnsRegistrar = require("./deployments/rinkeby/PodEnsRegistrar.json");
@@ -20,6 +22,8 @@ const deployments = {
   rinkeby: {
     controller: RinkebyController,
     controllerv1: RinkebyControllerV1,
+    controllerv1_1: RinkebyControllerV1_1,
+    controllerlatest: RinkebyControllerV1_1,
     controllerregistry: RinkebyControllerRegistry,
     membertoken: RinkebyMemberToken,
     podensregistrar: RinkebyPodEnsRegistrar,
@@ -63,6 +67,7 @@ function getControllerByAddress(address, network) {
   if (networkName === "rinkeby") {
     if (address === RinkebyController.address) return RinkebyController;
     if (address === RinkebyControllerV1.address) return RinkebyControllerV1;
+    if (address === RinkebyControllerV1_1.address) return RinkebyControllerV1_1;
     throw new Error("Address did not match any rinkeby deployments");
   }
   if (networkName === "mainnet") {

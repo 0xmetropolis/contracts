@@ -51,7 +51,7 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
       inviteToken,
     ],
     log: true,
-    skipIfAlreadyDeployed: false,
+    skipIfAlreadyDeployed: true,
   });
 
   if (newlyDeployed) {
