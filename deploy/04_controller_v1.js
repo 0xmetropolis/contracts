@@ -57,5 +57,5 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
   }
 };
 
-module.exports.tags = ["ControllerV1"];
+module.exports.tags = ["ControllerV1", "ControllerNext"];
 module.exports.dependencies = ["Controller"];
