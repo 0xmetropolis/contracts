@@ -1,14 +1,19 @@
 /* eslint-disable camelcase */
 const { ethers } = require("ethers");
+// controllers
 const RinkebyController = require("./deployments/rinkeby/Controller.json");
 const RinkebyControllerV1 = require("./deployments/rinkeby/ControllerV1.json");
 const RinkebyControllerV1_1 = require("./deployments/rinkeby/ControllerV1.1.json");
+//
 const RinkebyControllerRegistry = require("./deployments/rinkeby/ControllerRegistry.json");
 const RinkebyMemberToken = require("./deployments/rinkeby/MemberToken.json");
 const RinkebyPodEnsRegistrar = require("./deployments/rinkeby/PodEnsRegistrar.json");
 const RinkebyInviteToken = require("./deployments/rinkeby/InviteToken.json");
+// controllers
 const MainnetController = require("./deployments/mainnet/Controller.json");
 const MainnetControllerV1 = require("./deployments/mainnet/ControllerV1.json");
+const MainnetControllerV1_1 = require("./deployments/mainnet/ControllerV1.1.json");
+//
 const MainnetControllerRegistry = require("./deployments/mainnet/ControllerRegistry.json");
 const MainnetMemberToken = require("./deployments/mainnet/MemberToken.json");
 const MainnetPodEnsRegistrar = require("./deployments/mainnet/PodEnsRegistrar.json");
@@ -21,18 +26,26 @@ const networkMap = {
 
 const deployments = {
   rinkeby: {
+    // controllers
     controller: RinkebyController,
     controllerv1: RinkebyControllerV1,
     controllerv1_1: RinkebyControllerV1_1,
+    // latest controller
     controllerlatest: RinkebyControllerV1_1,
+    //
     controllerregistry: RinkebyControllerRegistry,
     membertoken: RinkebyMemberToken,
     podensregistrar: RinkebyPodEnsRegistrar,
     invitetoken: RinkebyInviteToken,
   },
   mainnet: {
+    // controllers
     controller: MainnetController,
     controllerv1: MainnetControllerV1,
+    controllerv1_1: MainnetControllerV1_1,
+    // latest controller
+    controllerlatest: MainnetControllerV1_1,
+    //
     controllerregistry: MainnetControllerRegistry,
     membertoken: MainnetMemberToken,
     podensregistrar: MainnetPodEnsRegistrar,
@@ -75,6 +88,7 @@ function getControllerByAddress(address, network) {
   if (networkName === "mainnet") {
     if (checksumAddress === ethers.utils.getAddress(MainnetController.address)) return MainnetController;
     if (checksumAddress === ethers.utils.getAddress(MainnetControllerV1.address)) return MainnetControllerV1;
+    if (checksumAddress === ethers.utils.getAddress(MainnetControllerV1_1.address)) return MainnetControllerV1_1;
     throw new Error("Address did not match any mainnet deployments");
   }
   throw new Error("Network not found, currently only support rinkeby and mainnet");
