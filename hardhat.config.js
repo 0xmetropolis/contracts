@@ -33,7 +33,7 @@ const networks = {
   mainnet: {
     url: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
     accounts: process.env.MAINNET_PRIVATE_KEY ? [process.env.MAINNET_PRIVATE_KEY] : [],
-    gasPrice: 200000000000,
+    gasPrice: ethers.utils.parseUnits("70", "gwei").toNumber(),
     timeout: 1200000, // 20 minute timeout in ms
   },
 };
