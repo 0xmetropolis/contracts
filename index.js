@@ -1,4 +1,5 @@
 /* eslint-disable camelcase */
+const { ethers } = require("ethers");
 const RinkebyController = require("./deployments/rinkeby/Controller.json");
 const RinkebyControllerV1 = require("./deployments/rinkeby/ControllerV1.json");
 const RinkebyControllerV1_1 = require("./deployments/rinkeby/ControllerV1.1.json");
@@ -63,16 +64,17 @@ function getDeployment(contract, network) {
  * @param {*} network - The network. You can use network id or name.
  */
 function getControllerByAddress(address, network) {
+  const checksumAddress = ethers.utils.getAddress(address);
   const networkName = typeof network === "number" ? networkMap[network] : network.toLowerCase();
   if (networkName === "rinkeby") {
-    if (address === RinkebyController.address) return RinkebyController;
-    if (address === RinkebyControllerV1.address) return RinkebyControllerV1;
-    if (address === RinkebyControllerV1_1.address) return RinkebyControllerV1_1;
+    if (checksumAddress === ethers.utils.getAddress(RinkebyController.address)) return RinkebyController;
+    if (checksumAddress === ethers.utils.getAddress(RinkebyControllerV1.address)) return RinkebyControllerV1;
+    if (checksumAddress === ethers.utils.getAddress(RinkebyControllerV1_1.address)) return RinkebyControllerV1_1;
     throw new Error("Address did not match any rinkeby deployments");
   }
   if (networkName === "mainnet") {
-    if (address === MainnetController.address) return MainnetController;
-    if (address === MainnetControllerV1.address) return MainnetControllerV1;
+    if (checksumAddress === ethers.utils.getAddress(MainnetController.address)) return MainnetController;
+    if (checksumAddress === ethers.utils.getAddress(MainnetControllerV1.address)) return MainnetControllerV1;
     throw new Error("Address did not match any mainnet deployments");
   }
   throw new Error("Network not found, currently only support rinkeby and mainnet");
