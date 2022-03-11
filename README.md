@@ -1,8 +1,37 @@
-## Orca Protocol
+# Orca Protocol
 
 Orca Protocol is a lightweight permissions and membership management protocol that can be connected to Gnosis Safe through the `SafeTeller.sol` safe module.
 
 Each membership group within orca is referred to as a pod and pod memberships are represented by ERC1155 membership tokens.
+
+## Library Usage
+
+The NPM package includes some convenience functions for fetching deployments:
+
+```js
+import { getDeployment, getControllerByAddress } from "@orcaprotocol/contracts";
+
+// Fetches the latest Controller from the mainnet
+const controller = getDeployment("ControllerLatest", 1);
+// Fetching and instantiating the MemberToken contract
+const memberTokenDeployment = getDeployment("MemberToken", network);
+const MemberToken = new ethers.Contract(memberTokenDeployment.address, memberTokenDeployment.abi, provider);
+
+// You can also fetch the Controller version by the address of the deployment.
+// This is useful for fetching Controllers from Pods, as different Pod versions
+// have different Controllers
+
+// The Controller address tracked on the MemberToken
+const controllerAddress = await MemberToken.memberController(id);
+if (controllerAddress === ethers.constants.AddressZero) {
+  throw new Error("Pod ID was not registered on Controller");
+}
+
+const controllerDeployment = getControllerByAddress(controllerAddress, network);
+const Controller = new ethers.Contract(controllerDeployment.address, controllerDeployment.abi, provider);
+```
+
+###
 
 ## Development
 

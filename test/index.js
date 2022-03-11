@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 const { expect } = require("chai");
 const { getDeployment, getControllerByAddress } = require("..");
 const RinkebyController = require("../deployments/rinkeby/Controller.json");
