@@ -21,6 +21,7 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
     mapping(address => uint256) public safeToPodId;
     mapping(uint256 => address) public podIdToSafe;
     mapping(uint256 => address) public podAdmin;
+    mapping(uint256 => bool) public isTransferLocked;
 
     uint8 internal constant CREATE_EVENT = 0x01;
 
@@ -225,6 +226,29 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
     }
 
     /**
+     * @param _podId The id number of the pod
+     * @param _isTransferLocked The address of the new pod admin
+     */
+    function setPodTransferLock(uint256 _podId, bool _isTransferLocked) public {
+        address admin = podAdmin[_podId];
+        address safe = podIdToSafe[_podId];
+
+        // if no pod admin it can only be set by safe
+        if (admin == address(0)) {
+            require(msg.sender == safe, "Only safe can set transfer lock");
+        } else {
+            // if admin then it can be set by admin or safe
+            require(
+                msg.sender == admin || msg.sender == safe,
+                "Only admin or safe can set transfer lock"
+            );
+        }
+
+        // set podid to transfer lock bool
+        isTransferLocked[_podId] = _isTransferLocked;
+    }
+
+    /**
      * @dev This will nullify all pod state on this controller
      * @dev Update state on _newController
      * @dev Update controller to _newController in Safe and MemberToken
@@ -353,6 +377,11 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
 
                 onBurn(from, safe);
             } else {
+                // pod cannot be locked
+                require(
+                    isTransferLocked[podId] == false,
+                    "Pod Is Transfer Locked"
+                );
                 // transfer event
                 onTransfer(from, to, safe);
             }

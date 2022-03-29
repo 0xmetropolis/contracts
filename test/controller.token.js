@@ -150,4 +150,54 @@ describe("Controller beforeTokenTransfer Test", () => {
         .withArgs(bob.address, bob.address, charlie.address, POD_ID, 1);
     });
   });
+
+  describe("when toggling transfer lock without a pod admin", () => {
+    beforeEach(async () => {
+      await setup();
+      await controller.connect(admin).updatePodAdmin(POD_ID, AddressZero);
+    });
+
+    it("should allow safe to toggle transfer lock", async () => {
+      await controller.connect(safeSigner).setPodTransferLock(POD_ID, true);
+      expect(await controller.isTransferLocked(POD_ID)).to.equal(true);
+    });
+    it("should throw if user toggles transfer lock", async () => {
+      await expect(controller.connect(bob).setPodTransferLock(POD_ID, true)).to.be.revertedWith(
+        "Only safe can set transfer lock",
+      );
+    });
+  });
+
+  describe("when toggling transfer lock with a pod admin", () => {
+    beforeEach(async () => {
+      await setup();
+    });
+
+    it("should allow admin to toggle transfer lock", async () => {
+      await controller.connect(safeSigner).setPodTransferLock(POD_ID, true);
+      expect(await controller.isTransferLocked(POD_ID)).to.equal(true);
+    });
+    it("should allow safe to toggle transfer lock", async () => {
+      await controller.connect(safeSigner).setPodTransferLock(POD_ID, true);
+      expect(await controller.isTransferLocked(POD_ID)).to.equal(true);
+    });
+    it("should throw if user toggles transfer lock", async () => {
+      await expect(controller.connect(bob).setPodTransferLock(POD_ID, true)).to.be.revertedWith(
+        "Only admin or safe can set transfer lock",
+      );
+    });
+  });
+
+  describe("when transferring membership tokens with transfer lock", () => {
+    beforeEach(async () => {
+      await setup();
+      await controller.connect(safeSigner).setPodTransferLock(POD_ID, true);
+    });
+
+    it("should throw when user to transfer membership token", async () => {
+      await expect(
+        memberToken.connect(bob).safeTransferFrom(bob.address, charlie.address, POD_ID, 1, HashZero, TX_OPTIONS),
+      ).to.revertedWith("Pod Is Transfer Locked");
+    });
+  });
 });
