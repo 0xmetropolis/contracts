@@ -18,6 +18,9 @@ describe("pod migration test", () => {
   const TX_OPTIONS = { gasLimit: 4000000 };
   const GUARD_STORAGE_SLOT = "0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8";
 
+  // current controller being tested - will attempt to test migrations to this version
+  const CONTROLLER_LATEST = "ControllerV1.2";
+
   // create pod args
   const MEMBERS = [alice.address, bob.address];
   const LEGACY_POD_ID = 0;
@@ -37,10 +40,10 @@ describe("pod migration test", () => {
   };
 
   const setupV0 = async () => {
-    await deployments.fixture(["Base", "Registry", "Controller", "ControllerV1", "ControllerV1.1"]);
+    await deployments.fixture(["Base", "Registry", "Controller", "ControllerV1", "ControllerLatest"]);
     const controller = {};
     controller.VPrev = await ethers.getContract("Controller", admin);
-    controller.VNext = await ethers.getContract("ControllerV1.1", admin);
+    controller.VNext = await ethers.getContract(CONTROLLER_LATEST, admin);
 
     const { memberToken, controllerRegistry } = await setDependancies(controller);
     // register VNext contracts
@@ -59,11 +62,11 @@ describe("pod migration test", () => {
     };
   };
 
-  const setupV1 = async () => {
-    await deployments.fixture(["Base", "Registry", "Controller", "ControllerV1", "ControllerV1.1"]);
+  const setupV1 = async controllerV1 => {
+    await deployments.fixture(["Base", "Registry", "Controller", controllerV1, "ControllerLatest"]);
     const controller = {};
-    controller.VPrev = await ethers.getContract("ControllerV1", admin);
-    controller.VNext = await ethers.getContract("ControllerV1.1", admin);
+    controller.VPrev = await ethers.getContract(controllerV1, admin);
+    controller.VNext = await ethers.getContract(CONTROLLER_LATEST, admin);
 
     const { memberToken, controllerRegistry } = await setDependancies(controller);
     // register VNext contracts
@@ -196,6 +199,12 @@ describe("pod migration test", () => {
     });
   };
 
-  describe("should test Controller to ControllerV1.1", async () => migrationTests(setupV0));
-  describe("should test ControllerV1 to ControllerV1.1", async () => migrationTests(setupV1));
+  // Test Execution
+  describe(`should test Controller to ${CONTROLLER_LATEST}`, async () => migrationTests(setupV0));
+
+  describe(`should test ControllerV1 to ${CONTROLLER_LATEST}`, async () =>
+    migrationTests(() => setupV1("ControllerV1")));
+
+  describe(`should test ControllerV1.1 to ${CONTROLLER_LATEST}`, async () =>
+    migrationTests(() => setupV1("ControllerV1.1")));
 });

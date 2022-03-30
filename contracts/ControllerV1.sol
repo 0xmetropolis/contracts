@@ -18,6 +18,8 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
     IControllerRegistry public immutable controllerRegistry;
     IPodEnsRegistrar public podEnsRegistrar;
 
+    string public constant VERSION = "1.2.0";
+
     mapping(address => uint256) public safeToPodId;
     mapping(uint256 => address) public podIdToSafe;
     mapping(uint256 => address) public podAdmin;

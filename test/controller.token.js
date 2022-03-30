@@ -22,6 +22,9 @@ describe("Controller beforeTokenTransfer Test", () => {
   const POD_LABEL = labelhash("test");
   const IMAGE_URL = "https://testurl/";
 
+  // current controller being tested
+  const CONTROLLER_LATEST = "ControllerV1.2";
+
   let controller;
   let memberToken;
   let safe;
@@ -49,9 +52,9 @@ describe("Controller beforeTokenTransfer Test", () => {
   };
 
   const setup = async () => {
-    await deployments.fixture(["Base", "Registrar", "ControllerV1.1"]);
+    await deployments.fixture(["Base", "Registrar", "ControllerLatest"]);
 
-    controller = await ethers.getContract("ControllerV1.1", admin);
+    controller = await ethers.getContract(CONTROLLER_LATEST, admin);
     memberToken = await ethers.getContract("MemberToken", admin);
 
     const podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", admin);
