@@ -1,56 +1,19 @@
 /* eslint-disable camelcase */
 const { ethers } = require("ethers");
+const fs = require("fs");
+
 // controllers
-const RinkebyController = require("./deployments/rinkeby/Controller.json");
-const RinkebyControllerV1 = require("./deployments/rinkeby/ControllerV1.json");
 const RinkebyControllerV1_1 = require("./deployments/rinkeby/ControllerV1.1.json");
-//
-const RinkebyControllerRegistry = require("./deployments/rinkeby/ControllerRegistry.json");
-const RinkebyMemberToken = require("./deployments/rinkeby/MemberToken.json");
-const RinkebyPodEnsRegistrar = require("./deployments/rinkeby/PodEnsRegistrar.json");
-const RinkebyInviteToken = require("./deployments/rinkeby/InviteToken.json");
-// controllers
-const MainnetController = require("./deployments/mainnet/Controller.json");
-const MainnetControllerV1 = require("./deployments/mainnet/ControllerV1.json");
 const MainnetControllerV1_1 = require("./deployments/mainnet/ControllerV1.1.json");
-//
-const MainnetControllerRegistry = require("./deployments/mainnet/ControllerRegistry.json");
-const MainnetMemberToken = require("./deployments/mainnet/MemberToken.json");
-const MainnetPodEnsRegistrar = require("./deployments/mainnet/PodEnsRegistrar.json");
-const MainnetInviteToken = require("./deployments/mainnet/InviteToken.json");
 
 const networkMap = {
   1: "mainnet",
   4: "rinkeby",
 };
 
-const deployments = {
-  rinkeby: {
-    // controllers
-    controller: RinkebyController,
-    controllerv1: RinkebyControllerV1,
-    controllerv1_1: RinkebyControllerV1_1,
-    // latest controller
-    controllerlatest: RinkebyControllerV1_1,
-    //
-    controllerregistry: RinkebyControllerRegistry,
-    membertoken: RinkebyMemberToken,
-    podensregistrar: RinkebyPodEnsRegistrar,
-    invitetoken: RinkebyInviteToken,
-  },
-  mainnet: {
-    // controllers
-    controller: MainnetController,
-    controllerv1: MainnetControllerV1,
-    controllerv1_1: MainnetControllerV1_1,
-    // latest controller
-    controllerlatest: MainnetControllerV1_1,
-    //
-    controllerregistry: MainnetControllerRegistry,
-    membertoken: MainnetMemberToken,
-    podensregistrar: MainnetPodEnsRegistrar,
-    invitetoken: MainnetInviteToken,
-  },
+const controllerLatest = {
+  rinkeby: RinkebyControllerV1_1,
+  mainnet: MainnetControllerV1_1,
 };
 
 /**
@@ -59,16 +22,27 @@ const deployments = {
  * @param {*} network - The network. You can use network id or name.
  */
 function getDeployment(contract, network) {
-  const contractName = contract.toLowerCase();
+  // replace underscores with dots controllerV1_1 -> controllerV1.1
+  const contractName = contract.toLowerCase().replace("_", ".");
   const networkName = typeof network === "number" ? networkMap[network] : network.toLowerCase();
 
-  const networkObject = deployments[networkName];
-  if (!networkObject) throw new RangeError("Invalid network");
+  if (!Object.values(networkMap).includes(networkName)) throw new RangeError("Invalid network");
 
-  const contractObject = networkObject[contractName];
-  if (!contractObject) throw new RangeError("Invalid contract name");
+  // if contract name is controllerlatest return from latestController cache
+  if (contractName === "controllerlatest") return controllerLatest[networkName];
 
-  return contractObject;
+  const fileNameLookup = {};
+  fs.readdirSync(`./deployments/${networkName}`).forEach(name => {
+    const fileName = name.toLowerCase().split(".json")[0]; // get lowercase name w/o file extension
+    fileNameLookup[fileName] = name; // use filename as key for file name lookup
+  });
+
+  try {
+    const artifact = JSON.parse(fs.readFileSync(`./deployments/${networkName}/${fileNameLookup[contractName]}`));
+    return artifact;
+  } catch (e) {
+    throw new RangeError("Invalid contract name");
+  }
 }
 
 /**
@@ -79,19 +53,23 @@ function getDeployment(contract, network) {
 function getControllerByAddress(address, network) {
   const checksumAddress = ethers.utils.getAddress(address);
   const networkName = typeof network === "number" ? networkMap[network] : network.toLowerCase();
-  if (networkName === "rinkeby") {
-    if (checksumAddress === ethers.utils.getAddress(RinkebyController.address)) return RinkebyController;
-    if (checksumAddress === ethers.utils.getAddress(RinkebyControllerV1.address)) return RinkebyControllerV1;
-    if (checksumAddress === ethers.utils.getAddress(RinkebyControllerV1_1.address)) return RinkebyControllerV1_1;
-    throw new Error("Address did not match any rinkeby deployments");
+
+  if (!Object.values(networkMap).includes(networkName)) throw new RangeError("Invalid network");
+
+  const fileLookup = {};
+  fs.readdirSync(`./deployments/${networkName}`).forEach(name => {
+    // case sensitive - should only get controllers and controller registry
+    if (name.includes("Controller")) {
+      const artifact = JSON.parse(fs.readFileSync(`./deployments/${networkName}/${name}`));
+      fileLookup[ethers.utils.getAddress(artifact.address)] = artifact; // use checksummed address as key for file lookup
+    }
+  });
+
+  const controller = fileLookup[checksumAddress];
+  if (!controller) {
+    throw new Error(`Address did not match any ${networkName} deployments`);
   }
-  if (networkName === "mainnet") {
-    if (checksumAddress === ethers.utils.getAddress(MainnetController.address)) return MainnetController;
-    if (checksumAddress === ethers.utils.getAddress(MainnetControllerV1.address)) return MainnetControllerV1;
-    if (checksumAddress === ethers.utils.getAddress(MainnetControllerV1_1.address)) return MainnetControllerV1_1;
-    throw new Error("Address did not match any mainnet deployments");
-  }
-  throw new Error("Network not found, currently only support rinkeby and mainnet");
+  return controller;
 }
 
 module.exports = {
