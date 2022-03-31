@@ -58,5 +58,5 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
   }
 };
 
-module.exports.tags = ["ControllerLatest"];
+module.exports.tags = ["ControllerV1.2"];
 module.exports.dependencies = ["Registrar"];
