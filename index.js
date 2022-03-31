@@ -3,8 +3,8 @@ const { ethers } = require("ethers");
 const fs = require("fs");
 
 // controllers
-const RinkebyControllerV1_1 = require("./deployments/rinkeby/ControllerV1.1.json");
-const MainnetControllerV1_1 = require("./deployments/mainnet/ControllerV1.1.json");
+const rinkebyController = require("./deployments/rinkeby/ControllerV1.2.json");
+const mainnetController = require("./deployments/mainnet/ControllerV1.1.json");
 
 const networkMap = {
   1: "mainnet",
@@ -12,8 +12,8 @@ const networkMap = {
 };
 
 const controllerLatest = {
-  rinkeby: RinkebyControllerV1_1,
-  mainnet: MainnetControllerV1_1,
+  rinkeby: rinkebyController,
+  mainnet: mainnetController,
 };
 
 /**
