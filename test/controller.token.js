@@ -52,7 +52,7 @@ describe("Controller beforeTokenTransfer Test", () => {
   };
 
   const setup = async () => {
-    await deployments.fixture(["Base", "Registrar", "ControllerLatest"]);
+    await deployments.fixture(["Base", "Registrar", CONTROLLER_LATEST]);
 
     controller = await ethers.getContract(CONTROLLER_LATEST, admin);
     memberToken = await ethers.getContract("MemberToken", admin);

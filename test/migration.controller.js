@@ -40,7 +40,7 @@ describe("pod migration test", () => {
   };
 
   const setupV0 = async () => {
-    await deployments.fixture(["Base", "Registry", "Controller", "ControllerV1", "ControllerLatest"]);
+    await deployments.fixture(["Base", "Registry", "Controller", "ControllerV1", CONTROLLER_LATEST]);
     const controller = {};
     controller.VPrev = await ethers.getContract("Controller", admin);
     controller.VNext = await ethers.getContract(CONTROLLER_LATEST, admin);
@@ -63,7 +63,7 @@ describe("pod migration test", () => {
   };
 
   const setupV1 = async controllerV1 => {
-    await deployments.fixture(["Base", "Registry", "Controller", controllerV1, "ControllerLatest"]);
+    await deployments.fixture(["Base", "Registry", "Controller", controllerV1, CONTROLLER_LATEST]);
     const controller = {};
     controller.VPrev = await ethers.getContract(controllerV1, admin);
     controller.VNext = await ethers.getContract(CONTROLLER_LATEST, admin);

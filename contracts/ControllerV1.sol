@@ -231,7 +231,10 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
      * @param _podId The id number of the pod
      * @param _isTransferLocked The address of the new pod admin
      */
-    function setPodTransferLock(uint256 _podId, bool _isTransferLocked) public {
+    function setPodTransferLock(uint256 _podId, bool _isTransferLocked)
+        external
+        override
+    {
         address admin = podAdmin[_podId];
         address safe = podIdToSafe[_podId];
 
