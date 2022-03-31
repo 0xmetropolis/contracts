@@ -28,6 +28,9 @@ describe("Controller safe integration test", () => {
   const POD_ID = 0;
   const IMAGE_URL = "https://orcaprotocol-nft.vercel.app/assets/testnet/00000001";
 
+  // current controller being tested
+  const CONTROLLER_LATEST = "ControllerV1.2";
+
   const createSafeSigner = async (safe, signer) => {
     const { chainId } = await provider.getNetwork();
 
@@ -85,12 +88,12 @@ describe("Controller safe integration test", () => {
   };
 
   const setup = async () => {
-    await deployments.fixture(["Base", "Registrar", "ControllerV1.1"]);
+    await deployments.fixture(["Base", "Registrar", CONTROLLER_LATEST]);
     // Deploy the master safe contract and multisend
     multiSend = await deployContract(admin, MultiSend);
     fallbackHandler = await deployContract(admin, FallbackHandler);
 
-    controller = await ethers.getContract("ControllerV1.1", admin);
+    controller = await ethers.getContract(CONTROLLER_LATEST, admin);
 
     const publicResolver = await ethers.getContract("PublicResolver", admin);
 

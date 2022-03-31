@@ -48,6 +48,12 @@ interface IControllerV1 is IControllerBase {
 
     /**
      * @param _podId The id number of the pod
+     * @param _isTransferLocked The address of the new pod admin
+     */
+    function setPodTransferLock(uint256 _podId, bool _isTransferLocked) external;
+
+    /**
+     * @param _podId The id number of the pod
      * @param _newAdmin The address of the new pod admin
      */
     function updatePodAdmin(uint256 _podId, address _newAdmin) external;
