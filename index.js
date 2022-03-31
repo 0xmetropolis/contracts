@@ -4,7 +4,7 @@ const fs = require("fs");
 
 // controllers
 const rinkebyController = require("./deployments/rinkeby/ControllerV1.2.json");
-const mainnetController = require("./deployments/mainnet/ControllerV1.1.json");
+const mainnetController = require("./deployments/mainnet/ControllerV1.2.json");
 
 const networkMap = {
   1: "mainnet",
