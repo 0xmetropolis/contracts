@@ -38,7 +38,8 @@ describe("Get Deployment", () => {
   });
 
   it("should be able to find latest controller", () => {
-    expect(() => getDeployment("controllerLatest", 4)).to.not.throw("Invalid contract name");
+    expect(() => getDeployment("ControllerLatest", 4)).to.not.throw("Invalid contract name");
+    expect(getDeployment("ControllerLatest", 4)).to.have.property("abi");
   });
 
   it("should be able to fetch Controllers by address", () => {

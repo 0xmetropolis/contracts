@@ -31,8 +31,8 @@ const contracts = {
 };
 
 const controllerLatest = {
-  rinkeby: contracts.rinkeby.controllerV1_2,
-  mainnet: contracts.mainnet.controllerV1_2,
+  rinkeby: require("./deployments/rinkeby/ControllerV1.2.json"),
+  mainnet: require("./deployments/mainnet/ControllerV1.2.json"),
 };
 
 /**
@@ -46,7 +46,6 @@ function getDeployment(contract, network) {
   const networkName = typeof network === "number" ? networkMap[network] : network.toLowerCase();
 
   if (!Object.values(networkMap).includes(networkName)) throw new RangeError("Invalid network");
-
   // if contract name is controllerlatest return from latestController cache
   if (contractName === "controllerlatest") return controllerLatest[networkName];
 
