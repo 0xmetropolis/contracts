@@ -36,7 +36,7 @@ const controllerLatest = {
 };
 
 /**
- *
+ * Gets the artifact of contract based on contract name string and network
  * @param {string} contractName - The name of the contract, casing independent.
  * @param {*} network - The network. You can use network id or name.
  */
