@@ -39,6 +39,8 @@ interface IControllerV1 is IControllerBase {
         string memory _imageUrl
     ) external;
 
+    function podIdToSafe(uint256 _podId) external view returns (address);
+
     /**
      * @dev Allows admin to unlock the safe modules and allow them to be edited by members
      * @param _podId The id number of the pod
