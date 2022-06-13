@@ -332,6 +332,51 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
     }
 
     /**
+     * Ejects a safe from the Orca ecosystem. Also handles clean up for safes
+     * that have already been ejected.
+     * Note that the reverse registry entry cannot be cleaned up if the safe has already been ejected.
+     * @param podId - ID of pod being ejected
+     * @param label - labelhash of pod ENS name, i.e., `labelhash("mypod")`
+     * @param members - array of all members in the pod
+     * @param previousModule - previous module
+     */
+    function ejectSafe(
+        uint256 podId,
+        bytes32 label,
+        address[] calldata members,
+        address previousModule
+    ) external {
+        address safe = podIdToSafe[podId];
+        require(safe != address(0), "pod not registered");
+        podEnsRegistrar.deregister(safe, label);
+
+        if (podAdmin[podId] != address(0)) {
+            require(msg.sender == podAdmin[podId], "must be admin");
+            setModuleLock(safe, false);
+        } else {
+            require(msg.sender == safe, "tx must be sent from safe");
+        }
+
+        this.disableModule(
+            safe,
+            podEnsRegistrar.reverseRegistrar(),
+            previousModule,
+            address(this)
+        );
+
+        // This needs to happen before the burn to skip the transfer check.
+        podAdmin[podId] = address(0);
+        podIdToSafe[podId] = address(0);
+        safeToPodId[safe] = 0;
+
+        require(
+            memberToken.totalSupply(podId) == members.length,
+            "must provide all pod members"
+        );
+        memberToken.burnSingleBatch(members, podId);
+    }
+
+    /**
      * @param operator The address that initiated the action
      * @param from The address sending the membership token
      * @param to The address recieveing the membership token
@@ -350,12 +395,19 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
 
         // if create event than side effects have been pre-handled
         // only recognise data flags from this controller
-        if (operator == address(this) && uint8(data[0]) == CREATE_EVENT) return;
+        if (
+            operator == address(this) &&
+            data.length > 0 &&
+            uint8(data[0]) == CREATE_EVENT
+        ) return;
 
         for (uint256 i = 0; i < ids.length; i += 1) {
             uint256 podId = ids[i];
             address safe = podIdToSafe[podId];
             address admin = podAdmin[podId];
+
+            // If safe is 0'd, it means we're deregistering the pod, so we can skip check
+            if (safe == address(0) && to == address(0)) return;
 
             if (from == address(0)) {
                 // mint event

@@ -1,8 +1,10 @@
 pragma solidity 0.8.7;
 
 interface IGnosisSafe {
-
-    enum Operation {Call, DelegateCall}
+    enum Operation {
+        Call,
+        DelegateCall
+    }
 
     /// @dev Allows a Module to execute a Safe transaction without any further confirmations.
     /// @param to Destination address of module transaction.
@@ -30,7 +32,7 @@ interface IGnosisSafe {
     /// @return array Array of modules.
     /// @return next Start of the next page.
     function getModulesPaginated(address start, uint256 pageSize)
-        external 
+        external
         view
         returns (address[] memory array, address next);
 
@@ -41,4 +43,6 @@ interface IGnosisSafe {
     /// @dev Set a guard that checks transactions before execution
     /// @param guard The address of the guard to be used or the 0 address to disable the guard
     function setGuard(address guard) external;
+
+    function disableModule(address prevModule, address module) external;
 }

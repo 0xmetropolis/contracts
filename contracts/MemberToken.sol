@@ -154,6 +154,8 @@ contract MemberToken is ERC1155Supply, Ownable {
         uint256[] memory amounts,
         bytes memory data
     ) internal override {
+        super._beforeTokenTransfer(operator, from, to, ids, amounts, data);
+
         // use first id to lookup controller
         address controller = memberController[ids[0]];
         require(controller != address(0), "Pod doesn't exist");

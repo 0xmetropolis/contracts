@@ -16,7 +16,7 @@ interface IMemberToken is IERC1155 {
     function getNextAvailablePodId() external view returns (uint256);
 
     /**
-     * @param _podId The pod id number 
+     * @param _podId The pod id number
      * @param _newController The address of the new controller
      */
     function migrateMemberController(uint256 _podId, address _newController)
@@ -44,5 +44,9 @@ interface IMemberToken is IERC1155 {
         bytes memory data
     ) external;
 
-    function createPod(address[] memory _accounts, bytes memory data) external returns (uint256);
+    function burnSingleBatch(address[] memory _accounts, uint256 _id) external;
+
+    function createPod(address[] memory _accounts, bytes memory data)
+        external
+        returns (uint256);
 }

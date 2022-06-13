@@ -1,6 +1,8 @@
 pragma solidity 0.8.7;
 
 interface IPodEnsRegistrar {
+    function reverseRegistrar() external view returns (address);
+
     function getRootNode() external view returns (bytes32);
 
     function registerPod(
@@ -10,6 +12,8 @@ interface IPodEnsRegistrar {
     ) external returns (address);
 
     function register(bytes32 label, address owner) external;
+
+    function deregister(address safe, bytes32 label) external;
 
     function setText(
         bytes32 node,
