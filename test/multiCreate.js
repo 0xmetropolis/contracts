@@ -83,9 +83,17 @@ describe("Controller safe integration test", () => {
   it("should create non-dependant pods", async () => {
     const { multiCreate, memberToken } = await setup();
 
-    const podData = ["a", "b", "c"].map(label => generatePodData(label));
+    const [
+      podA, // index 1
+      podB, // index 2
+      podC, // index 3
+    ] = ["a", "b", "c"].map(label => generatePodData(label));
 
-    const { membersArray, thresholds, admins, labels, ensStrings, imageUrls } = convertPodArrayToArgArray(podData);
+    const { membersArray, thresholds, admins, labels, ensStrings, imageUrls } = convertPodArrayToArgArray([
+      podA,
+      podB,
+      podC,
+    ]);
 
     const initNextPodId = await memberToken.getNextAvailablePodId();
 
@@ -98,63 +106,78 @@ describe("Controller safe integration test", () => {
   it("should create non-dependant pod with zero admin", async () => {
     const { multiCreate, memberToken } = await setup();
 
-    const podData = ["a", "b", "c"].map(label => generatePodData(label));
+    const [
+      podA, // index 1
+      podB, // index 2
+      podC, // index 3
+    ] = ["a", "b", "c"].map(label => generatePodData(label));
 
-    const { membersArray, thresholds, admins, labels, ensStrings, imageUrls } = convertPodArrayToArgArray(podData);
+    // set pod admin to zero
+    podB.admin = AddressZero;
 
-    admins[0] = AddressZero;
+    const { membersArray, thresholds, admins, labels, ensStrings, imageUrls } = convertPodArrayToArgArray([
+      podA,
+      podB,
+      podC,
+    ]);
 
     const initNextPodId = await memberToken.getNextAvailablePodId();
 
     await multiCreate.createPods(controller.address, membersArray, thresholds, admins, labels, ensStrings, imageUrls);
 
     const newNextPodId = await memberToken.getNextAvailablePodId();
+    // should create 3 pods
     expect(newNextPodId).to.equal(initNextPodId + 3);
-  });
-
-  it("should throw with bad admin dependacy order", async () => {
-    const { multiCreate } = await setup();
-
-    const podData = ["a", "b", "c"].map(label => generatePodData(label));
-
-    const { membersArray, thresholds, admins, labels, ensStrings, imageUrls } = convertPodArrayToArgArray(podData);
-
-    // override with dependency pointer with bad order - admin for pod 2 is pod 3
-    admins[1] = createAddressPointer(3);
-
-    await expect(
-      multiCreate.createPods(controller.address, membersArray, thresholds, admins, labels, ensStrings, imageUrls),
-    ).to.be.revertedWith("Admin dependency bad ordering");
   });
 
   it("should use an address pointer for setting admin", async () => {
     const { multiCreate, memberToken } = await setup();
 
-    const podData = ["a", "b", "c"].map(label => generatePodData(label));
+    const [
+      podA, // index 1
+      podB, // index 2
+      podC, // index 3
+    ] = ["a", "b", "c"].map(label => generatePodData(label));
 
-    const { membersArray, thresholds, admins, labels, ensStrings, imageUrls } = convertPodArrayToArgArray(podData);
+    // podB admin should be podC
 
-    // override with dependency pointer with - admin for pod 3 is pod 2
-    admins[2] = createAddressPointer(2);
+    // override admin of podB with podC pointer
+    podC.admin = createAddressPointer(2);
+
+    const { membersArray, thresholds, admins, labels, ensStrings, imageUrls } = convertPodArrayToArgArray([
+      podA,
+      podB,
+      podC,
+    ]);
 
     const initPodId = (await memberToken.getNextAvailablePodId()) - 1;
 
     await multiCreate.createPods(controller.address, membersArray, thresholds, admins, labels, ensStrings, imageUrls);
 
-    const pod2Address = await controller.podIdToSafe(initPodId + 2);
-    const pod3Admin = await controller.podAdmin(initPodId + 3);
-    expect(pod2Address).to.equal(pod3Admin);
+    const podBAddress = await controller.podIdToSafe(initPodId + 2);
+    const podCAdmin = await controller.podAdmin(initPodId + 3);
+    expect(podBAddress).to.equal(podCAdmin);
   });
 
   it("should throw with bad member dependacy order", async () => {
     const { multiCreate } = await setup();
 
-    const podData = ["a", "b", "c"].map(label => generatePodData(label));
+    const [
+      podA, // index 1
+      podB, // index 2
+      podC, // index 3
+    ] = ["a", "b", "c"].map(label => generatePodData(label));
 
-    const { membersArray, thresholds, admins, labels, ensStrings, imageUrls } = convertPodArrayToArgArray(podData);
+    // should throw with podC should be a member of podB
 
-    // override with dependency pointer with bad order - member[0] for pod 2 is pod 3
-    membersArray[1][0] = createAddressPointer(3);
+    // override member of podB with podC pointer
+    podB.members[0] = createAddressPointer(3);
+
+    const { membersArray, thresholds, admins, labels, ensStrings, imageUrls } = convertPodArrayToArgArray([
+      podA,
+      podB,
+      podC,
+    ]);
 
     await expect(
       multiCreate.createPods(controller.address, membersArray, thresholds, admins, labels, ensStrings, imageUrls),
@@ -164,19 +187,75 @@ describe("Controller safe integration test", () => {
   it("should use an address pointer for setting member", async () => {
     const { multiCreate, memberToken } = await setup();
 
-    const podData = ["a", "b", "c"].map(label => generatePodData(label));
+    const [
+      podA, // index 1
+      podB, // index 2
+      podC, // index 3
+    ] = ["a", "b", "c"].map(label => generatePodData(label));
 
-    const { membersArray, thresholds, admins, labels, ensStrings, imageUrls } = convertPodArrayToArgArray(podData);
+    // podB should be a member of podC
 
-    // override with dependency pointer with - member[0] of pod 3 is pod 2
-    membersArray[2][0] = createAddressPointer(2);
+    // override member of podC with podB pointer
+    podC.members[0] = createAddressPointer(2);
+
+    const { membersArray, thresholds, admins, labels, ensStrings, imageUrls } = convertPodArrayToArgArray([
+      podA,
+      podB,
+      podC,
+    ]);
 
     const initPodId = (await memberToken.getNextAvailablePodId()) - 1;
 
     await multiCreate.createPods(controller.address, membersArray, thresholds, admins, labels, ensStrings, imageUrls);
 
-    const pod2Address = await controller.podIdToSafe(initPodId + 2);
+    const podBAddress = await controller.podIdToSafe(initPodId + 2);
 
-    expect(await memberToken.balanceOf(pod2Address, initPodId + 3)).to.equal(1);
+    expect(
+      await memberToken.balanceOf(
+        podBAddress,
+        initPodId + 3, // podC id
+      ),
+    ).to.equal(1);
+  });
+
+  it("should create an agent subpod", async () => {
+    const { multiCreate, memberToken } = await setup();
+
+    const [
+      podA, // index 1
+      podB, // index 2
+      podC, // index 3
+    ] = ["a", "b", "c"].map(label => generatePodData(label));
+
+    // podB should be a member of podC
+    // podC should be admin of podB
+
+    // override member of podC with podB pointer
+    podC.members[0] = createAddressPointer(2);
+
+    // override admin of podB with podC pointer
+    podB.admin = createAddressPointer(3);
+
+    const { membersArray, thresholds, admins, labels, ensStrings, imageUrls } = convertPodArrayToArgArray([
+      podA,
+      podB,
+      podC,
+    ]);
+
+    const initPodId = (await memberToken.getNextAvailablePodId()) - 1;
+
+    await multiCreate.createPods(controller.address, membersArray, thresholds, admins, labels, ensStrings, imageUrls);
+
+    const podBAddress = await controller.podIdToSafe(initPodId + 2);
+    const podCAddress = await controller.podIdToSafe(initPodId + 3);
+    expect(
+      await memberToken.balanceOf(
+        podBAddress,
+        initPodId + 3, // podC id
+      ),
+    ).to.equal(1);
+
+    const podBAdmin = await controller.podAdmin(initPodId + 2);
+    expect(podBAdmin).to.equal(podCAddress);
   });
 });
