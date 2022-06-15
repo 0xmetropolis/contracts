@@ -346,9 +346,10 @@ describe("Controller safe integration test", () => {
       expect(await publicResolver["addr(bytes32)"](namehash("test.pod.eth"))).to.not.equal(
         ethers.constants.AddressZero,
       );
+      expect((await ens.getName(podSafe.address)).name).to.equal("test.pod.eth");
 
       const previousModule = await getPreviousModule(podSafe.address, controller.address, provider);
-      await controller.connect(admin).ejectSafe(POD_ID, labelhash("test"), MEMBERS, previousModule);
+      await controller.connect(admin).ejectSafe(POD_ID, labelhash("test"), previousModule);
 
       // Safe owners should be untouched.
       expect(await ethersSafe.getOwners()).to.deep.equal([alice.address, bob.address]);
@@ -385,12 +386,7 @@ describe("Controller safe integration test", () => {
     // Constructing TX to eject safe
     const txArgs = {
       to: controller.address,
-      data: controller.interface.encodeFunctionData("ejectSafe", [
-        POD_ID + 1,
-        labelhash("noadmin"),
-        [alice.address, bob.address],
-        previousModule,
-      ]),
+      data: controller.interface.encodeFunctionData("ejectSafe", [POD_ID + 1, labelhash("noadmin"), previousModule]),
       value: 0,
     };
     const tx = await safeSigner.createTransaction(txArgs);
@@ -444,12 +440,7 @@ describe("Controller safe integration test", () => {
     // Eject safe with an already disabled module.
     const ejectArgs = {
       to: controller.address,
-      data: controller.interface.encodeFunctionData("ejectSafe", [
-        POD_ID + 1,
-        labelhash("noadmin"),
-        [alice.address, bob.address],
-        previousModule,
-      ]),
+      data: controller.interface.encodeFunctionData("ejectSafe", [POD_ID + 1, labelhash("noadmin"), previousModule]),
       value: 0,
     };
     const ejectTx = await safeSigner.createTransaction(ejectArgs);
@@ -483,35 +474,26 @@ describe("Controller safe integration test", () => {
     await createPodSafe(admin.address, POD_ID + 1, labelhash("test2"), "test2.pod.eth");
 
     // Attempting to eject the original safe, but with the wrong label.
-    await expect(
-      controller.connect(admin).ejectSafe(POD_ID, labelhash("test2"), MEMBERS, previousModule),
-    ).to.be.revertedWith("safe and label didn't match");
-  });
-
-  it("should throw if members array does not contain every member", async () => {
-    const { podSafe } = await setup();
-
-    const previousModule = await getPreviousModule(podSafe.address, controller.address, provider);
-    await expect(
-      controller.connect(admin).ejectSafe(POD_ID, labelhash("test"), [alice.address], previousModule),
-    ).to.be.revertedWith("must provide all pod members");
+    await expect(controller.connect(admin).ejectSafe(POD_ID, labelhash("test2"), previousModule)).to.be.revertedWith(
+      "safe and label didn't match",
+    );
   });
 
   it("should throw if a non-admin attempts to eject safe", async () => {
     const { podSafe } = await setup();
 
     const previousModule = await getPreviousModule(podSafe.address, controller.address, provider);
-    await expect(
-      controller.connect(alice).ejectSafe(POD_ID, labelhash("test"), MEMBERS, previousModule),
-    ).to.be.revertedWith("must be admin");
+    await expect(controller.connect(alice).ejectSafe(POD_ID, labelhash("test"), previousModule)).to.be.revertedWith(
+      "must be admin",
+    );
   });
 
   it("should throw if ejecting a non-existent pod", async () => {
     const { podSafe } = await setup();
 
     const previousModule = await getPreviousModule(podSafe.address, controller.address, provider);
-    await expect(
-      controller.connect(alice).ejectSafe(POD_ID + 1, labelhash("test"), MEMBERS, previousModule),
-    ).to.be.revertedWith("pod not registered");
+    await expect(controller.connect(alice).ejectSafe(POD_ID + 1, labelhash("test"), previousModule)).to.be.revertedWith(
+      "pod not registered",
+    );
   });
 });

@@ -136,7 +136,10 @@ contract PodEnsRegistrar is Ownable {
      * Register a name, or change the owner of an existing registration.
      * @param label The hash of the label to register.
      */
-    function register(bytes32 label, address owner) public onlyOwner {
+    function register(bytes32 label, address owner)
+        public
+        onlyControllerOrOwner
+    {
         _register(label, owner);
     }
 
@@ -146,23 +149,6 @@ contract PodEnsRegistrar is Ownable {
      */
     function _register(bytes32 label, address owner) internal {
         ens.setSubnodeRecord(rootNode, label, owner, address(resolver), 0);
-    }
-
-    function deregister(address safe, bytes32 label)
-        external
-        onlyControllerOrOwner
-    {
-        // Ensure that the label provided matches the safe we are deregistering.
-        // Otherwise, you can deregister other labels by deregistering an arbitrary pod.
-        bytes32 node = getEnsNode(label);
-        address addr = resolver.addr(node);
-        require(addr == safe, "safe and label didn't match");
-        reverseRegistrar.setName("");
-        resolver.setAddr(node, address(0));
-        ens.setSubnodeRecord(rootNode, label, address(this), address(0), 0);
-
-        setText(node, "avatar", "");
-        setText(node, "podId", "");
     }
 
     /**
@@ -176,7 +162,10 @@ contract PodEnsRegistrar is Ownable {
         resolver.setText(node, key, value);
     }
 
-    function setAddr(bytes32 node, address newAddress) public onlyOwner {
+    function setAddr(bytes32 node, address newAddress)
+        public
+        onlyControllerOrOwner
+    {
         resolver.setAddr(node, newAddress);
     }
 

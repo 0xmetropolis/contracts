@@ -4,11 +4,15 @@ pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@ensdomains/ens-contracts/contracts/registry/ENS.sol";
+import "@ensdomains/ens-contracts/contracts/registry/ReverseRegistrar.sol";
+import "@ensdomains/ens-contracts/contracts/resolvers/Resolver.sol";
 import "./interfaces/IControllerV1.sol";
 import "./interfaces/IMemberToken.sol";
 import "./interfaces/IControllerRegistry.sol";
 import "./SafeTeller.sol";
 import "./ens/IPodEnsRegistrar.sol";
+import "hardhat/console.sol";
 
 contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
     event CreatePod(uint256 podId, address safe, address admin, string ensName);
@@ -337,18 +341,25 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
      * Note that the reverse registry entry cannot be cleaned up if the safe has already been ejected.
      * @param podId - ID of pod being ejected
      * @param label - labelhash of pod ENS name, i.e., `labelhash("mypod")`
-     * @param members - array of all members in the pod
      * @param previousModule - previous module
      */
     function ejectSafe(
         uint256 podId,
         bytes32 label,
-        address[] calldata members,
         address previousModule
     ) external {
         address safe = podIdToSafe[podId];
         require(safe != address(0), "pod not registered");
-        podEnsRegistrar.deregister(safe, label);
+        address[] memory members = this.getSafeMembers(safe);
+
+        Resolver resolver = Resolver(podEnsRegistrar.resolver());
+        bytes32 node = podEnsRegistrar.getEnsNode(label);
+        address addr = resolver.addr(node);
+        require(addr == safe, "safe and label didn't match");
+        podEnsRegistrar.setText(node, "avatar", "");
+        podEnsRegistrar.setText(node, "podId", "");
+        podEnsRegistrar.setAddr(node, address(0));
+        podEnsRegistrar.register(label, address(this));
 
         if (podAdmin[podId] != address(0)) {
             require(msg.sender == podAdmin[podId], "must be admin");
@@ -357,6 +368,7 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
             require(msg.sender == safe, "tx must be sent from safe");
         }
 
+        // Also handles reverse registration clearing.
         this.disableModule(
             safe,
             podEnsRegistrar.reverseRegistrar(),
@@ -369,10 +381,6 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
         podIdToSafe[podId] = address(0);
         safeToPodId[safe] = 0;
 
-        require(
-            memberToken.totalSupply(podId) == members.length,
-            "must provide all pod members"
-        );
         memberToken.burnSingleBatch(members, podId);
     }
 
