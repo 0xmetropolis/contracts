@@ -12,7 +12,6 @@ import "./interfaces/IMemberToken.sol";
 import "./interfaces/IControllerRegistry.sol";
 import "./SafeTeller.sol";
 import "./ens/IPodEnsRegistrar.sol";
-import "hardhat/console.sol";
 
 contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
     event CreatePod(uint256 podId, address safe, address admin, string ensName);
@@ -359,7 +358,7 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
         podEnsRegistrar.setText(node, "avatar", "");
         podEnsRegistrar.setText(node, "podId", "");
         podEnsRegistrar.setAddr(node, address(0));
-        podEnsRegistrar.register(label, address(this));
+        podEnsRegistrar.register(label, address(0));
 
         if (podAdmin[podId] != address(0)) {
             require(msg.sender == podAdmin[podId], "must be admin");
