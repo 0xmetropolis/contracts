@@ -16,6 +16,7 @@ import "./ens/IPodEnsRegistrar.sol";
 contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
     event CreatePod(uint256 podId, address safe, address admin, string ensName);
     event UpdatePodAdmin(uint256 podId, address admin);
+    event DeregisterPod(uint256 podId);
 
     IMemberToken public immutable memberToken;
     IControllerRegistry public immutable controllerRegistry;
@@ -381,6 +382,8 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
         safeToPodId[safe] = 0;
 
         memberToken.burnSingleBatch(members, podId);
+
+        emit DeregisterPod(podId);
     }
 
     /**

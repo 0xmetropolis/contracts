@@ -343,14 +343,12 @@ describe("Controller safe integration test", () => {
     async function checkEject({ ethersSafe, memberToken, publicResolver, podId, ensName }) {
       // Safe owners should be untouched.
       expect(await ethersSafe.getOwners()).to.deep.equal([alice.address, bob.address]);
-      // All MemberTokens should be removed.
-      expect(await memberToken.totalSupply(podId)).to.equal(0);
       expect(await memberToken.balanceOf(alice.address, podId)).to.equal(0);
       expect(await memberToken.balanceOf(bob.address, podId)).to.equal(0);
 
-      // Checking if regular resolver is zeroed.
+      // Checking if reverse resolver is zeroed.
       expect(await publicResolver.name(namehash(ensName))).to.equal("");
-      // I have no idea why but calling .addr directly on this contract does not work lol, hence the weird fetch.
+      // Checking if there is an owner for the node.
       expect(await publicResolver["addr(bytes32)"](namehash(ensName))).to.equal(ethers.constants.AddressZero);
       expect(await publicResolver.text(namehash(ensName), "podId")).to.equal("");
       expect(await publicResolver.text(namehash(ensName), "avatar")).to.equal("");
@@ -402,8 +400,10 @@ describe("Controller safe integration test", () => {
         ensName: "noadmin.pod.eth",
       });
 
-      // // Checking reverse resolver is zeroed.
+      // Checking reverse resolver is zeroed.
+      expect(await publicResolver.name(namehash("noadmin.pod.eth"))).to.equal("");
       expect((await ens.getName(noAdminPod.address)).name).to.equal("");
+
       expect(await safeSigner.isModuleEnabled(controller.address)).to.equal(false);
     });
 
@@ -450,8 +450,11 @@ describe("Controller safe integration test", () => {
         safeSigner,
       });
 
-      // Reverse resolve does not get zeroed.
+      // Reverse resolver does not get cleared.
       expect((await ens.getName(noAdminPod.address)).name).to.equal("noadmin.pod.eth");
+      // We are able to clear out the public resolver, but not the actual reverse resolver.
+      // That's why this record gets cleared, but not the above one.
+      expect(await publicResolver.name(namehash("noadmin.pod.eth"))).to.equal("");
       expect(await safeSigner.isModuleEnabled(controller.address)).to.equal(false);
     });
 
