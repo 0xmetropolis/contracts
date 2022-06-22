@@ -44,7 +44,7 @@ contract MultiCreateV1 {
             newPods = [address(0), address(PodA)];
             PodB.members[address(0x1337), address(1) // we know to check the cache]
 
-            because we can rely on address(0) we have to index the cache at 1
+            because we can't rely on address(0) we have to index the cache at 1
         */
 
         // 1 indexing to avoid relying on address(0)
