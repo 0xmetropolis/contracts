@@ -7,7 +7,10 @@ const { ethers } = require("ethers");
 const { task } = require("hardhat/config");
 const { utils } = require("web3");
 
+const fs = require("fs");
+
 /* eslint-disable import/no-extraneous-dependencies */
+require("hardhat-preprocessor");
 require("@nomiclabs/hardhat-waffle");
 require("hardhat-gas-reporter");
 require("solidity-coverage");
@@ -15,6 +18,14 @@ require("hardhat-deploy");
 require("@nomiclabs/hardhat-ethers");
 require("@tenderly/hardhat-tenderly");
 require("dotenv").config();
+
+function getRemappings() {
+  return fs
+    .readFileSync("remappings.txt", "utf8")
+    .split("\n")
+    .filter(Boolean) // remove empty lines
+    .map(line => line.trim().split("="));
+}
 
 const networks = {
   hardhat: {
@@ -291,5 +302,19 @@ module.exports = {
   tenderly: {
     project: "orca",
     username: "dev-sonar",
+  },
+  preprocess: {
+    eachLine: hre => ({
+      transform: line => {
+        if (line.match(/^\s*import /i)) {
+          getRemappings().forEach(([find, replace]) => {
+            if (line.match(find)) {
+              line = line.replace(find, replace);
+            }
+          });
+        }
+        return line;
+      },
+    }),
   },
 };
