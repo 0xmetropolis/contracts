@@ -43,6 +43,8 @@ Run `npm install`
 
 Run `npm run test` to run the test suite
 
+Run `forge test` to run the test suite
+
 Run `npm run coverage` to print a coverage report
 
 ## Deployment
