@@ -1,8 +1,6 @@
-pragma solidity 0.8.7;
+pragma solidity ^0.8.7;
 
-/* solhint-disable indent */
-
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "openzeppelin-contracts/token/ERC20/IERC20.sol";
 
 interface IInviteToken is IERC20 {
     function batchMint(address[] calldata accounts, uint256 amount) external;
@@ -10,5 +8,4 @@ interface IInviteToken is IERC20 {
     function mint(address account, uint256 amount) external;
 
     function burn(address account, uint256 amount) external;
-
 }

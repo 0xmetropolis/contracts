@@ -1,4 +1,4 @@
-pragma solidity 0.8.7;
+pragma solidity ^0.8.7;
 
 import "./IControllerBase.sol";
 
@@ -38,8 +38,6 @@ interface IControllerV1 is IControllerBase {
         uint256 expectedPodId,
         string memory _imageUrl
     ) external;
-
-    function podIdToSafe(uint256 _podId) external view returns (address);
 
     /**
      * @dev Allows admin to unlock the safe modules and allow them to be edited by members

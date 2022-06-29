@@ -1,9 +1,9 @@
-pragma solidity 0.8.7;
+pragma solidity ^0.8.7;
 
-import "@openzeppelin/contracts/utils/Address.sol";
+import "openzeppelin-contracts/utils/Address.sol";
 import "./interfaces/IGnosisSafe.sol";
 import "./interfaces/IGnosisSafeProxyFactory.sol";
-import "@gnosis.pm/zodiac/contracts/guard/BaseGuard.sol";
+import {BaseGuard, Enum} from "safe-contracts/base/GuardManager.sol";
 
 contract SafeTeller is BaseGuard {
     using Address for address;
@@ -283,7 +283,7 @@ contract SafeTeller is BaseGuard {
         address safe,
         address reverseRegistrar,
         string memory _ensString
-    ) internal {
+    ) internal virtual {
         bytes memory data = abi.encodeWithSignature(
             "setName(string)",
             _ensString

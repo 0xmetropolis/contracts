@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.7;
-import "@gnosis.pm/safe-contracts/contracts/common/Enum.sol";
-import "@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol";
+import "safe-contracts/common/Enum.sol";
+import "safe-contracts/GnosisSafe.sol";
 
 // used to help generate Txs for onchain approvals
 /* 
