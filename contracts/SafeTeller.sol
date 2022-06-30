@@ -336,7 +336,9 @@ contract SafeTeller is BaseGuard {
     ) external view override {
         address safe = msg.sender;
         // if safe isn't locked return
-        if (!areModulesLocked[safe]) return;
+        if (!areModulesLocked[safe]) {
+            return;
+        }
         if (data.length >= 4) {
             require(
                 bytes4(data) != ENCODED_SIG_ENABLE_MOD,
@@ -359,6 +361,47 @@ contract SafeTeller is BaseGuard {
     // Used in a delegate call to enable module add on setup
     function enableModule(address module) external {
         require(module == address(0));
+    }
+
+    /**
+     * Removes the reverse registrar entry and disables module.
+     * Intended as clean up during the safe ejection process.
+     * Note that an already ejected safe cannot clear the reverse registry entry.
+     */
+    function disableModule(
+        address safe,
+        address reverseRegistrar,
+        address previousModule,
+        address module
+    ) external {
+        IGnosisSafe safeContract = IGnosisSafe(safe);
+
+        if (!safeContract.isModuleEnabled(module)) {
+            // Module was already disabled.
+            return;
+        }
+
+        // Note that you cannot clear the reverse registry entry of an already ejected safe.
+        bytes memory nameData = abi.encodeWithSignature("setName(string)", "");
+        safeContract.execTransactionFromModule(
+            reverseRegistrar,
+            0,
+            nameData,
+            IGnosisSafe.Operation.Call
+        );
+
+        bytes memory data = abi.encodeWithSignature(
+            "disableModule(address,address)",
+            previousModule,
+            module
+        );
+
+        safeContract.execTransactionFromModule(
+            safe,
+            0,
+            data,
+            IGnosisSafe.Operation.Call
+        );
     }
 
     function delegateSetup(address _context) external {

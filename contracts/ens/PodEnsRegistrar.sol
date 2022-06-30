@@ -124,7 +124,8 @@ contract PodEnsRegistrar is Ownable {
     }
 
     /**
-     * Returns the ENS Node of a given address
+     * Returns the reverse registrar node of a given address,
+     * e.g., the node of mypod.addr.reverse.
      * @param input - an ENS registered address
      */
     function addressToNode(address input) public returns (bytes32) {
@@ -135,7 +136,10 @@ contract PodEnsRegistrar is Ownable {
      * Register a name, or change the owner of an existing registration.
      * @param label The hash of the label to register.
      */
-    function register(bytes32 label, address owner) public onlyOwner {
+    function register(bytes32 label, address owner)
+        public
+        onlyControllerOrOwner
+    {
         _register(label, owner);
     }
 
@@ -152,13 +156,16 @@ contract PodEnsRegistrar is Ownable {
      */
     function setText(
         bytes32 node,
-        string calldata key,
-        string calldata value
+        string memory key,
+        string memory value
     ) public onlyControllerOrOwner {
         resolver.setText(node, key, value);
     }
 
-    function setAddr(bytes32 node, address newAddress) public onlyOwner {
+    function setAddr(bytes32 node, address newAddress)
+        public
+        onlyControllerOrOwner
+    {
         resolver.setAddr(node, newAddress);
     }
 

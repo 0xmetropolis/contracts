@@ -1,12 +1,13 @@
 const { expect, use } = require("chai");
-const { waffle, ethers, deployments } = require("hardhat");
-const { labelhash, namehash } = require("@ensdomains/ensjs");
+const { waffle, ethers, deployments, getNamedAccounts } = require("hardhat");
+const { default: ENS, labelhash, namehash } = require("@ensdomains/ensjs");
 
 const EthersSafe = require("@gnosis.pm/safe-core-sdk").default;
 
 const GnosisSafe = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/GnosisSafe.sol/GnosisSafe.json");
 const MultiSend = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/libraries/MultiSend.sol/MultiSend.json");
 const FallbackHandler = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/handler/CompatibilityFallbackHandler.sol/CompatibilityFallbackHandler.json");
+const { getPreviousModule } = require("./utils");
 
 const { deployContract, provider, solidity } = waffle;
 
@@ -29,7 +30,7 @@ describe("Controller safe integration test", () => {
   const IMAGE_URL = "https://orcaprotocol-nft.vercel.app/assets/testnet/00000001";
 
   // current controller being tested
-  const CONTROLLER_LATEST = "ControllerV1.2";
+  const CONTROLLER_LATEST = "ControllerV1.3";
 
   const createSafeSigner = async (safe, signer) => {
     const { chainId } = await provider.getNetwork();
@@ -92,13 +93,17 @@ describe("Controller safe integration test", () => {
     // Deploy the master safe contract and multisend
     multiSend = await deployContract(admin, MultiSend);
     fallbackHandler = await deployContract(admin, FallbackHandler);
+    const { ensHolder } = await getNamedAccounts();
 
     controller = await ethers.getContract(CONTROLLER_LATEST, admin);
 
     const publicResolver = await ethers.getContract("PublicResolver", admin);
+    const ensRegistry = await ethers.getContract("ENSRegistry", ensHolder);
 
     const podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", admin);
     await podEnsRegistrar.setRestrictionState(2); // 2 == open enrollment
+
+    const ensReverseRegistrar = await ethers.getContract("ReverseRegistrar", alice);
 
     const memberToken = await ethers.getContract("MemberToken", admin);
     const gnosisSafeProxyFactory = await ethers.getContract("GnosisSafeProxyFactory", admin);
@@ -107,7 +112,10 @@ describe("Controller safe integration test", () => {
     const podSafe = await createPodSafe(admin.address, POD_ID, labelhash("test"), "test.pod.eth");
     const ethersSafe = await createSafeSigner(podSafe, admin);
 
+    const ens = new ENS({ provider, ensAddress: ensRegistry.address });
+
     return {
+      ensReverseRegistrar,
       memberToken,
       publicResolver,
       ethersSafe,
@@ -115,6 +123,7 @@ describe("Controller safe integration test", () => {
       podEnsRegistrar,
       gnosisSafeMaster,
       podSafe,
+      ens,
     };
   };
 
@@ -327,6 +336,179 @@ describe("Controller safe integration test", () => {
         // check safe owners
         expect(await ethersSafe.getOwners()).to.deep.equal([charlie.address, alice.address, bob.address]);
       });
+    });
+  });
+
+  describe("ejecting a safe", () => {
+    async function checkEject({ ethersSafe, memberToken, publicResolver, podId, ensName }) {
+      // Safe owners should be untouched.
+      expect(await ethersSafe.getOwners()).to.deep.equal([alice.address, bob.address]);
+      expect(await memberToken.balanceOf(alice.address, podId)).to.equal(0);
+      expect(await memberToken.balanceOf(bob.address, podId)).to.equal(0);
+
+      // Checking if reverse resolver is zeroed.
+      expect(await publicResolver.name(namehash(ensName))).to.equal("");
+      // Checking if there is an owner for the node.
+      expect(await publicResolver["addr(bytes32)"](namehash(ensName))).to.equal(ethers.constants.AddressZero);
+      expect(await publicResolver.text(namehash(ensName), "podId")).to.equal("");
+      expect(await publicResolver.text(namehash(ensName), "avatar")).to.equal("");
+    }
+
+    it("should be able to eject a safe via an admin call", async () => {
+      const { memberToken, ethersSafe, publicResolver, ens, podSafe } = await setup();
+      // This is just to make sure the addr call works properly.
+      expect(await publicResolver["addr(bytes32)"](namehash("test.pod.eth"))).to.not.equal(
+        ethers.constants.AddressZero,
+      );
+      expect((await ens.getName(podSafe.address)).name).to.equal("test.pod.eth");
+
+      const previousModule = await getPreviousModule(podSafe.address, controller.address, provider);
+      await controller.connect(admin).ejectSafe(POD_ID, labelhash("test"), previousModule);
+
+      await checkEject({ ethersSafe, memberToken, publicResolver, podId: POD_ID, ensName: "test.pod.eth" });
+
+      // Checking reverse resolver is zeroed. Reverse resolver check happens separately.
+      expect((await ens.getName(podSafe.address)).name).to.equal("");
+      expect(await ethersSafe.isModuleEnabled(controller.address)).to.equal(false);
+    });
+
+    it("should be able to eject a safe via a proposal (safe transaction)", async () => {
+      const { ethersSafe, memberToken, ens, publicResolver, podSafe } = await setup();
+      const noAdminPod = await createPodSafe(
+        ethers.constants.AddressZero,
+        POD_ID + 1,
+        labelhash("noadmin"),
+        "noadmin.pod.eth",
+      );
+      const safeSigner = await createSafeSigner(noAdminPod, alice);
+
+      const previousModule = await getPreviousModule(podSafe.address, controller.address, provider);
+      // Constructing TX to eject safe
+      const txArgs = {
+        to: controller.address,
+        data: controller.interface.encodeFunctionData("ejectSafe", [POD_ID + 1, labelhash("noadmin"), previousModule]),
+        value: 0,
+      };
+      const tx = await safeSigner.createTransaction(txArgs);
+      await safeSigner.executeTransaction(tx);
+
+      await checkEject({
+        ethersSafe,
+        memberToken,
+        publicResolver,
+        podId: POD_ID + 1,
+        ensName: "noadmin.pod.eth",
+      });
+
+      // Checking reverse resolver is zeroed.
+      expect(await publicResolver.name(namehash("noadmin.pod.eth"))).to.equal("");
+      expect((await ens.getName(noAdminPod.address)).name).to.equal("");
+
+      expect(await safeSigner.isModuleEnabled(controller.address)).to.equal(false);
+    });
+
+    it("should be able to eject pods that have had the module disabled", async () => {
+      const { ethersSafe, memberToken, ens, publicResolver } = await setup();
+
+      const noAdminPod = await createPodSafe(
+        ethers.constants.AddressZero,
+        POD_ID + 1,
+        labelhash("noadmin"),
+        "noadmin.pod.eth",
+      );
+      const safeSigner = await createSafeSigner(noAdminPod, alice);
+
+      const previousModule = await getPreviousModule(noAdminPod.address, controller.address, provider);
+
+      // Manually disable module.
+      const txArgs = {
+        to: noAdminPod.address,
+        data: noAdminPod.interface.encodeFunctionData("disableModule", [previousModule, controller.address]),
+        value: 0,
+      };
+      const tx = await safeSigner.createTransaction(txArgs);
+      await safeSigner.executeTransaction(tx);
+
+      // eslint-disable-next-line no-unused-expressions
+      expect(await noAdminPod.isModuleEnabled(controller.address)).to.be.false;
+
+      // Eject safe with an already disabled module.
+      const ejectArgs = {
+        to: controller.address,
+        data: controller.interface.encodeFunctionData("ejectSafe", [POD_ID + 1, labelhash("noadmin"), previousModule]),
+        value: 0,
+      };
+      const ejectTx = await safeSigner.createTransaction(ejectArgs);
+      await safeSigner.executeTransaction(ejectTx);
+
+      await checkEject({
+        ethersSafe,
+        memberToken,
+        publicResolver,
+        podId: POD_ID + 1,
+        ensName: "noadmin.pod.eth",
+        safeSigner,
+      });
+
+      // Reverse resolver does not get cleared.
+      expect((await ens.getName(noAdminPod.address)).name).to.equal("noadmin.pod.eth");
+      // We are able to clear out the public resolver, but not the actual reverse resolver.
+      // That's why this record gets cleared, but not the above one.
+      expect(await publicResolver.name(namehash("noadmin.pod.eth"))).to.equal("");
+      expect(await safeSigner.isModuleEnabled(controller.address)).to.equal(false);
+    });
+
+    it("should be able to re-add a pod that was previously deregistered", async () => {
+      const { memberToken, publicResolver, ens, podSafe, gnosisSafeProxyFactory, gnosisSafeMaster } = await setup();
+
+      const previousModule = await getPreviousModule(podSafe.address, controller.address, provider);
+      await controller.connect(admin).ejectSafe(POD_ID, labelhash("test"), previousModule);
+
+      const nextId = (await memberToken.nextAvailablePodId()).toNumber();
+      const newPod = await createPodWithExistingSafe(
+        gnosisSafeProxyFactory,
+        gnosisSafeMaster,
+        "test",
+        nextId,
+        IMAGE_URL,
+      );
+
+      expect((await ens.getName(newPod.safeAddress)).name).to.equal("test.pod.eth");
+      expect(await publicResolver["addr(bytes32)"](namehash("test.pod.eth"))).to.not.equal(
+        ethers.constants.AddressZero,
+      );
+      expect(await controller.podIdToSafe(nextId)).to.equal(newPod.safeAddress);
+    });
+
+    it("should not allow users to deregister ENS names that don't belong to the safe", async () => {
+      const { podSafe } = await setup();
+
+      const previousModule = await getPreviousModule(podSafe.address, controller.address, provider);
+      // Set up another pod just so we have a label to work with.
+      await createPodSafe(admin.address, POD_ID + 1, labelhash("test2"), "test2.pod.eth");
+
+      // Attempting to eject the original safe, but with the wrong label.
+      await expect(controller.connect(admin).ejectSafe(POD_ID, labelhash("test2"), previousModule)).to.be.revertedWith(
+        "safe and label didn't match",
+      );
+    });
+
+    it("should throw if a non-admin attempts to eject safe", async () => {
+      const { podSafe } = await setup();
+
+      const previousModule = await getPreviousModule(podSafe.address, controller.address, provider);
+      await expect(controller.connect(alice).ejectSafe(POD_ID, labelhash("test"), previousModule)).to.be.revertedWith(
+        "must be admin",
+      );
+    });
+
+    it("should throw if ejecting a non-existent pod", async () => {
+      const { podSafe } = await setup();
+
+      const previousModule = await getPreviousModule(podSafe.address, controller.address, provider);
+      await expect(
+        controller.connect(alice).ejectSafe(POD_ID + 1, labelhash("test"), previousModule),
+      ).to.be.revertedWith("pod not registered");
     });
   });
 });

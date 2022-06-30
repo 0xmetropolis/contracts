@@ -4,6 +4,9 @@ pragma solidity 0.8.7;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
+import "@ensdomains/ens-contracts/contracts/registry/ENS.sol";
+import "@ensdomains/ens-contracts/contracts/registry/ReverseRegistrar.sol";
+import "@ensdomains/ens-contracts/contracts/resolvers/Resolver.sol";
 import "./interfaces/IControllerV1.sol";
 import "./interfaces/IMemberToken.sol";
 import "./interfaces/IControllerRegistry.sol";
@@ -13,12 +16,13 @@ import "./ens/IPodEnsRegistrar.sol";
 contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
     event CreatePod(uint256 podId, address safe, address admin, string ensName);
     event UpdatePodAdmin(uint256 podId, address admin);
+    event DeregisterPod(uint256 podId);
 
     IMemberToken public immutable memberToken;
     IControllerRegistry public immutable controllerRegistry;
     IPodEnsRegistrar public podEnsRegistrar;
 
-    string public constant VERSION = "1.2.0";
+    string public constant VERSION = "1.3.0";
 
     mapping(address => uint256) public safeToPodId;
     mapping(uint256 => address) public override podIdToSafe;
@@ -332,6 +336,57 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
     }
 
     /**
+     * Ejects a safe from the Orca ecosystem. Also handles clean up for safes
+     * that have already been ejected.
+     * Note that the reverse registry entry cannot be cleaned up if the safe has already been ejected.
+     * @param podId - ID of pod being ejected
+     * @param label - labelhash of pod ENS name, i.e., `labelhash("mypod")`
+     * @param previousModule - previous module
+     */
+    function ejectSafe(
+        uint256 podId,
+        bytes32 label,
+        address previousModule
+    ) external override {
+        address safe = podIdToSafe[podId];
+        require(safe != address(0), "pod not registered");
+        address[] memory members = this.getSafeMembers(safe);
+
+        Resolver resolver = Resolver(podEnsRegistrar.resolver());
+        bytes32 node = podEnsRegistrar.getEnsNode(label);
+        address addr = resolver.addr(node);
+        require(addr == safe, "safe and label didn't match");
+        podEnsRegistrar.setText(node, "avatar", "");
+        podEnsRegistrar.setText(node, "podId", "");
+        podEnsRegistrar.setAddr(node, address(0));
+        podEnsRegistrar.register(label, address(0));
+
+        if (podAdmin[podId] != address(0)) {
+            require(msg.sender == podAdmin[podId], "must be admin");
+            setModuleLock(safe, false);
+        } else {
+            require(msg.sender == safe, "tx must be sent from safe");
+        }
+
+        // Also handles reverse registration clearing.
+        this.disableModule(
+            safe,
+            podEnsRegistrar.reverseRegistrar(),
+            previousModule,
+            address(this)
+        );
+
+        // This needs to happen before the burn to skip the transfer check.
+        podAdmin[podId] = address(0);
+        podIdToSafe[podId] = address(0);
+        safeToPodId[safe] = 0;
+
+        memberToken.burnSingleBatch(members, podId);
+
+        emit DeregisterPod(podId);
+    }
+
+    /**
      * @param operator The address that initiated the action
      * @param from The address sending the membership token
      * @param to The address recieveing the membership token
@@ -350,12 +405,19 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
 
         // if create event than side effects have been pre-handled
         // only recognise data flags from this controller
-        if (operator == address(this) && uint8(data[0]) == CREATE_EVENT) return;
+        if (
+            operator == address(this) &&
+            data.length > 0 &&
+            uint8(data[0]) == CREATE_EVENT
+        ) return;
 
         for (uint256 i = 0; i < ids.length; i += 1) {
             uint256 podId = ids[i];
             address safe = podIdToSafe[podId];
             address admin = podAdmin[podId];
+
+            // If safe is 0'd, it means we're deregistering the pod, so we can skip check
+            if (safe == address(0) && to == address(0)) return;
 
             if (from == address(0)) {
                 // mint event
