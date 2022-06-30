@@ -19,7 +19,7 @@ describe("pod migration test", () => {
   const GUARD_STORAGE_SLOT = "0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8";
 
   // current controller being tested - will attempt to test migrations to this version
-  const CONTROLLER_LATEST = "ControllerV1.2";
+  const CONTROLLER_LATEST = "ControllerV1.3";
 
   // create pod args
   const MEMBERS = [alice.address, bob.address];
@@ -207,4 +207,7 @@ describe("pod migration test", () => {
 
   describe(`should test ControllerV1.1 to ${CONTROLLER_LATEST}`, async () =>
     migrationTests(() => setupV1("ControllerV1.1")));
+
+  describe(`should test ControllerV1.2 to ${CONTROLLER_LATEST}`, async () =>
+    migrationTests(() => setupV1("ControllerV1.2")));
 });

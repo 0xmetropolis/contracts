@@ -22,7 +22,7 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
     IControllerRegistry public immutable controllerRegistry;
     IPodEnsRegistrar public podEnsRegistrar;
 
-    string public constant VERSION = "1.2.0";
+    string public constant VERSION = "1.3.0";
 
     mapping(address => uint256) public safeToPodId;
     mapping(uint256 => address) public podIdToSafe;
@@ -347,7 +347,7 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
         uint256 podId,
         bytes32 label,
         address previousModule
-    ) external {
+    ) external override {
         address safe = podIdToSafe[podId];
         require(safe != address(0), "pod not registered");
         address[] memory members = this.getSafeMembers(safe);

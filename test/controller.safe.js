@@ -30,7 +30,7 @@ describe("Controller safe integration test", () => {
   const IMAGE_URL = "https://orcaprotocol-nft.vercel.app/assets/testnet/00000001";
 
   // current controller being tested
-  const CONTROLLER_LATEST = "ControllerV1.2";
+  const CONTROLLER_LATEST = "ControllerV1.3";
 
   const createSafeSigner = async (safe, signer) => {
     const { chainId } = await provider.getNetwork();

@@ -23,7 +23,7 @@ describe("Controller beforeTokenTransfer Test", () => {
   const IMAGE_URL = "https://testurl/";
 
   // current controller being tested
-  const CONTROLLER_LATEST = "ControllerV1.2";
+  const CONTROLLER_LATEST = "ControllerV1.3";
 
   let controller;
   let memberToken;
