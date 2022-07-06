@@ -88,7 +88,7 @@ describe("Controller safe integration test", () => {
     return { safeAddress: existingSafeAddress, podId };
   };
 
-  const setup = async () => {
+  const setup = async podAdmin => {
     await deployments.fixture(["Base", "Registrar", CONTROLLER_LATEST]);
     // Deploy the master safe contract and multisend
     multiSend = await deployContract(admin, MultiSend);
@@ -109,8 +109,13 @@ describe("Controller safe integration test", () => {
     const gnosisSafeProxyFactory = await ethers.getContract("GnosisSafeProxyFactory", admin);
     const gnosisSafeMaster = await ethers.getContract("GnosisSafe", admin);
 
-    const podSafe = await createPodSafe(admin.address, POD_ID, labelhash("test"), "test.pod.eth");
-    const ethersSafe = await createSafeSigner(podSafe, admin);
+    const podSafe = await createPodSafe(
+      podAdmin ? podAdmin.address : admin.address,
+      POD_ID,
+      labelhash("test"),
+      "test.pod.eth",
+    );
+    const ethersSafe = await createSafeSigner(podSafe, podAdmin || admin);
 
     const ens = new ENS({ provider, ensAddress: ensRegistry.address });
 
@@ -355,7 +360,7 @@ describe("Controller safe integration test", () => {
     }
 
     it("should be able to eject a safe via an admin call", async () => {
-      const { memberToken, ethersSafe, publicResolver, ens, podSafe } = await setup();
+      const { memberToken, ethersSafe, publicResolver, ens, podSafe } = await setup(alice);
       // This is just to make sure the addr call works properly.
       expect(await publicResolver["addr(bytes32)"](namehash("test.pod.eth"))).to.not.equal(
         ethers.constants.AddressZero,
@@ -363,7 +368,9 @@ describe("Controller safe integration test", () => {
       expect((await ens.getName(podSafe.address)).name).to.equal("test.pod.eth");
 
       const previousModule = await getPreviousModule(podSafe.address, controller.address, provider);
-      await controller.connect(admin).ejectSafe(POD_ID, labelhash("test"), previousModule);
+      await expect(controller.connect(alice).ejectSafe(POD_ID, labelhash("test"), previousModule))
+        .to.emit(controller, "DeregisterPod")
+        .withArgs(POD_ID);
 
       await checkEject({ ethersSafe, memberToken, publicResolver, podId: POD_ID, ensName: "test.pod.eth" });
 
