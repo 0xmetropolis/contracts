@@ -37,7 +37,9 @@ const Controller = new ethers.Contract(controllerDeployment.address, controllerD
 
 ### Getting Started
 
-Run `npm install`
+Run `npm install`.
+
+Install [Foundry](https://github.com/foundry-rs/foundry/blob/master/README.md#installation), then run `forge install`.
 
 ### Testing
 
