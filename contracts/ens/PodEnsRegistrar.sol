@@ -1,11 +1,11 @@
 pragma solidity 0.8.7;
 
-import "@ensdomains/ens-contracts/contracts/registry/ENS.sol";
-import "@ensdomains/ens-contracts/contracts/registry/ReverseRegistrar.sol";
-import "@ensdomains/ens-contracts/contracts/resolvers/Resolver.sol";
+import "ens-contracts/registry/ENS.sol";
+import "ens-contracts/registry/ReverseRegistrar.sol";
+import "ens-contracts/resolvers/Resolver.sol";
 import "../interfaces/IControllerRegistry.sol";
 import "../interfaces/IInviteToken.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "openzeppelin-contracts/access/Ownable.sol";
 
 /**
  * A registrar that allocates subdomains to the first person to claim them.

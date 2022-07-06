@@ -1,12 +1,12 @@
-pragma solidity 0.8.7;
+pragma solidity ^0.8.7;
 
 /* solhint-disable indent */
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Strings.sol";
-import "@ensdomains/ens-contracts/contracts/registry/ENS.sol";
-import "@ensdomains/ens-contracts/contracts/registry/ReverseRegistrar.sol";
-import "@ensdomains/ens-contracts/contracts/resolvers/Resolver.sol";
+import "ens-contracts/registry/ENS.sol";
+import "ens-contracts/registry/ReverseRegistrar.sol";
+import "ens-contracts/resolvers/Resolver.sol";
+import "openzeppelin-contracts/access/Ownable.sol";
+import "openzeppelin-contracts/utils/Strings.sol";
 import "./interfaces/IControllerV1.sol";
 import "./interfaces/IMemberToken.sol";
 import "./interfaces/IControllerRegistry.sol";
@@ -154,7 +154,7 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
         string memory _ensString,
         uint256 expectedPodId,
         string memory _imageUrl
-    ) private {
+    ) internal {
         // add create event flag to token data
         bytes memory data = new bytes(1);
         data[0] = bytes1(uint8(CREATE_EVENT));

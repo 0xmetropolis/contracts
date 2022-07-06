@@ -6,6 +6,10 @@ artifacts
 coverage
 coverage.json
 
+# foundry
+out
+foundry_cache
+
 # Private keys
 .env
 

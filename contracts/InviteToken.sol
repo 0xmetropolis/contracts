@@ -1,9 +1,7 @@
-pragma solidity 0.8.7;
+pragma solidity ^0.8.7;
 
-/* solhint-disable indent */
-
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
+import "openzeppelin-contracts/token/ERC20/ERC20.sol";
+import "openzeppelin-contracts/access/AccessControl.sol";
 
 contract InviteToken is ERC20, AccessControl {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
