@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 const { ENSRegistry, PublicResolver, ReverseRegistrar } = require("@ensdomains/ens-contracts");
-const { getEnsAddress, getResolverContract, getName } = require("@ensdomains/ensjs");
+const { getEnsAddress, getResolverContract, getName, labelhash } = require("@ensdomains/ensjs");
 const ENS = require("@ensdomains/ensjs").default;
 const namehash = require("@ensdomains/eth-ens-namehash");
 const { ethers: ethersLibrary } = require("ethers");
@@ -113,6 +113,48 @@ task("update-registrar", "upgrade controller to new registrar").setAction(
     await (await ethers.getContract("ControllerV1.3", deployerSigner)).updatePodEnsRegistrar(podEnsRegistrarAddress);
   },
 );
+
+task("get-labelhashes", "updates the ENS owner for a list of pod IDs")
+  .addPositionalParam("startPod")
+  .addOptionalPositionalParam("endPod")
+  .setAction(async (args, { getChainId, ethers }) => {
+    const IController = require("./artifacts/contracts/interfaces/IControllerV1.sol/IControllerV1.json");
+
+    const { startPod, endPod } = args;
+    const network = await getChainId();
+    const ens = new ENS({ provider: ethers.provider, ensAddress: getEnsAddress(network) });
+
+    const { address: newRegistrar } = await ethers.getContract("PodEnsRegistrar");
+    const memberToken = await ethers.getContract("MemberToken");
+    console.log("newRegistrar", newRegistrar);
+    const ROOT = network === "1" ? "pod.xyz" : "pod.eth";
+
+    // Generate an array of pod IDs.
+    const podIds = [];
+    if (!endPod) {
+      podIds.push(startPod);
+    } else {
+      for (let i = parseInt(startPod, 10); i <= parseInt(endPod, 10); i += 1) {
+        podIds.push(i);
+      }
+    }
+    const labels = await Promise.all(
+      podIds.map(async podId => {
+        const controllerAddress = await memberToken.memberController(podId);
+        const controller = new ethers.Contract(controllerAddress, IController.abi, ethers.provider);
+        const safe = await controller.podIdToSafe(podId);
+        const Name = await ens.getName(safe);
+        if (Name.name === null) return null;
+        const name = Name.name.split(".")[0];
+        if (name.includes("'")) return null;
+        return labelhash(name);
+      }),
+    );
+    console.log(
+      "labels",
+      labels.filter(x => !!x),
+    );
+  });
 
 task("update-subnode-owner", "updates the ENS owner for a list of pod IDs")
   .addPositionalParam("startPod")
