@@ -6,7 +6,6 @@ const namehash = require("@ensdomains/eth-ens-namehash");
 const { ethers: ethersLibrary } = require("ethers");
 const { task } = require("hardhat/config");
 const { utils } = require("web3");
-const IController = require("./artifacts/contracts/interfaces/IControllerV1.sol/IControllerV1.json");
 
 task("tenderly-verify", "verifies current deployment on tenderly").setAction(
   async (args, { tenderly, deployments }) => {
@@ -119,6 +118,8 @@ task("update-subnode-owner", "updates the ENS owner for a list of pod IDs")
   .addPositionalParam("startPod")
   .addOptionalPositionalParam("endPod")
   .setAction(async (args, { getChainId, ethers }) => {
+    const IController = require("./artifacts/contracts/interfaces/IControllerV1.sol/IControllerV1.json");
+
     const { startPod, endPod } = args;
     const network = await getChainId();
     const ens = new ENS({ provider: ethers.provider, ensAddress: getEnsAddress(network) });
