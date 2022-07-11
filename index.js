@@ -15,6 +15,7 @@ const contracts = {
     membertoken: require("./deployments/rinkeby/MemberToken.json"),
     controller: require("./deployments/rinkeby/Controller.json"),
     controllerv1: require("./deployments/rinkeby/ControllerV1.json"),
+    multicreatev1: require("./deployments/rinkeby/MultiCreateV1.json"),
     controllerv1_1: require("./deployments/rinkeby/ControllerV1.1.json"),
     controllerv1_2: require("./deployments/rinkeby/ControllerV1.2.json"),
     controllerv1_3: require("./deployments/rinkeby/ControllerV1.3.json"),
@@ -25,15 +26,17 @@ const contracts = {
     invitetoken: require("./deployments/mainnet/InviteToken.json"),
     membertoken: require("./deployments/mainnet/MemberToken.json"),
     controller: require("./deployments/mainnet/Controller.json"),
+    multicreatev1: require("./deployments/mainnet/MultiCreateV1.json"),
     controllerv1: require("./deployments/mainnet/ControllerV1.json"),
     controllerv1_1: require("./deployments/mainnet/ControllerV1.1.json"),
     controllerv1_2: require("./deployments/mainnet/ControllerV1.2.json"),
+    controllerv1_3: require("./deployments/mainnet/ControllerV1.3.json"),
   },
 };
 
 const controllerLatest = {
   rinkeby: require("./deployments/rinkeby/ControllerV1.3.json"),
-  mainnet: require("./deployments/mainnet/ControllerV1.2.json"),
+  mainnet: require("./deployments/mainnet/ControllerV1.3.json"),
 };
 
 /**
