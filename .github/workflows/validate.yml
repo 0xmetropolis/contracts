@@ -1,0 +1,41 @@
+name: Validate
+
+on: pull_request
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: 16.12.0
+
+      - name: Reconfigure git to use HTTP authentication
+        run: >
+          git config --global url."https://github.com/".insteadOf
+          ssh://git@github.com/
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install forge dependencies
+        run: |
+          forge install
+          forge build
+
+      - name: Lint, test and compile
+        run: |
+          npm ci
+          npm run lint
+          npm run test
+          npm run compile
+        env:
+          CI: true
+          ALCHEMY_TOKEN: ${{ secrets.ALCHEMY_TOKEN }}
