@@ -7,15 +7,17 @@ on:
       - alpha
       - beta
       - next
-      - 'next-major'
-      - '+([0-9])?(.{+([0-9]),x}).x'
+      - "next-major"
+      - "+([0-9])?(.{+([0-9]),x}).x"
 
 jobs:
   release:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
       - uses: actions/setup-node@v2
         with:
@@ -25,6 +27,14 @@ jobs:
         run: >
           git config --global url."https://github.com/".insteadOf
           ssh://git@github.com/
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install forge dependencies
+        run: forge install
 
       - name: Lint, test and compile
         run: |

@@ -1,5 +1,7 @@
 const { labelhash } = require("@ensdomains/ensjs");
 
+const ReverseRegistrar = require("@ensdomains/ens-contracts/artifacts/contracts/registry/ReverseRegistrar.sol/ReverseRegistrar.json");
+
 module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) => {
   const { deploy } = deployments;
   const { gnosisDeployer, ensDeployer, ensHolder } = await getNamedAccounts();
@@ -49,6 +51,10 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
   });
 
   const { address: reverseRegistrarAddress } = await deploy("ReverseRegistrar", {
+    contract: {
+      abi: ReverseRegistrar.abi,
+      bytecode: ReverseRegistrar.bytecode,
+    },
     from: ensDeployer,
     gasLimit: 4000000,
     args: [ensRegistryAddress, reverseResolverAddress],
