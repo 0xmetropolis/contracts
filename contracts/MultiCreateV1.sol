@@ -54,8 +54,8 @@ contract MultiCreateV1 {
         for (uint256 i = 0; i < numPods; i++) {
             // if the numerical version of admin address is less than numPods + 1 and not address(0) its a pointer
             if (
-                uint256(uint160(_admins[i])) <= numPods + 1 ||
-                _admins[i] == address(0)
+                uint256(uint160(_admins[i])) <= numPods + 1 &&
+                _admins[i] != address(0)
             ) {
                 // store the admin pointer
                 tempAdmin[i] = AdminPointer(nextPodId + i, _admins[i]);

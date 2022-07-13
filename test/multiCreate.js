@@ -100,6 +100,7 @@ describe("Controller safe integration test", () => {
     await multiCreate.createPods(controller.address, membersArray, thresholds, admins, labels, ensStrings, imageUrls);
 
     const newNextPodId = await memberToken.getNextAvailablePodId();
+    // expect 3 pods to have been created
     expect(newNextPodId).to.equal(initNextPodId + 3);
   });
 
@@ -128,6 +129,34 @@ describe("Controller safe integration test", () => {
     const newNextPodId = await memberToken.getNextAvailablePodId();
     // should create 3 pods
     expect(newNextPodId).to.equal(initNextPodId + 3);
+    // expect podA to have admin
+    expect(await controller.podAdmin(initNextPodId)).to.equal(admin.address);
+    // expect alice to be member of podA
+    expect(
+      await memberToken.balanceOf(
+        alice.address,
+        initNextPodId, // podA id
+      ),
+    ).to.equal(1);
+    // expect bob to be member of podA
+    expect(
+      await memberToken.balanceOf(
+        bob.address,
+        initNextPodId + 1, // podB id
+      ),
+    ).to.equal(1);
+    // expect charlie to be member of podA
+    expect(
+      await memberToken.balanceOf(
+        charlie.address,
+        initNextPodId + 2, // podC id
+      ),
+    ).to.equal(1);
+
+    // expect podB to have zero admin
+    expect(await controller.podAdmin(initNextPodId + 1)).to.equal(ethers.constants.AddressZero);
+    // expect podC to have admin
+    expect(await controller.podAdmin(initNextPodId + 2)).to.equal(admin.address);
   });
 
   it("should use an address pointer for setting admin", async () => {
@@ -155,8 +184,8 @@ describe("Controller safe integration test", () => {
     await multiCreate.createPods(controller.address, membersArray, thresholds, admins, labels, ensStrings, imageUrls);
 
     const podBAddress = await controller.podIdToSafe(initPodId + 2);
-    const podCAdmin = await controller.podAdmin(initPodId + 3);
-    expect(podBAddress).to.equal(podCAdmin);
+    // expect podB admin should be podC
+    expect(podBAddress).to.equal(await controller.podAdmin(initPodId + 3));
   });
 
   it("should throw with bad member dependacy order", async () => {
@@ -210,6 +239,7 @@ describe("Controller safe integration test", () => {
 
     const podBAddress = await controller.podIdToSafe(initPodId + 2);
 
+    // expect podB should be a member of podC
     expect(
       await memberToken.balanceOf(
         podBAddress,
@@ -248,6 +278,8 @@ describe("Controller safe integration test", () => {
 
     const podBAddress = await controller.podIdToSafe(initPodId + 2);
     const podCAddress = await controller.podIdToSafe(initPodId + 3);
+
+    // expect podB should be a member of podC
     expect(
       await memberToken.balanceOf(
         podBAddress,
@@ -255,6 +287,7 @@ describe("Controller safe integration test", () => {
       ),
     ).to.equal(1);
 
+    // expect podC should be admin of podB
     const podBAdmin = await controller.podAdmin(initPodId + 2);
     expect(podBAdmin).to.equal(podCAddress);
   });
