@@ -211,3 +211,34 @@ task("add-ens-podid", "updates the ENS owner for a list of pod IDs")
       }
     }
   });
+
+task("add-permission-owner", "adds an address to be an owner of the Permissions contract")
+  .addPositionalParam("newOwner")
+  .setAction(async (args, { getChainId, ethers }) => {
+    const { newOwner } = args;
+    const { deployer } = await getNamedAccounts();
+
+    const Permissions = await ethers.getContract("Permissions", deployer);
+    const adminRole = await Permissions.DEFAULT_ADMIN_ROLE();
+    await Permissions.grantRole(adminRole, newOwner);
+    const hasRole = await Permissions.hasRole(adminRole, newOwner);
+    if (hasRole) console.log("Granted permission successfully");
+    else console.log("Failed to grant permission");
+  });
+
+task("migrate-owner", "change owner of contracts to the Permissions contract").setAction(
+  async (args, { getNamedAccounts, ethers, deployments }) => {
+    const { deployer } = await getNamedAccounts();
+    const deployerSigner = ethers.provider.getSigner(deployer);
+
+    const { address: permissionsAddress } = await ethers.getContract("Permissions", deployer);
+
+    await (await ethers.getContract("MemberToken", deployerSigner)).transferOwnership(permissionsAddress);
+    await (await ethers.getContract("InviteToken", deployerSigner)).transferOwnership(permissionsAddress);
+    await (await ethers.getContract("ControllerRegistry", deployerSigner)).transferOwnership(permissionsAddress);
+    await (await ethers.getContract("Controller", deployerSigner)).transferOwnership(permissionsAddress);
+    await (await ethers.getContract("ControllerV1.1", deployerSigner)).transferOwnership(permissionsAddress);
+    await (await ethers.getContract("ControllerV1.2", deployerSigner)).transferOwnership(permissionsAddress);
+    await (await ethers.getContract("ControllerV1.3", deployerSigner)).transferOwnership(permissionsAddress);
+  },
+);
