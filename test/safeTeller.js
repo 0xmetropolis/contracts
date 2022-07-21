@@ -1,6 +1,6 @@
 const { expect, use } = require("chai");
 const { waffle, ethers, deployments } = require("hardhat");
-const { default: ENS, labelhash } = require("@ensdomains/ensjs");
+const { labelhash } = require("@ensdomains/ensjs");
 
 const EthersSafe = require("@gnosis.pm/safe-core-sdk").default;
 
@@ -18,7 +18,6 @@ describe("SafeTeller test", () => {
   const [admin, alice, bob, charlie, mockModule] = provider.getWallets();
 
   let multiSend;
-  let ens;
 
   const { HashZero, AddressZero } = ethers.constants;
 
@@ -65,10 +64,6 @@ describe("SafeTeller test", () => {
     const podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", admin);
     await podEnsRegistrar.setRestrictionState(2); // 2 == open enrollment
 
-    const ensRegistry = await ethers.getContract("ENSRegistry", admin);
-
-    ens = new ENS({ provider, ensAddress: ensRegistry.address });
-
     const res = await controller
       .connect(alice)
       .createPod(MEMBERS, THRESHOLD, alice.address, labelhash("test"), "test.pod.eth", 0, "https://testUrl/");
@@ -113,8 +108,6 @@ describe("SafeTeller test", () => {
       // check to see if guard has been enabled
       // strip off the address 0x for comparison
       expect(await safe.getStorageAt(GUARD_STORAGE_SLOT, 1)).to.include(controller.address.substring(2).toLowerCase());
-      // check reverse resolver
-      expect(await ens.getName(args.safe)).to.deep.equal({ name: "test2.pod.eth" });
     });
 
     it("should throw error on bad safe setup", async () => {

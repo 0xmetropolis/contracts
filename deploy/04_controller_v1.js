@@ -1,10 +1,5 @@
-const {
-  getSafeSingletonDeployment,
-  getProxyFactoryDeployment,
-  getDefaultCallbackHandlerDeployment,
-} = require("@gnosis.pm/safe-deployments");
-
 const ControllerV1 = require("../deployments/mainnet/ControllerV1.json");
+const { getGnosisAddresses } = require("../utils/dependencyManager");
 
 module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) => {
   const { deploy } = deployments;
@@ -17,20 +12,10 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
   const network = await getChainId();
 
   // Gnosis contracts
-  const proxyFactoryAddress =
-    network === "31337"
-      ? (await deployments.get("GnosisSafeProxyFactory")).address
-      : getProxyFactoryDeployment({ network }).defaultAddress;
-
-  const gnosisSafeAddress =
-    network === "31337"
-      ? (await deployments.get("GnosisSafe")).address
-      : getSafeSingletonDeployment({ network }).defaultAddress;
-
-  const fallbackHandlerAddress =
-    network === "31337"
-      ? (await deployments.get("CompatibilityFallbackHandler")).address
-      : getDefaultCallbackHandlerDeployment({ network }).defaultAddress;
+  const { proxyFactoryAddress, gnosisSafeSingletonAddress, unsafeCallbackHandlerAddress } = await getGnosisAddresses(
+    network,
+    deployments,
+  );
 
   // Our contracts
   const memberTokenAddress = (await deployments.get("MemberToken")).address;
@@ -48,9 +33,9 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
       memberTokenAddress,
       controllerRegistryAddress,
       proxyFactoryAddress,
-      gnosisSafeAddress,
+      gnosisSafeSingletonAddress,
       podEnsRegistrarAddress,
-      fallbackHandlerAddress,
+      unsafeCallbackHandlerAddress,
     ],
     log: true,
     skipIfAlreadyDeployed: true,

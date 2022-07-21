@@ -1,13 +1,6 @@
-const { labelhash } = require("@ensdomains/ensjs");
-
-const ReverseRegistrar = require("@ensdomains/ens-contracts/artifacts/contracts/registry/ReverseRegistrar.sol/ReverseRegistrar.json");
-
-module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) => {
+module.exports = async ({ deployments, getChainId, getNamedAccounts }) => {
   const { deploy } = deployments;
-  const { gnosisDeployer, ensDeployer, ensHolder } = await getNamedAccounts();
-  const signer = ethers.provider.getSigner(ensDeployer);
-
-  const { HashZero, AddressZero } = ethers.constants;
+  const { gnosisDeployer, ensDeployer } = await getNamedAccounts();
 
   const network = await getChainId();
 
@@ -31,43 +24,27 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
     gasLimit: 8000000,
   });
 
+  // unsafe do not use only for backwards compatibility testing
+  await deploy("DefaultCallbackHandler", {
+    from: gnosisDeployer,
+    gasLimit: 8000000,
+  });
+
   // deploy ens dependencies
-  const { address: ensRegistryAddress } = await deploy("ENSRegistry", {
+  await deploy("MockEns", {
     from: ensDeployer,
     gasLimit: 4000000,
-    args: [],
   });
 
-  await deploy("PublicResolver", {
+  await deploy("MockEnsResolver", {
     from: ensDeployer,
     gasLimit: 4000000,
-    args: [ensRegistryAddress, AddressZero],
   });
 
-  const { address: reverseResolverAddress } = await deploy("DefaultReverseResolver", {
+  await deploy("MockEnsReverseRegistrar", {
     from: ensDeployer,
     gasLimit: 4000000,
-    args: [ensRegistryAddress],
   });
-
-  const { address: reverseRegistrarAddress } = await deploy("ReverseRegistrar", {
-    contract: {
-      abi: ReverseRegistrar.abi,
-      bytecode: ReverseRegistrar.bytecode,
-    },
-    from: ensDeployer,
-    gasLimit: 4000000,
-    args: [ensRegistryAddress, reverseResolverAddress],
-  });
-
-  const ensRegistry = await ethers.getContract("ENSRegistry", signer);
-  // // setup reverse
-  await ensRegistry.setSubnodeOwner(HashZero, labelhash("reverse"), ensDeployer);
-  await ensRegistry.setSubnodeOwner(ethers.utils.namehash("reverse"), labelhash("addr"), reverseRegistrarAddress);
-  // setup root
-  await ensRegistry.setSubnodeOwner(HashZero, labelhash("eth"), ensDeployer);
-  // setup pod
-  await ensRegistry.setSubnodeOwner(ethers.utils.namehash("eth"), labelhash("pod"), ensHolder);
 };
 
 module.exports.tags = ["Dependency"];
