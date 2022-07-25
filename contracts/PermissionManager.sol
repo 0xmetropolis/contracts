@@ -3,7 +3,7 @@ pragma solidity ^0.8.7;
 import "openzeppelin-contracts/access/AccessControl.sol";
 
 // This contract will be the owner of all other contracts in the ecosystem.
-contract Permissions is AccessControl {
+contract PermissionManager is AccessControl {
     constructor() {
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }

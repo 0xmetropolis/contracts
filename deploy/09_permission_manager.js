@@ -2,7 +2,7 @@ module.exports = async ({ deployments, getNamedAccounts }) => {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  await deploy("Permissions", {
+  await deploy("PermissionManager", {
     from: deployer,
     gasLimit: 8000000,
     args: [],
@@ -11,5 +11,5 @@ module.exports = async ({ deployments, getNamedAccounts }) => {
   });
 };
 
-module.exports.tags = ["Permissions"];
+module.exports.tags = ["PermissionManager"];
 module.exports.dependencies = ["Base"];
