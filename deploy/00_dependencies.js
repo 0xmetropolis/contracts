@@ -24,6 +24,11 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts }) => {
     gasLimit: 8000000,
   });
 
+  await deploy("MultiSend", {
+    from: gnosisDeployer,
+    gasLimit: 8000000,
+  });
+
   // unsafe do not use only for backwards compatibility testing
   await deploy("DefaultCallbackHandler", {
     from: gnosisDeployer,

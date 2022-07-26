@@ -3,6 +3,7 @@ const {
   getProxyFactoryDeployment,
   getCompatibilityFallbackHandlerDeployment,
   getDefaultCallbackHandlerDeployment,
+  getMultiSendDeployment,
 } = require("@gnosis.pm/safe-deployments");
 const { getEnsAddress } = require("@ensdomains/ensjs");
 const { ethers } = require("ethers");
@@ -65,11 +66,18 @@ const getGnosisAddresses = async (network, deployments) => {
       network === "31337" ? (await deployments.get("DefaultCallbackHandler")).address : ethers.constants.AddressZero,
   };
 
+  const multiSend = {
+    1: getMultiSendDeployment({ network: 1 }).defaultAddress,
+    4: getMultiSendDeployment({ network: 4 }).defaultAddress,
+    31337: network === "31337" ? (await deployments.get("MultiSend")).address : ethers.constants.AddressZero,
+  };
+
   return {
     proxyFactoryAddress: proxyFactory[network],
     gnosisSafeSingletonAddress: gnosisSafe[network],
     fallbackHandlerAddress: fallbackHandler[network],
     unsafeCallbackHandlerAddress: unSafeCallbackHandler[network],
+    multiSendAddress: multiSend[network],
   };
 };
 
