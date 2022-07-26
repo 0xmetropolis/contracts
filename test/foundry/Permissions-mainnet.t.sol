@@ -75,10 +75,7 @@ contract PermissionsMainnetTest is Test {
     function test_assignAdditionalOwner() public {
         vm.prank(originalOwner);
         registry.transferOwnership(address(permissions));
-        permissions.grantRole(
-            0x0000000000000000000000000000000000000000000000000000000000000000,
-            address(0x1338)
-        );
+        permissions.grantRole(bytes32(0), address(0x1338));
 
         vm.prank(address(0x1338));
         permissions.callAsOwner(
@@ -92,15 +89,9 @@ contract PermissionsMainnetTest is Test {
       Should be able to remove other owners
      */
     function test_removeOwner() public {
-        permissions.grantRole(
-            0x0000000000000000000000000000000000000000000000000000000000000000,
-            address(0x1338)
-        );
+        permissions.grantRole(bytes32(0), address(0x1338));
         vm.prank(address(0x1338));
-        permissions.revokeRole(
-            0x0000000000000000000000000000000000000000000000000000000000000000,
-            testAddress
-        );
+        permissions.revokeRole(bytes32(0), testAddress);
     }
 
     /**
@@ -117,10 +108,7 @@ contract PermissionsMainnetTest is Test {
             address(registry),
             abi.encodeWithSignature("registerController(address)", testAddress)
         );
-        permissions.grantRole(
-            0x0000000000000000000000000000000000000000000000000000000000000000,
-            testAddress
-        );
+        permissions.grantRole(bytes32(0), testAddress);
         PermissionManager permissions2 = new PermissionManager();
         vm.prank(testAddress);
         permissions.callAsOwner(

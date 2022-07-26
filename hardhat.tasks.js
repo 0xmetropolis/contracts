@@ -257,38 +257,42 @@ task("add-permission-owner", "adds an address to be an owner of the Permissions 
     else console.log("Failed to grant permission");
   });
 
-task("migrate-owner", "change owner of contracts to the Permissions contract").setAction(
-  async (args, { getChainId, getNamedAccounts, ethers, deployments }) => {
+task("migrate-contracts", "migrates contract owners to the Permissions contract").setAction(
+  async (args, { getNamedAccounts, ethers }) => {
     const { deployer } = await getNamedAccounts();
     const deployerSigner = ethers.provider.getSigner(deployer);
-    const network = await getChainId();
 
     const Permissions = await ethers.getContract("PermissionManager", deployer);
     const { address: permissionsAddress } = await ethers.getContract("PermissionManager", deployer);
 
     const adminRole = await Permissions.DEFAULT_ADMIN_ROLE();
-    // await (await ethers.getContract("MemberToken", deployerSigner)).transferOwnership(permissionsAddress);
-    // await (await ethers.getContract("InviteToken", deployerSigner)).grantRole(adminRole, permissionsAddress);
-    // await (await ethers.getContract("ControllerRegistry", deployerSigner)).transferOwnership(permissionsAddress);
-    // await (await ethers.getContract("Controller", deployerSigner)).transferOwnership(permissionsAddress);
-    // await (await ethers.getContract("ControllerV1.1", deployerSigner)).transferOwnership(permissionsAddress);
-    // await (await ethers.getContract("ControllerV1.2", deployerSigner)).transferOwnership(permissionsAddress);
-    // await (await ethers.getContract("ControllerV1.3", deployerSigner)).transferOwnership(permissionsAddress);
-    // await (await ethers.getContract("PodEnsRegistrar", deployerSigner)).transferOwnership(permissionsAddress);
+    const mintRole = (await ethers.getContract("InviteToken", deployer)).MINTER_ROLE();
+    await (await ethers.getContract("MemberToken", deployerSigner)).transferOwnership(permissionsAddress);
+    await (await ethers.getContract("InviteToken", deployerSigner)).grantRole(adminRole, permissionsAddress);
+    await (await ethers.getContract("InviteToken", deployerSigner)).grantRole(mintRole, permissionsAddress);
+    await (await ethers.getContract("ControllerRegistry", deployerSigner)).transferOwnership(permissionsAddress);
+    await (await ethers.getContract("Controller", deployerSigner)).transferOwnership(permissionsAddress);
+    await (await ethers.getContract("ControllerV1.1", deployerSigner)).transferOwnership(permissionsAddress);
+    await (await ethers.getContract("ControllerV1.2", deployerSigner)).transferOwnership(permissionsAddress);
+    await (await ethers.getContract("ControllerV1.3", deployerSigner)).transferOwnership(permissionsAddress);
+    await (await ethers.getContract("PodEnsRegistrar", deployerSigner)).transferOwnership(permissionsAddress);
+  },
+);
+
+task("migrate-ens-owner", "change owner of the ENS TLD").setAction(
+  async (args, { getChainId, getNamedAccounts, ethers, deployments }) => {
+    const { deployer } = await getNamedAccounts();
+    const network = await getChainId();
+    const deployerSigner = ethers.provider.getSigner(deployer);
+
+    const { address: permissionsAddress } = await ethers.getContract("PermissionManager", deployer);
 
     const ensRegistryAddress =
       network === "31337" ? (await deployments.get("ENSRegistry")).address : getEnsAddress(network);
 
     const ensRegistry = new ethers.Contract(ensRegistryAddress, ENSRegistry, deployerSigner);
-    console.log(ethers.utils.namehash("pod.eth"));
-    console.log(await ensRegistry.owner(ethers.utils.namehash("pod.eth")));
-    await ensRegistry.setOwner(ethers.utils.namehash("pod.eth"), permissionsAddress);
-    // ensRegistry.setOwner(namehash("pod.xyz"), permissionsAddress);
-    // await ensRegistry.setApprovalForAll(permissionsAddress, true);
-
-    // const ens = new ENS({ provider: ethers.provider, ensAddress: getEnsAddress(network) });
-    // const podEth = await ens.name("pod.eth");
-    // console.log("podEth", await podEth.getOwner());
+    const tld = network === "1" ? "xyz" : "eth";
+    await ensRegistry.setOwner(ethers.utils.namehash(`pod.${tld}`), permissionsAddress);
   },
 );
 
