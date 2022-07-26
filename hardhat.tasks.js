@@ -125,6 +125,26 @@ task("update-registrar", "upgrade controller to new registrar").setAction(
   },
 );
 
+task("ens-approve-registrar", "upgrade controller to new registrar").setAction(
+  async (args, { getNamedAccounts, getChainId, ethers, deployments }) => {
+    const { deployer } = await getNamedAccounts();
+    const network = await getChainId();
+    const deployerSigner = ethers.provider.getSigner(deployer);
+    const permissionManager = await ethers.getContract("PermissionManager", deployer);
+
+    const { address: podEnsRegistrarAddress } = await ethers.getContract("PodEnsRegistrar", deployer);
+
+    const ensRegistryAddress =
+      network === "31337" ? (await deployments.get("ENSRegistry")).address : getEnsAddress(network);
+
+    const ensRegistry = new ethers.Contract(ensRegistryAddress, ENSRegistry, deployerSigner);
+    // approve podENSRegistry to make ens changes on behalf of permissionManager
+    const { data } = await ensRegistry.populateTransaction.setApprovalForAll(podEnsRegistrarAddress, true);
+    const res = await permissionManager.callAsOwner(ensRegistry.address, data);
+    await res.wait(1);
+  },
+);
+
 task("update-subnode-owner", "updates the ENS owner for a list of pod IDs")
   .addPositionalParam("startPod")
   .addOptionalPositionalParam("endPod")
