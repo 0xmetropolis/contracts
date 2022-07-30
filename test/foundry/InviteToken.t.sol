@@ -28,6 +28,9 @@ contract InviteTokenTest is Test {
         );
     }
 
+    //TODO: should allow admin to asign and revoke roles
+    //TODO: should prevent non-admin from assigning roles
+
     function test_MintAndBurn() public {
         // check that minter can mint
         inviteToken.mint(ALICE, 1);

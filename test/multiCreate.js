@@ -1,13 +1,9 @@
-const { expect, use } = require("chai");
-const { waffle, ethers, deployments } = require("hardhat");
+const { expect } = require("chai");
+const { ethers, deployments } = require("hardhat");
 const { labelhash } = require("@ensdomains/ensjs");
 
-const { provider, solidity } = waffle;
-
-use(solidity);
-
 describe("Controller safe integration test", () => {
-  const [admin, alice, bob, charlie] = provider.getWallets();
+  let [admin, alice, bob, charlie] = [];
 
   let controller;
 
@@ -17,22 +13,42 @@ describe("Controller safe integration test", () => {
   const CONTROLLER_LATEST = "ControllerV1.2";
 
   const setup = async () => {
+    [admin, alice, bob, charlie] = await ethers.getSigners();
     await deployments.fixture(["Base", "Registrar", "MultiCreateV1", CONTROLLER_LATEST]);
 
-    controller = await ethers.getContract(CONTROLLER_LATEST, admin);
+    // hardhat ethers doesn't recognize controller versions
+    const { address: controllerAddress, abi: controllerAbi } = await deployments.get(CONTROLLER_LATEST);
+    controller = await ethers.getContractAt(controllerAbi, controllerAddress, admin);
 
-    const podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", admin);
+    const podEnsRegistrar = await ethers.getContractAt(
+      "PodEnsRegistrar",
+      (
+        await deployments.get("PodEnsRegistrar")
+      ).address,
+      admin,
+    );
+
     await podEnsRegistrar.setRestrictionState(2); // 2 == open enrollment
 
-    const memberToken = await ethers.getContract("MemberToken", admin);
-    const gnosisSafeProxyFactory = await ethers.getContract("GnosisSafeProxyFactory", admin);
+    const memberToken = await ethers.getContractAt(
+      "MemberToken",
+      (
+        await deployments.get("MemberToken")
+      ).address,
+      admin,
+    );
 
-    const multiCreate = await ethers.getContract("MultiCreateV1", admin);
+    const multiCreate = await ethers.getContractAt(
+      "MultiCreateV1",
+      (
+        await deployments.get("MultiCreateV1")
+      ).address,
+      admin,
+    );
 
     return {
       memberToken,
       controller,
-      gnosisSafeProxyFactory,
       podEnsRegistrar,
       multiCreate,
     };

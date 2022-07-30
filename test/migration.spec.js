@@ -1,20 +1,14 @@
-const { expect, use } = require("chai");
-const { waffle, ethers, deployments } = require("hardhat");
+const { expect } = require("chai");
+const { ethers, deployments } = require("hardhat");
 const { labelhash } = require("@ensdomains/ensjs");
 
 const GnosisSafe = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/GnosisSafe.sol/GnosisSafe.json");
 
-const { solidity, provider } = waffle;
-
 const { AddressZero, HashZero } = ethers.constants;
-
-use(solidity);
 
 /// ///// THESE TEST ARE MEANT TO TEST BACKWARDS COMPATIBILITY OF MIGRATIONS //////////
 
 describe("pod migration test", () => {
-  const [admin, owner, alice, bob, charlie] = provider.getWallets();
-
   const TX_OPTIONS = { gasLimit: 4000000 };
   const GUARD_STORAGE_SLOT = "0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8";
 
@@ -22,30 +16,59 @@ describe("pod migration test", () => {
   const CONTROLLER_LATEST = "ControllerV1.3";
 
   // create pod args
-  const MEMBERS = [alice.address, bob.address];
+  let MEMBERS = [];
   const LEGACY_POD_ID = 0;
   const UPGRADE_POD_ID = 1;
   const IMAGE_URL = "img";
+  let [admin, owner, alice, bob, charlie] = [];
+
+  before(async () => {
+    [admin, owner, alice, bob, charlie] = await ethers.getSigners();
+    MEMBERS = [alice.address, bob.address];
+  });
 
   const createSafe = async (controller, podId) =>
     new ethers.Contract(await controller.podIdToSafe(podId), GnosisSafe.abi, owner);
 
-  const setDependancies = async () => {
-    const memberToken = await ethers.getContract("MemberToken", admin);
-    const controllerRegistry = await ethers.getContract("ControllerRegistry", admin);
-    const podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", admin);
+  const getDependencies = async () => {
+    const memberToken = await ethers.getContractAt(
+      "MemberToken",
+      (
+        await deployments.get("MemberToken")
+      ).address,
+      admin,
+    );
+    const controllerRegistry = await ethers.getContractAt(
+      "ControllerRegistry",
+      (
+        await deployments.get("ControllerRegistry")
+      ).address,
+      admin,
+    );
+    const podEnsRegistrar = await ethers.getContractAt(
+      "PodEnsRegistrar",
+      (
+        await deployments.get("PodEnsRegistrar")
+      ).address,
+      admin,
+    );
     await podEnsRegistrar.setRestrictionState(2); // 2 == open enrollment
 
     return { memberToken, controllerRegistry, podEnsRegistrar };
   };
 
+  const getController = async (name, _admin) => {
+    const { address: controllerAddress, abi: controllerAbi } = await deployments.get(name);
+    return ethers.getContractAt(controllerAbi, controllerAddress, _admin);
+  };
+
   const setupV0 = async () => {
     await deployments.fixture(["Base", "Registry", "Controller", "ControllerV1", CONTROLLER_LATEST]);
     const controller = {};
-    controller.VPrev = await ethers.getContract("Controller", admin);
-    controller.VNext = await ethers.getContract(CONTROLLER_LATEST, admin);
+    controller.VPrev = await getController("Controller", admin);
+    controller.VNext = await getController(CONTROLLER_LATEST, admin);
 
-    const { memberToken, controllerRegistry } = await setDependancies(controller);
+    const { memberToken, controllerRegistry } = await getDependencies(controller);
     // register VNext contracts
     await controllerRegistry.connect(admin).registerController(controller.VNext.address);
 
@@ -65,10 +88,10 @@ describe("pod migration test", () => {
   const setupV1 = async controllerV1 => {
     await deployments.fixture(["Base", "Registry", "Controller", controllerV1, CONTROLLER_LATEST]);
     const controller = {};
-    controller.VPrev = await ethers.getContract(controllerV1, admin);
-    controller.VNext = await ethers.getContract(CONTROLLER_LATEST, admin);
+    controller.VPrev = await getController(controllerV1, admin);
+    controller.VNext = await getController(CONTROLLER_LATEST, admin);
 
-    const { memberToken, controllerRegistry } = await setDependancies(controller);
+    const { memberToken, controllerRegistry } = await getDependencies(controller);
     // register VNext contracts
     await controllerRegistry.connect(admin).registerController(controller.VNext.address);
 

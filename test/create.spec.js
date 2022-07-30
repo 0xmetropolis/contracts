@@ -7,7 +7,7 @@ const GnosisSafe = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/
 
 const { createSafeSigner, createSafeWithControllerModule } = require("./utils");
 
-describe("Pod create integration test", () => {
+describe("create pod integration test", () => {
   let controller;
 
   const { AddressZero } = ethers.constants;
@@ -22,8 +22,7 @@ describe("Pod create integration test", () => {
   // current controller being tested
   const CONTROLLER_LATEST = "ControllerV1.3";
 
-  const setup = async (settings = {}) => {
-    const { hasAdmin = false } = settings;
+  const setup = async () => {
     const { chainId } = await ethers.provider.getNetwork();
 
     await deployments.fixture(["Base", "Registrar", CONTROLLER_LATEST]);
@@ -66,7 +65,7 @@ describe("Pod create integration test", () => {
       );
       // query the new gnosis safe
       const safeAddress = await controller.podIdToSafe(POD_ID);
-      const ethersSafe = await createSafeSigner(safeAddress, hasAdmin ? admin : alice);
+      const ethersSafe = await createSafeSigner(safeAddress, alice);
       const safeContract = new ethers.Contract(safeAddress, GnosisSafe.abi, alice);
 
       return { safeContract, ethersSafe };
@@ -103,13 +102,18 @@ describe("Pod create integration test", () => {
   };
 
   describe("when creating through createPod", () => {
-    it("should set safe state correctly", async () => {
-      const {
-        signers: [, alice, bob],
-        createPodHelper,
-      } = await setup();
+    let { signers, memberToken, safeContract, ethersSafe, createPodHelper } = {};
+    let [, alice, bob] = [];
 
-      const { ethersSafe, safeContract } = await createPodHelper();
+    before(async () => {
+      ({ signers, safeContract, ethersSafe, memberToken, createPodHelper } = await setup());
+
+      [, alice, bob] = signers;
+      // create pod no admin
+      ({ ethersSafe, safeContract } = await createPodHelper());
+    });
+
+    it("should set safe state correctly", async () => {
       // threshold and owners
       expect(await ethersSafe.getThreshold()).to.equal(THRESHOLD);
       expect(await ethersSafe.getOwners()).to.deep.equal([alice.address, bob.address]);
@@ -122,14 +126,6 @@ describe("Pod create integration test", () => {
       );
     });
     it("set member token state correctly", async () => {
-      const {
-        signers: [, alice, bob],
-        memberToken,
-        createPodHelper,
-      } = await setup();
-
-      await createPodHelper();
-
       expect(await memberToken.memberController(POD_ID)).to.equal(controller.address);
       // should mint member tokens
       expect(await memberToken.balanceOf(alice.address, POD_ID)).to.equal(1);
@@ -137,10 +133,6 @@ describe("Pod create integration test", () => {
     });
 
     it("should set controller state correctly", async () => {
-      const { createPodHelper } = await setup();
-
-      const { safeContract } = await createPodHelper();
-
       expect(await controller.podIdToSafe(POD_ID)).to.equal(safeContract.address);
       expect(await controller.safeToPodId(safeContract.address)).to.equal(POD_ID);
       // check admin
@@ -151,14 +143,18 @@ describe("Pod create integration test", () => {
   });
 
   describe("when creating through createPod with Admin", () => {
+    let { signers, memberToken, safeContract, ethersSafe, createPodHelper } = {};
+    let [admin, alice, bob] = [];
+
+    before(async () => {
+      ({ signers, safeContract, ethersSafe, memberToken, createPodHelper } = await setup());
+
+      [admin, alice, bob] = signers;
+      // create pod with admin
+      ({ ethersSafe, safeContract } = await createPodHelper(admin));
+    });
+
     it("should set safe state correctly", async () => {
-      const {
-        signers: [admin, alice, bob],
-        createPodHelper,
-      } = await setup();
-
-      const { ethersSafe, safeContract } = await createPodHelper(admin);
-
       // threshold and owners
       expect(await ethersSafe.getThreshold()).to.equal(THRESHOLD);
       expect(await ethersSafe.getOwners()).to.deep.equal([alice.address, bob.address]);
@@ -171,13 +167,6 @@ describe("Pod create integration test", () => {
       );
     });
     it("set member token state correctly", async () => {
-      const {
-        signers: [admin, alice, bob],
-        memberToken,
-        createPodHelper,
-      } = await setup();
-
-      await createPodHelper(admin);
       expect(await memberToken.memberController(POD_ID)).to.equal(controller.address);
       // should mint member tokens
       expect(await memberToken.balanceOf(alice.address, POD_ID)).to.equal(1);
@@ -185,13 +174,6 @@ describe("Pod create integration test", () => {
     });
 
     it("should set controller state correctly", async () => {
-      const {
-        signers: [admin],
-        createPodHelper,
-      } = await setup();
-
-      const { safeContract } = await createPodHelper(admin);
-
       expect(await controller.podIdToSafe(POD_ID)).to.equal(safeContract.address);
       expect(await controller.safeToPodId(safeContract.address)).to.equal(POD_ID);
       // check admin
@@ -204,14 +186,18 @@ describe("Pod create integration test", () => {
   // CREATE POD WITH SAFE TESTS
 
   describe("when creating new pod through createPodWithSafe without an admin", () => {
+    let { signers, memberToken, ethersSafe, createPodWithSafeHelper } = {};
+    let [, alice, bob] = [];
+
+    before(async () => {
+      ({ signers, ethersSafe, memberToken, createPodWithSafeHelper } = await setup());
+
+      [, alice, bob] = signers;
+      // create pod with safe no admin
+      ({ ethersSafe } = await createPodWithSafeHelper());
+    });
+
     it("should set safe state correctly", async () => {
-      const {
-        signers: [, alice, bob],
-        createPodWithSafeHelper,
-      } = await setup();
-
-      const { ethersSafe } = await createPodWithSafeHelper();
-
       // threshold and owners
       expect(await ethersSafe.getThreshold()).to.equal(THRESHOLD);
       expect(await ethersSafe.getOwners()).to.deep.equal([alice.address, bob.address]);
@@ -225,15 +211,8 @@ describe("Pod create integration test", () => {
       //   controller.address.substring(2).toLowerCase(),
       // );
     });
+
     it("set member token state correctly", async () => {
-      const {
-        signers: [, alice, bob],
-        memberToken,
-        createPodWithSafeHelper,
-      } = await setup();
-
-      await createPodWithSafeHelper();
-
       expect(await memberToken.memberController(POD_ID)).to.equal(controller.address);
       // should mint member tokens
       expect(await memberToken.balanceOf(alice.address, POD_ID)).to.equal(1);
@@ -241,10 +220,6 @@ describe("Pod create integration test", () => {
     });
 
     it("should set controller state correctly", async () => {
-      const { createPodWithSafeHelper } = await setup();
-
-      const { ethersSafe } = await createPodWithSafeHelper();
-
       const safeAddress = ethersSafe.getAddress();
 
       expect(await controller.podIdToSafe(POD_ID)).to.equal(safeAddress);
@@ -257,36 +232,32 @@ describe("Pod create integration test", () => {
   });
 
   describe("when creating new pod through createPodWithSafe with an admin", () => {
+    let { signers, memberToken, ethersSafe, createPodWithSafeHelper } = {};
+    let [admin, alice, bob] = [];
+
+    before(async () => {
+      ({ signers, ethersSafe, memberToken, createPodWithSafeHelper } = await setup());
+
+      [admin, alice, bob] = signers;
+      // create pod with safe with admin
+      ({ ethersSafe } = await createPodWithSafeHelper(admin));
+    });
+
     it("should set safe state correctly", async () => {
-      const {
-        signers: [admin, alice, bob],
-        createPodWithSafeHelper,
-      } = await setup();
-
-      const { ethersSafe } = await createPodWithSafeHelper(admin);
-
       // threshold and owners
       expect(await ethersSafe.getThreshold()).to.equal(THRESHOLD);
       expect(await ethersSafe.getOwners()).to.deep.equal([alice.address, bob.address]);
       // check to see if module has been enabled
       expect(await ethersSafe.isModuleEnabled(controller.address)).to.equal(true);
-
-      // TODO: should be setting the guard
+      // TODO : should be setting the guard
       // check to see if guard has been enabled
       // strip off the address 0x for comparison
       // expect(await safeContract.getStorageAt(GUARD_STORAGE_SLOT, 1)).to.include(
       //   controller.address.substring(2).toLowerCase(),
       // );
     });
+
     it("set member token state correctly", async () => {
-      const {
-        signers: [admin, alice, bob],
-        memberToken,
-        createPodWithSafeHelper,
-      } = await setup();
-
-      await createPodWithSafeHelper(admin);
-
       expect(await memberToken.memberController(POD_ID)).to.equal(controller.address);
       // should mint member tokens
       expect(await memberToken.balanceOf(alice.address, POD_ID)).to.equal(1);
@@ -294,13 +265,6 @@ describe("Pod create integration test", () => {
     });
 
     it("should set controller state correctly", async () => {
-      const {
-        signers: [admin],
-        createPodWithSafeHelper,
-      } = await setup();
-
-      const { ethersSafe } = await createPodWithSafeHelper(admin);
-
       const safeAddress = ethersSafe.getAddress();
 
       expect(await controller.podIdToSafe(POD_ID)).to.equal(safeAddress);

@@ -17,6 +17,6 @@ contract MockEnsResolver {
     }
 
     function addr(bytes32 node) public view returns (address) {
-        return addr(node);
+        return addrs[node];
     }
 }
