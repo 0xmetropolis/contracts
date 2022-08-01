@@ -5,11 +5,11 @@ const fs = require("fs");
 
 /* eslint-disable import/no-extraneous-dependencies */
 require("hardhat-preprocessor");
-require("@nomiclabs/hardhat-waffle");
 require("hardhat-gas-reporter");
 require("solidity-coverage");
 require("hardhat-deploy");
 require("@nomiclabs/hardhat-ethers");
+require("@nomicfoundation/hardhat-chai-matchers");
 require("@tenderly/hardhat-tenderly");
 require("dotenv").config();
 require("./hardhat.tasks");
@@ -28,8 +28,6 @@ const networks = {
     blockGasLimit: 0xbebc20,
     allowUnlimitedContractSize: true,
     timeout: 1800000000,
-    // TODO: london breaks safe-sdk used in tests
-    hardfork: "berlin",
   },
   rinkeby: {
     url: `https://rinkeby.infura.io/v3/${process.env.INFURA_API_KEY}`,
@@ -87,12 +85,6 @@ module.exports = {
     contracts: [
       {
         artifacts: "node_modules/@gnosis.pm/safe-contracts/build/artifacts",
-      },
-      {
-        artifacts: "node_modules/@gnosis.pm/zodiac/build/artifacts",
-      },
-      {
-        artifacts: "node_modules/@ensdomains/ens-contracts/artifacts",
       },
     ],
   },

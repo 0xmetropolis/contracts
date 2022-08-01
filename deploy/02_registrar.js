@@ -1,5 +1,5 @@
-const { getEnsAddress } = require("@ensdomains/ensjs");
 const { ENSRegistry } = require("@ensdomains/ens-contracts");
+const { getEnsAddresses } = require("../utils/dependencyManager");
 
 module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) => {
   const { deploy } = deployments;
@@ -18,22 +18,10 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
   };
 
   // ENS contracts.
-  const ens = {
-    reverseRegistrar: {
-      1: "0x084b1c3C81545d370f3634392De611CaaBFf8148",
-      4: "0x6F628b68b30Dc3c17f345c9dbBb1E483c2b7aE5c",
-    },
-    publicResolver: {
-      1: "0x4976fb03C32e5B8cfe2b6cCB31c09Ba78EBaBa41",
-      4: "0xf6305c19e814d2a75429Fd637d01F7ee0E77d615",
-    },
-  };
-  const ensRegistryAddress =
-    network === "31337" ? (await deployments.get("ENSRegistry")).address : getEnsAddress(network);
-  const ensReverseRegistrar =
-    network === "31337" ? (await deployments.get("ReverseRegistrar")).address : ens.reverseRegistrar[network];
-  const ensResolver =
-    network === "31337" ? (await deployments.get("PublicResolver")).address : ens.publicResolver[network];
+  const { reverseRegistrarAddress, publicResolverAddress, registryAddress } = await getEnsAddresses(
+    network,
+    deployments,
+  );
 
   // Our contracts
   const controllerRegistryAddress = (await deployments.get("ControllerRegistry")).address;
@@ -43,9 +31,9 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
     from: deployer,
     gasLimit: 4000000,
     args: [
-      ensRegistryAddress,
-      ensResolver,
-      ensReverseRegistrar,
+      registryAddress,
+      publicResolverAddress,
+      reverseRegistrarAddress,
       controllerRegistryAddress,
       ethers.utils.namehash(TLD[network]),
       inviteToken,
@@ -55,7 +43,7 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
   });
 
   if (newlyDeployed) {
-    const ensRegistry = new ethers.Contract(ensRegistryAddress, ENSRegistry, ensHolderSigner);
+    const ensRegistry = new ethers.Contract(registryAddress, ENSRegistry, ensHolderSigner);
     // approve podENSRegistry to make pod.eth changes on behalf of ensHolder
     await ensRegistry.setApprovalForAll(podEnsRegistrarAddress, true);
   }
