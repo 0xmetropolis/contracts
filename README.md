@@ -59,8 +59,10 @@ You must create `.env` in the product root, and it should look like this:
 // This should be your private key
 PRIVATE_KEY = ""
 
+// Optional
 COINMARKETCAP_KEY= ""
 
+// Required
 INFURA_API_KEY= ""
 ```
 

@@ -50,11 +50,22 @@ task("mint", "mints tokens to an address, with an optional amount")
   .setAction(async (args, { getNamedAccounts, ethers }) => {
     const { deployer } = await getNamedAccounts();
     const inviteToken = await ethers.getContract("InviteToken", deployer);
+    const permissions = await ethers.getContract("PermissionManager", deployer);
 
+    const minterRole = await inviteToken.MINTER_ROLE();
+
+    const hasRole = await inviteToken.hasRole(minterRole, permissions.address);
+    console.log("hasRole", hasRole);
     const { recipient, amount } = args;
-    const res = await inviteToken.mint(recipient, amount || 1);
-    console.log(res);
-    console.log(`Minted ${amount || 1} tokens to ${recipient}`);
+
+    let balance = await inviteToken.balanceOf(recipient);
+    console.log("Old balance", balance.toNumber());
+
+    const { data } = await inviteToken.populateTransaction.mint(recipient, amount || 1);
+    const res = await permissions.callAsOwner(inviteToken.address, data);
+    await res.wait(1);
+    balance = await inviteToken.balanceOf(recipient);
+    console.log("New balance", balance.toNumber());
   });
 
 task("set-burner", "registers contract as invite burner").setAction(
@@ -111,6 +122,26 @@ task("update-registrar", "upgrade controller to new registrar").setAction(
     await (await ethers.getContract("ControllerV1.1", deployerSigner)).updatePodEnsRegistrar(podEnsRegistrarAddress);
     await (await ethers.getContract("ControllerV1.2", deployerSigner)).updatePodEnsRegistrar(podEnsRegistrarAddress);
     await (await ethers.getContract("ControllerV1.3", deployerSigner)).updatePodEnsRegistrar(podEnsRegistrarAddress);
+  },
+);
+
+task("ens-approve-registrar", "upgrade controller to new registrar").setAction(
+  async (args, { getNamedAccounts, getChainId, ethers, deployments }) => {
+    const { deployer } = await getNamedAccounts();
+    const network = await getChainId();
+    const deployerSigner = ethers.provider.getSigner(deployer);
+    const permissionManager = await ethers.getContract("PermissionManager", deployer);
+
+    const { address: podEnsRegistrarAddress } = await ethers.getContract("PodEnsRegistrar", deployer);
+
+    const ensRegistryAddress =
+      network === "31337" ? (await deployments.get("ENSRegistry")).address : getEnsAddress(network);
+
+    const ensRegistry = new ethers.Contract(ensRegistryAddress, ENSRegistry, deployerSigner);
+    // approve podENSRegistry to make ens changes on behalf of permissionManager
+    const { data } = await ensRegistry.populateTransaction.setApprovalForAll(podEnsRegistrarAddress, true);
+    const res = await permissionManager.callAsOwner(ensRegistry.address, data);
+    await res.wait(1);
   },
 );
 
@@ -211,3 +242,80 @@ task("add-ens-podid", "updates the ENS owner for a list of pod IDs")
       }
     }
   });
+
+task("add-permission-owner", "adds an address to be an owner of the Permissions contract")
+  .addPositionalParam("newOwner")
+  .setAction(async (args, { getChainId, ethers }) => {
+    const { newOwner } = args;
+    const { deployer } = await getNamedAccounts();
+
+    const Permissions = await ethers.getContract("PermissionManager", deployer);
+    const adminRole = await Permissions.DEFAULT_ADMIN_ROLE();
+    // await Permissions.grantRole(adminRole, newOwner);
+    const hasRole = await Permissions.hasRole(adminRole, newOwner);
+    if (hasRole) console.log("Granted permission successfully");
+    else console.log("Failed to grant permission");
+  });
+
+task("migrate-contracts", "migrates contract owners to the Permissions contract").setAction(
+  async (args, { getNamedAccounts, ethers }) => {
+    const { deployer } = await getNamedAccounts();
+    const deployerSigner = ethers.provider.getSigner(deployer);
+
+    const Permissions = await ethers.getContract("PermissionManager", deployer);
+    const { address: permissionsAddress } = await ethers.getContract("PermissionManager", deployer);
+
+    const adminRole = await Permissions.DEFAULT_ADMIN_ROLE();
+    const mintRole = (await ethers.getContract("InviteToken", deployer)).MINTER_ROLE();
+    await (await ethers.getContract("MemberToken", deployerSigner)).transferOwnership(permissionsAddress);
+    await (await ethers.getContract("InviteToken", deployerSigner)).grantRole(adminRole, permissionsAddress);
+    await (await ethers.getContract("InviteToken", deployerSigner)).grantRole(mintRole, permissionsAddress);
+    await (await ethers.getContract("ControllerRegistry", deployerSigner)).transferOwnership(permissionsAddress);
+    await (await ethers.getContract("Controller", deployerSigner)).transferOwnership(permissionsAddress);
+    await (await ethers.getContract("ControllerV1.1", deployerSigner)).transferOwnership(permissionsAddress);
+    await (await ethers.getContract("ControllerV1.2", deployerSigner)).transferOwnership(permissionsAddress);
+    await (await ethers.getContract("ControllerV1.3", deployerSigner)).transferOwnership(permissionsAddress);
+    await (await ethers.getContract("PodEnsRegistrar", deployerSigner)).transferOwnership(permissionsAddress);
+  },
+);
+
+task("migrate-ens-owner", "change owner of the ENS TLD").setAction(
+  async (args, { getChainId, getNamedAccounts, ethers, deployments }) => {
+    const { deployer } = await getNamedAccounts();
+    const network = await getChainId();
+    const deployerSigner = ethers.provider.getSigner(deployer);
+
+    const { address: permissionsAddress } = await ethers.getContract("PermissionManager", deployer);
+
+    const ensRegistryAddress =
+      network === "31337" ? (await deployments.get("ENSRegistry")).address : getEnsAddress(network);
+
+    const ensRegistry = new ethers.Contract(ensRegistryAddress, ENSRegistry, deployerSigner);
+    const tld = network === "1" ? "xyz" : "eth";
+    await ensRegistry.setOwner(ethers.utils.namehash(`pod.${tld}`), permissionsAddress);
+  },
+);
+
+task("test-ens", "tests to see if ENS works via our Permissions contract").setAction(
+  async (args, { getChainId, getNamedAccounts, ethers, deployments }) => {
+    const { deployer } = await getNamedAccounts();
+    const deployerSigner = ethers.provider.getSigner(deployer);
+    const network = await getChainId();
+
+    const Permissions = await ethers.getContract("PermissionManager", deployer);
+    const { address: permissionsAddress } = await ethers.getContract("PermissionManager", deployer);
+
+    const PodEnsRegistrar = await ethers.getContract("PodEnsRegistrar", deployer);
+    const { data } = await PodEnsRegistrar.populateTransaction.setText(
+      ethers.utils.namehash("yourmoms.pod.eth"),
+      "butt",
+      "butt",
+    );
+
+    await Permissions.callAsOwner(PodEnsRegistrar.address, data);
+
+    // const ens = new ENS({ provider: ethers.provider, ensAddress: getEnsAddress(network) });
+    // const podEth = await ens.name("pod.eth");
+    // console.log("podEth", await podEth.getOwner());
+  },
+);
