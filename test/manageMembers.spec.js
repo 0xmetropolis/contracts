@@ -189,7 +189,7 @@ describe("manage members integration test", () => {
       expect(await ethersSafe.isOwner(charlie.address)).to.eq(false);
     });
 
-    it("should mint multiple members", async () => {
+    it("should burn multiple members", async () => {
       await memberToken.connect(admin).mintSingleBatch([charlie.address, dave.address], POD_ID, HashZero);
       await memberToken.connect(admin).burnSingleBatch([charlie.address, dave.address], POD_ID);
 
@@ -220,6 +220,86 @@ describe("manage members integration test", () => {
 
       expect(await memberToken.balanceOf(charlie.address, POD_ID)).to.eq(1);
       expect(await ethersSafe.isOwner(charlie.address)).to.eq(true);
+    });
+  });
+
+  describe("when managing signers as safe", () => {
+    let { signers, memberToken, ethersSafe, createPodHelper, safeExecutionHelper } = {};
+    let [, , , charlie, dave] = [];
+
+    beforeEach(async () => {
+      ({ signers, ethersSafe, memberToken, createPodHelper, safeExecutionHelper } = await setup());
+
+      [, , , charlie, dave] = signers;
+      // create pod no admin
+      ({ ethersSafe } = await createPodHelper());
+    });
+
+    it("should add signer", async () => {
+      await safeExecutionHelper(ethersSafe, (await ethersSafe.getAddOwnerTx({ ownerAddress: charlie.address })).data);
+
+      expect(await memberToken.balanceOf(charlie.address, POD_ID)).to.eq(1);
+      expect(await ethersSafe.isOwner(charlie.address)).to.eq(true);
+    });
+
+    it("should remove signer", async () => {
+      await safeExecutionHelper(
+        ethersSafe,
+        await memberToken.populateTransaction.mint(charlie.address, POD_ID, HashZero),
+      );
+      await safeExecutionHelper(
+        ethersSafe,
+        (
+          await ethersSafe.getRemoveOwnerTx({ ownerAddress: charlie.address, threshold: 1 })
+        ).data,
+      );
+
+      expect(await memberToken.balanceOf(charlie.address, POD_ID)).to.eq(0);
+      expect(await ethersSafe.isOwner(charlie.address)).to.eq(false);
+    });
+
+    it("should swap signer", async () => {
+      await safeExecutionHelper(
+        ethersSafe,
+        await memberToken.populateTransaction.mint(charlie.address, POD_ID, HashZero),
+      );
+      await safeExecutionHelper(
+        ethersSafe,
+        (
+          await ethersSafe.getSwapOwnerTx({ oldOwnerAddress: charlie.address, newOwnerAddress: dave.address })
+        ).data,
+      );
+
+      expect(await memberToken.balanceOf(charlie.address, POD_ID)).to.eq(0);
+      expect(await ethersSafe.isOwner(charlie.address)).to.eq(false);
+      expect(await memberToken.balanceOf(dave.address, POD_ID)).to.eq(1);
+      expect(await ethersSafe.isOwner(dave.address)).to.eq(true);
+    });
+  });
+  describe("when managing members with batch mint and burn", () => {
+    let { signers, memberToken, ethersSafe, createPodHelper } = {};
+    let [admin, alice, bob, charlie, dave] = [];
+
+    beforeEach(async () => {
+      ({ signers, ethersSafe, memberToken, createPodHelper } = await setup());
+
+      [admin, alice, bob, charlie, dave] = signers;
+      // create pod with admin
+      ({ ethersSafe } = await createPodHelper(admin));
+    });
+
+    it("should batch mint and burn", async () => {
+      controller.connect(admin).batchMintAndBurn(POD_ID, [charlie.address, dave.address], [alice.address, bob.address]);
+      // should mint charlie and dave
+      expect(await memberToken.balanceOf(charlie.address, POD_ID)).to.eq(1);
+      expect(await ethersSafe.isOwner(charlie.address)).to.eq(true);
+      expect(await memberToken.balanceOf(dave.address, POD_ID)).to.eq(1);
+      expect(await ethersSafe.isOwner(dave.address)).to.eq(true);
+      // should burn alice and bob
+      expect(await memberToken.balanceOf(alice.address, POD_ID)).to.eq(0);
+      expect(await ethersSafe.isOwner(alice.address)).to.eq(false);
+      expect(await memberToken.balanceOf(bob.address, POD_ID)).to.eq(0);
+      expect(await ethersSafe.isOwner(bob.address)).to.eq(false);
     });
   });
 });
