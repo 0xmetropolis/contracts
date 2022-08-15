@@ -42,7 +42,7 @@ contract SafeTellerInternalTest is Test, SafeTeller, SafeTxHelper {
         addresses[1] = BOB;
         uint256 threshold = 1;
 
-        return GnosisSafe(payable(super.createSafe(addresses, threshold)));
+        return GnosisSafe(payable(super.createSafe(addresses, threshold, 1)));
     }
 
     // CREATESAFE TESTS
@@ -54,7 +54,7 @@ contract SafeTellerInternalTest is Test, SafeTeller, SafeTxHelper {
         uint256 threshold = 1;
 
         address payable newSafe = payable(
-            super.createSafe(addresses, threshold)
+            super.createSafe(addresses, threshold, 1)
         );
 
         // check owners are set
@@ -77,7 +77,7 @@ contract SafeTellerInternalTest is Test, SafeTeller, SafeTxHelper {
         addresses[0] = ALICE;
         uint256 threshold = 0; // bad threshold
 
-        super.createSafe(addresses, threshold);
+        super.createSafe(addresses, threshold, 1);
     }
 
     // TOKEN CALLBACK TESTS

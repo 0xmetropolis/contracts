@@ -39,6 +39,7 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
      * @param _gnosisMasterAddress The gnosis master address
      */
     constructor(
+        address _owner,
         address _memberToken,
         address _controllerRegistry,
         address _proxyFactoryAddress,
@@ -52,12 +53,16 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
             _fallbackHandlerAddress
         )
     {
+        require(_owner != address(0), "Invalid address");
         require(_memberToken != address(0), "Invalid address");
         require(_controllerRegistry != address(0), "Invalid address");
         require(_proxyFactoryAddress != address(0), "Invalid address");
         require(_gnosisMasterAddress != address(0), "Invalid address");
         require(_podEnsRegistrar != address(0), "Invalid address");
         require(_fallbackHandlerAddress != address(0), "Invalid address");
+
+        // Set owner separately from msg.sender.
+        transferOwnership(_owner);
 
         memberToken = IMemberToken(_memberToken);
         controllerRegistry = IControllerRegistry(_controllerRegistry);
@@ -89,7 +94,7 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
         uint256 expectedPodId,
         string memory _imageUrl
     ) external override {
-        address safe = createSafe(_members, threshold);
+        address safe = createSafe(_members, threshold, expectedPodId);
 
         _createPod(
             _members,

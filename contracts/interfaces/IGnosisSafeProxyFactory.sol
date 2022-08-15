@@ -7,4 +7,10 @@ interface IGnosisSafeProxyFactory {
     function createProxy(address singleton, bytes memory data)
         external
         returns (address);
+
+    function createProxyWithNonce(
+        address _singleton,
+        bytes memory initializer,
+        uint256 saltNonce
+    ) external returns (address);
 }

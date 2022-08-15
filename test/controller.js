@@ -20,7 +20,7 @@ describe("Controller safe integration test", () => {
   const IMAGE_URL = "https://orcaprotocol-nft.vercel.app/assets/testnet/00000001";
 
   // current controller being tested
-  const CONTROLLER_LATEST = "ControllerV1.3";
+  const CONTROLLER_LATEST = "ControllerV1.4";
 
   const createPodHelper = async _admin => {
     controller.createPod(
@@ -366,6 +366,16 @@ describe("Controller safe integration test", () => {
       await expect(
         memberToken.connect(bob).safeTransferFrom(bob.address, charlie.address, POD_ID, 1, HashZero, TX_OPTIONS),
       ).to.revertedWith("Pod Is Transfer Locked");
+    });
+  });
+
+  describe("recover safe", () => {
+    it("attempting to recover a safe twice should fail", async () => {
+      await controller.recoverSafe([alice.address, bob.address], 1, 2);
+      // This failure indicates that the first safe was created, and that a CREATE2 collision is occurring.
+      await expect(controller.recoverSafe([alice.address, bob.address], 1, 2)).to.be.revertedWith(
+        "Create Proxy With Data Failed",
+      );
     });
   });
 });

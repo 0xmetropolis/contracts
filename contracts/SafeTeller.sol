@@ -136,10 +136,11 @@ contract SafeTeller is BaseGuard {
      * @param _threshold The number of owners that are required to sign a transaciton
      * @return safeAddress The address of the new safe
      */
-    function createSafe(address[] memory _owners, uint256 _threshold)
-        internal
-        returns (address safeAddress)
-    {
+    function createSafe(
+        address[] memory _owners,
+        uint256 _threshold,
+        uint256 _salt
+    ) internal returns (address safeAddress) {
         bytes memory data = abi.encodeWithSignature(
             FUNCTION_SIG_ENABLE,
             address(this)
@@ -160,9 +161,10 @@ contract SafeTeller is BaseGuard {
         );
 
         try
-            IGnosisSafeProxyFactory(proxyFactoryAddress).createProxy(
+            IGnosisSafeProxyFactory(proxyFactoryAddress).createProxyWithNonce(
                 gnosisMasterAddress,
-                setupData
+                setupData,
+                _salt
             )
         returns (address newSafeAddress) {
             // add safe teller as guard
@@ -172,6 +174,20 @@ contract SafeTeller is BaseGuard {
         } catch (bytes memory) {
             revert("Create Proxy With Data Failed");
         }
+    }
+
+    /**
+     * Uses CREATE2 to replicate a given safe on a new network.
+     * @param members The addresses of the members of the pod as it was originally created.
+     * @param threshold The number of members that are required to sign a transaction
+     * @param podId - Pod ID of safe you are trying to recreate
+     */
+    function recoverSafe(
+        address[] calldata members,
+        uint256 threshold,
+        uint256 podId
+    ) external returns (address) {
+        return createSafe(members, threshold, podId);
     }
 
     /**
