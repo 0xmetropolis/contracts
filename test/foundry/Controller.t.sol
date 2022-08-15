@@ -17,6 +17,7 @@ contract ControllerV1Test is Test {
     MemberToken memberToken = new MemberToken(mockControllerRegistry, "uri");
     ControllerV1 controller =
         new ControllerV1(
+            address(0x1738),
             address(memberToken),
             mockControllerRegistry,
             mockDependency,
@@ -41,6 +42,7 @@ contract ControllerV1Test is Test {
             mockDependencies[i] = address(0);
             vm.expectRevert("Invalid address");
             new ControllerV1(
+                address(0x1738),
                 mockDependencies[0],
                 mockDependencies[1],
                 mockDependencies[2],
