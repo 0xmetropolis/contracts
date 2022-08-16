@@ -1,5 +1,8 @@
-const { getGnosisAddresses } = require("../utils/dependencyManager");
-const ControllerV1_3 = require("../deployments/mainnet/ControllerV1.3.json");
+const {
+  getSafeSingletonDeployment,
+  getProxyFactoryDeployment,
+  getCompatibilityFallbackHandlerDeployment,
+} = require("@gnosis.pm/safe-deployments");
 
 module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) => {
   const { deploy } = deployments;
@@ -12,32 +15,42 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
   const network = await getChainId();
 
   // Gnosis contracts
-  const { proxyFactoryAddress, gnosisSafeSingletonAddress, fallbackHandlerAddress } = await getGnosisAddresses(
-    network,
-    deployments,
-  );
+  const proxyFactoryAddress =
+    network === "31337"
+      ? (await deployments.get("GnosisSafeProxyFactory")).address
+      : getProxyFactoryDeployment({ network }).defaultAddress;
+
+  const gnosisSafeAddress =
+    network === "31337"
+      ? (await deployments.get("GnosisSafe")).address
+      : getSafeSingletonDeployment({ network }).defaultAddress;
+
+  const fallbackHandlerAddress =
+    network === "31337"
+      ? (await deployments.get("CompatibilityFallbackHandler")).address
+      : getCompatibilityFallbackHandlerDeployment({ network }).defaultAddress;
+
   // Our contracts
   const memberTokenAddress = (await deployments.get("MemberToken")).address;
   const controllerRegistryAddress = (await deployments.get("ControllerRegistry")).address;
   const podEnsRegistrarAddress = (await deployments.get("PodEnsRegistrar")).address;
 
-  const { address: controllerAddress, newlyDeployed } = await deploy("ControllerV1.3", {
-    contract: {
-      abi: ControllerV1_3.abi,
-      bytecode: ControllerV1_3.bytecode,
-    },
+  const { address: controllerAddress, newlyDeployed } = await deploy("ControllerV1.4", {
+    contract: "ControllerV1",
     from: deployer,
     gasLimit: 8000000,
     args: [
+      deployer,
       memberTokenAddress,
       controllerRegistryAddress,
       proxyFactoryAddress,
-      gnosisSafeSingletonAddress,
+      gnosisSafeAddress,
       podEnsRegistrarAddress,
       fallbackHandlerAddress,
     ],
     log: true,
-    skipIfAlreadyDeployed: true,
+    skipIfAlreadyDeployed: false,
+    deterministicDeployment: "0x0000000000000000000000000000000000000000000000000000000000000001",
   });
 
   if (newlyDeployed) {
@@ -47,5 +60,5 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
   }
 };
 
-module.exports.tags = ["ControllerV1.3"];
+module.exports.tags = ["ControllerV1.4"];
 module.exports.dependencies = ["Registrar"];

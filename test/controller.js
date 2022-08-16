@@ -368,4 +368,14 @@ describe("Controller safe integration test", () => {
       ).to.revertedWith("Pod Is Transfer Locked");
     });
   });
+
+  describe("recover safe", () => {
+    it("attempting to recover a safe twice should fail", async () => {
+      await controller.recoverSafe([alice.address, bob.address], 1, 2);
+      // This failure indicates that the first safe was created, and that a CREATE2 collision is occurring.
+      await expect(controller.recoverSafe([alice.address, bob.address], 1, 2)).to.be.revertedWith(
+        "Create Proxy With Data Failed",
+      );
+    });
+  });
 });
