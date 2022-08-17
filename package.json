@@ -20,7 +20,7 @@
     "mocha": "^9.0.0",
     "prettier": "^2.2.1",
     "prettier-plugin-solidity": "^1.0.0-beta.3",
-    "solhint": "^3.3.2",
+    "solhint": "^3.3.6",
     "solhint-plugin-prettier": "0.0.5",
     "solidity-coverage": "^0.7.17",
     "vercel": "^23.0.1"
@@ -34,7 +34,7 @@
   },
   "husky": {
     "hooks": {
-      "pre-commit": "npm run format && npm run lint && npm run test"
+      "pre-commit": "npm run format && npm run lint && npm run test && forge test"
     }
   },
   "dependencies": {

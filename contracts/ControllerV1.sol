@@ -1,7 +1,5 @@
 pragma solidity ^0.8.7;
 
-/* solhint-disable indent */
-
 import "ens-contracts/registry/ENS.sol";
 import "ens-contracts/registry/ReverseRegistrar.sol";
 import "ens-contracts/resolvers/Resolver.sol";
@@ -11,14 +9,21 @@ import "./interfaces/IControllerV1.sol";
 import "./interfaces/IMemberToken.sol";
 import "./interfaces/IControllerRegistry.sol";
 import "./SafeTeller.sol";
+import "./MemberTeller.sol";
 import "./ens/IPodEnsRegistrar.sol";
+import {BaseGuard, Enum} from "safe-contracts/base/GuardManager.sol";
 
-contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
+contract ControllerV1 is
+    IControllerV1,
+    SafeTeller,
+    MemberTeller,
+    BaseGuard,
+    Ownable
+{
     event CreatePod(uint256 podId, address safe, address admin, string ensName);
     event UpdatePodAdmin(uint256 podId, address admin);
     event DeregisterPod(uint256 podId);
 
-    IMemberToken public immutable memberToken;
     IControllerRegistry public immutable controllerRegistry;
     IPodEnsRegistrar public podEnsRegistrar;
 
@@ -52,6 +57,7 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
             _gnosisMasterAddress,
             _fallbackHandlerAddress
         )
+        MemberTeller(_memberToken)
     {
         require(_owner != address(0), "Invalid address");
         require(_memberToken != address(0), "Invalid address");
@@ -64,7 +70,6 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
         // Set owner separately from msg.sender.
         transferOwnership(_owner);
 
-        memberToken = IMemberToken(_memberToken);
         controllerRegistry = IControllerRegistry(_controllerRegistry);
         podEnsRegistrar = IPodEnsRegistrar(_podEnsRegistrar);
     }
@@ -124,6 +129,13 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
         string memory _imageUrl
     ) external override {
         require(_safe != address(0), "invalid safe address");
+        // safe must have zero'd pod id
+        if (safeToPodId[_safe] == 0) {
+            // if safe has zero pod id make sure its not set at pod id zero
+            require(_safe != podIdToSafe[0], "safe already in use");
+        } else {
+            revert("safe already in use");
+        }
         require(safeToPodId[_safe] == 0, "safe already in use");
         require(isSafeModuleEnabled(_safe), "safe module must be enabled");
         require(
@@ -171,6 +183,8 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
         emit CreatePod(podId, _safe, _admin, _ensString);
         emit UpdatePodAdmin(podId, _admin);
 
+        // add controller as guard
+        setSafeGuard(_safe, address(this));
         if (_admin != address(0)) {
             // will lock safe modules if admin exists
             setModuleLock(_safe, true);
@@ -277,6 +291,10 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
     ) external override {
         require(_newController != address(0), "Invalid address");
         require(
+            _newController != address(this),
+            "Cannot migrate to same controller"
+        );
+        require(
             controllerRegistry.isRegistered(_newController),
             "Controller not registered"
         );
@@ -335,7 +353,8 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
         podIdToSafe[_podId] = _safeAddress;
         safeToPodId[_safeAddress] = _podId;
 
-        setSafeTellerAsGuard(_safeAddress);
+        // add controller as guard
+        setSafeGuard(_safeAddress, address(this));
 
         emit UpdatePodAdmin(_podId, _podAdmin);
     }
@@ -354,8 +373,16 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
         address previousModule
     ) external override {
         address safe = podIdToSafe[podId];
+        address admin = podAdmin[podId];
+
         require(safe != address(0), "pod not registered");
-        address[] memory members = this.getSafeMembers(safe);
+
+        if (admin != address(0)) {
+            require(msg.sender == admin, "must be admin");
+            setModuleLock(safe, false);
+        } else {
+            require(msg.sender == safe, "tx must be sent from safe");
+        }
 
         Resolver resolver = Resolver(podEnsRegistrar.resolver());
         bytes32 node = podEnsRegistrar.getEnsNode(label);
@@ -366,29 +393,42 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
         podEnsRegistrar.setAddr(node, address(0));
         podEnsRegistrar.register(label, address(0));
 
-        if (podAdmin[podId] != address(0)) {
-            require(msg.sender == podAdmin[podId], "must be admin");
-            setModuleLock(safe, false);
-        } else {
-            require(msg.sender == safe, "tx must be sent from safe");
+        // if module is already disabled, the safe must unset these manually
+        if (isSafeModuleEnabled(safe)) {
+            // remove controller as guard
+            setSafeGuard(safe, address(0));
+            // remove module and handle reverse registration clearing.
+            disableModule(
+                safe,
+                podEnsRegistrar.reverseRegistrar(),
+                previousModule
+            );
         }
-
-        // Also handles reverse registration clearing.
-        this.disableModule(
-            safe,
-            podEnsRegistrar.reverseRegistrar(),
-            previousModule,
-            address(this)
-        );
 
         // This needs to happen before the burn to skip the transfer check.
         podAdmin[podId] = address(0);
         podIdToSafe[podId] = address(0);
         safeToPodId[safe] = 0;
 
+        // Burn member tokens
+        address[] memory members = this.getSafeMembers(safe);
         memberToken.burnSingleBatch(members, podId);
 
         emit DeregisterPod(podId);
+    }
+
+    function batchMintAndBurn(
+        uint256 _podId,
+        address[] memory _mintMembers,
+        address[] memory _burnMembers
+    ) external {
+        address safe = podIdToSafe[_podId];
+        require(
+            msg.sender == safe || msg.sender == podAdmin[_podId],
+            "not authorized"
+        );
+        memberToken.mintSingleBatch(_mintMembers, _podId, bytes(" "));
+        memberToken.burnSingleBatch(_burnMembers, _podId);
     }
 
     /**
@@ -408,13 +448,19 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
     ) external override {
         require(msg.sender == address(memberToken), "Not Authorized");
 
-        // if create event than side effects have been pre-handled
         // only recognise data flags from this controller
-        if (
-            operator == address(this) &&
-            data.length > 0 &&
-            uint8(data[0]) == CREATE_EVENT
-        ) return;
+        if (operator == address(this)) {
+            // if create or sync event than side effects have been pre-handled
+            if (data.length > 0) {
+                if (uint8(data[0]) == CREATE_EVENT) return;
+                if (uint8(data[0]) == SYNC_EVENT) return;
+            }
+            // because 1155 burn doesn't allow data we use a burn sync flag to skip side effects
+            if (BURN_SYNC_FLAG == true) {
+                setBurnSyncFlag(false);
+                return;
+            }
+        }
 
         for (uint256 i = 0; i < ids.length; i += 1) {
             uint256 podId = ids[i];
@@ -458,5 +504,55 @@ contract ControllerV1 is IControllerV1, SafeTeller, Ownable {
                 onTransfer(from, to, safe);
             }
         }
+    }
+
+    /**
+     * @dev This will be called by the safe at execution time time
+     * _param to Destination address of Safe transaction.
+     * _param value Ether value of Safe transaction.
+     * @param data Data payload of Safe transaction.
+     * _param operation Operation type of Safe transaction.
+     * _param safeTxGas Gas that should be used for the Safe transaction.
+     * _param baseGas Gas costs that are independent of the transaction execution(e.g. base transaction fee, signature check, payment of the refund)
+     * _param gasPrice Gas price that should be used for the payment calculation.
+     * _param gasToken Token address (or 0 if ETH) that is used for the payment.
+     * _param refundReceiver Address of receiver of gas payment (or 0 if tx.origin).
+     * _param signatures Packed signature data ({bytes32 r}{bytes32 s}{uint8 v})
+     * _param msgSender Account executing safe transaction
+     */
+    function checkTransaction(
+        address,
+        uint256,
+        bytes memory data,
+        Enum.Operation,
+        uint256,
+        uint256,
+        uint256,
+        address,
+        address payable,
+        bytes memory,
+        address
+    ) external override {
+        uint256 podId = safeToPodId[msg.sender];
+
+        if (podId == 0) {
+            address safe = podIdToSafe[podId];
+            // if safe is 0 its deregistered and we can skip check to allow cleanup
+            if (safe == address(0)) return;
+            // else require podId zero is calling from safe
+            require(safe == msg.sender, "Not Authorized");
+        }
+
+        if (data.length >= 4) {
+            // if safe modules are locked perform safe check
+            if (areModulesLocked[msg.sender]) {
+                safeTellerCheck(data);
+            }
+            memberTellerCheck(podId, data);
+        }
+    }
+
+    function checkAfterExecution(bytes32, bool) external pure override {
+        return;
     }
 }

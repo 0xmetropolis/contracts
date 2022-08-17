@@ -44,6 +44,12 @@ interface IMemberToken is IERC1155 {
         bytes memory data
     ) external;
 
+    /**
+     * @param _account The account address holding the membership token to destroy
+     * @param _id The id of the membership token to destroy
+     */
+    function burn(address _account, uint256 _id) external;
+
     function burnSingleBatch(address[] memory _accounts, uint256 _id) external;
 
     function createPod(address[] memory _accounts, bytes memory data)

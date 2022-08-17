@@ -20,7 +20,7 @@ describe("create pod integration test", () => {
   const IMAGE_URL = "https://orcaprotocol-nft.vercel.app/assets/testnet/00000001";
 
   // current controller being tested
-  const CONTROLLER_LATEST = "ControllerV1.3";
+  const CONTROLLER_LATEST = "ControllerV1.4";
 
   const setup = async () => {
     const { chainId } = await ethers.provider.getNetwork();
@@ -186,7 +186,7 @@ describe("create pod integration test", () => {
   // CREATE POD WITH SAFE TESTS
 
   describe("when creating new pod through createPodWithSafe without an admin", () => {
-    let { signers, memberToken, ethersSafe, createPodWithSafeHelper } = {};
+    let { signers, memberToken, ethersSafe, safeContract, createPodWithSafeHelper } = {};
     let [, alice, bob] = [];
 
     before(async () => {
@@ -194,7 +194,7 @@ describe("create pod integration test", () => {
 
       [, alice, bob] = signers;
       // create pod with safe no admin
-      ({ ethersSafe } = await createPodWithSafeHelper());
+      ({ ethersSafe, safeContract } = await createPodWithSafeHelper());
     });
 
     it("should set safe state correctly", async () => {
@@ -204,12 +204,11 @@ describe("create pod integration test", () => {
       // check to see if module has been enabled
       expect(await ethersSafe.isModuleEnabled(controller.address)).to.equal(true);
 
-      // TODO: should be setting the guard
       // check to see if guard has been enabled
       // strip off the address 0x for comparison
-      // expect(await safeContract.getStorageAt(GUARD_STORAGE_SLOT, 1)).to.include(
-      //   controller.address.substring(2).toLowerCase(),
-      // );
+      expect(await safeContract.getStorageAt(GUARD_STORAGE_SLOT, 1)).to.include(
+        controller.address.substring(2).toLowerCase(),
+      );
     });
 
     it("set member token state correctly", async () => {
@@ -232,7 +231,7 @@ describe("create pod integration test", () => {
   });
 
   describe("when creating new pod through createPodWithSafe with an admin", () => {
-    let { signers, memberToken, ethersSafe, createPodWithSafeHelper } = {};
+    let { signers, memberToken, ethersSafe, safeContract, createPodWithSafeHelper } = {};
     let [admin, alice, bob] = [];
 
     before(async () => {
@@ -240,7 +239,7 @@ describe("create pod integration test", () => {
 
       [admin, alice, bob] = signers;
       // create pod with safe with admin
-      ({ ethersSafe } = await createPodWithSafeHelper(admin));
+      ({ ethersSafe, safeContract } = await createPodWithSafeHelper(admin));
     });
 
     it("should set safe state correctly", async () => {
@@ -249,12 +248,11 @@ describe("create pod integration test", () => {
       expect(await ethersSafe.getOwners()).to.deep.equal([alice.address, bob.address]);
       // check to see if module has been enabled
       expect(await ethersSafe.isModuleEnabled(controller.address)).to.equal(true);
-      // TODO : should be setting the guard
       // check to see if guard has been enabled
       // strip off the address 0x for comparison
-      // expect(await safeContract.getStorageAt(GUARD_STORAGE_SLOT, 1)).to.include(
-      //   controller.address.substring(2).toLowerCase(),
-      // );
+      expect(await safeContract.getStorageAt(GUARD_STORAGE_SLOT, 1)).to.include(
+        controller.address.substring(2).toLowerCase(),
+      );
     });
 
     it("set member token state correctly", async () => {

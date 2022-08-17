@@ -6,14 +6,15 @@ const GnosisSafe = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/
 
 const { getPreviousModule, createSafeSigner } = require("./utils");
 
-describe("Controller safe integration test", () => {
-  let [admin, alice, bob, charlie] = [];
+describe("eject safe integration test", () => {
+  let [admin, alice, bob] = [];
 
   let controller;
 
-  const { HashZero, AddressZero } = ethers.constants;
+  const { AddressZero } = ethers.constants;
 
   const TX_OPTIONS = { gasLimit: 4000000 };
+  const GUARD_STORAGE_SLOT = "0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8";
 
   const THRESHOLD = 1;
   const POD_ID = 0;
@@ -54,7 +55,7 @@ describe("Controller safe integration test", () => {
 
   const setup = async ({ hasAdmin } = {}) => {
     await deployments.fixture(["Base", "Registrar", CONTROLLER_LATEST]);
-    [admin, alice, bob, charlie] = await ethers.getSigners();
+    [admin, alice, bob] = await ethers.getSigners();
 
     // hardhat ethers doesn't recognize controller versions
     const { address: controllerAddress, abi: controllerAbi } = await deployments.get(CONTROLLER_LATEST);
@@ -78,75 +79,28 @@ describe("Controller safe integration test", () => {
       admin,
     );
 
-    const { ethersSafe } = await createPodHelper(hasAdmin ? admin.address : undefined);
+    const { ethersSafe, safeContract } = await createPodHelper(hasAdmin ? admin.address : undefined);
 
     return {
       memberToken,
       ethersSafe,
       podEnsRegistrar,
+      safeContract,
     };
   };
 
-  describe("when a pod has an admin", () => {
-    let { ethersSafe } = {};
-    beforeEach(async () => {
-      ({ ethersSafe } = await setup({ hasAdmin: true }));
-    });
-    it("should let admin set new admin", async () => {
-      await controller.connect(admin).updatePodAdmin(POD_ID, alice.address);
-      expect(await controller.podAdmin(POD_ID)).to.equal(alice.address);
-      const safe = await controller.podIdToSafe(POD_ID);
-      expect(await controller.areModulesLocked(safe)).to.equal(true);
-    });
-    it("should let admin remove admin", async () => {
-      await controller.connect(admin).updatePodAdmin(POD_ID, AddressZero);
-      expect(await controller.podAdmin(POD_ID)).to.equal(AddressZero);
-      const safe = await controller.podIdToSafe(POD_ID);
-      expect(await controller.areModulesLocked(safe)).to.equal(false);
-    });
-    it("should let admin unlock modules", async () => {
-      await controller.connect(admin).setPodModuleLock(POD_ID, false);
-
-      const safe = await controller.podIdToSafe(POD_ID);
-      expect(await controller.areModulesLocked(safe)).to.equal(false);
-    });
-    it("should throw if safe updates admin", async () => {
-      await expect(
-        safeExecutionHelper(ethersSafe, await controller.populateTransaction.updatePodAdmin(POD_ID, alice.address)),
-      ).to.be.revertedWith("GS013"); // sdk throws safe failure error
-    });
-    it("should throw if user updates module lock", async () => {
-      await expect(controller.connect(bob).setPodModuleLock(POD_ID, false)).to.be.revertedWith(
-        "Must be admin to set module lock",
-      );
-    });
-  });
-
-  describe("when a pod has no admin", () => {
-    it("should throw if member updates admin", async () => {
-      await setup();
-
-      await expect(controller.connect(alice).updatePodAdmin(POD_ID, alice.address)).to.be.revertedWith(
-        "Only safe can add new admin",
-      );
-    });
-
-    it("should let safe update admin", async () => {
-      const { ethersSafe } = await setup();
-      await safeExecutionHelper(ethersSafe, await controller.populateTransaction.updatePodAdmin(POD_ID, alice.address));
-
-      expect(await controller.podAdmin(POD_ID)).to.equal(alice.address);
-      const safe = await controller.podIdToSafe(POD_ID);
-      expect(await controller.areModulesLocked(safe)).to.equal(true);
-    });
-  });
-
   describe("ejecting a safe", () => {
-    async function checkEject({ ethersSafe, memberToken, podId }) {
+    async function checkEject({ ethersSafe, safeContract, memberToken, podId }) {
       // Safe owners should be untouched.
       expect(await ethersSafe.getOwners()).to.deep.equal([alice.address, bob.address]);
       expect(await memberToken.balanceOf(alice.address, podId)).to.equal(0);
       expect(await memberToken.balanceOf(bob.address, podId)).to.equal(0);
+
+      // should remove module
+      expect(await ethersSafe.isModuleEnabled(controller.address)).to.equal(false);
+
+      // should remove guard
+      expect(await safeContract.getStorageAt(GUARD_STORAGE_SLOT, 1)).to.include(AddressZero.substring(2).toLowerCase());
 
       // // Checking if reverse resolver is zeroed.
       // expect(await publicResolver.name(namehash(ensName))).to.equal("");
@@ -157,7 +111,7 @@ describe("Controller safe integration test", () => {
     }
 
     it("should be able to eject a safe via an admin call", async () => {
-      const { memberToken, ethersSafe } = await setup({ hasAdmin: true });
+      const { memberToken, ethersSafe, safeContract } = await setup({ hasAdmin: true });
       // This is just to make sure the addr call works properly.
       // expect(await publicResolver["addr(bytes32)"](namehash("test.pod.eth"))).to.not.equal(
       //   ethers.constants.AddressZero,
@@ -170,7 +124,7 @@ describe("Controller safe integration test", () => {
         .to.emit(controller, "DeregisterPod")
         .withArgs(POD_ID);
 
-      await checkEject({ ethersSafe, memberToken, podId: POD_ID });
+      await checkEject({ ethersSafe, memberToken, safeContract, podId: POD_ID });
 
       // // Checking reverse resolver is zeroed. Reverse resolver check happens separately.
       // expect((await ens.getName(safeAddress)).name).to.equal("");
@@ -178,7 +132,7 @@ describe("Controller safe integration test", () => {
     });
 
     it("should be able to eject a safe via a proposal (safe transaction)", async () => {
-      const { ethersSafe, memberToken } = await setup();
+      const { ethersSafe, safeContract, memberToken } = await setup();
 
       const previousModule = await getPreviousModule(
         await ethersSafe.getAddress(),
@@ -193,6 +147,7 @@ describe("Controller safe integration test", () => {
 
       await checkEject({
         ethersSafe,
+        safeContract,
         memberToken,
         podId: POD_ID,
         ensName: "test",
@@ -206,7 +161,7 @@ describe("Controller safe integration test", () => {
     });
 
     it("should be able to eject pods that have had the module disabled", async () => {
-      const { ethersSafe, memberToken } = await setup();
+      const { ethersSafe, safeContract, memberToken } = await setup();
 
       const safeAddress = await ethersSafe.getAddress();
       const previousModule = await getPreviousModule(safeAddress, controller.address, ethers.provider);
@@ -223,8 +178,11 @@ describe("Controller safe integration test", () => {
         await controller.populateTransaction.ejectSafe(POD_ID, labelhash("test"), previousModule),
       );
 
+      await safeExecutionHelper(ethersSafe, await safeContract.populateTransaction.setGuard(AddressZero));
+
       await checkEject({
         ethersSafe,
+        safeContract,
         memberToken,
         podId: POD_ID,
         ensName: "test",
@@ -272,110 +230,5 @@ describe("Controller safe integration test", () => {
     //     "safe and label didn't match",
     //   );
     // });
-
-    it("should throw if a non-admin attempts to eject safe", async () => {
-      const { ethersSafe } = await setup({ hasAdmin: true });
-
-      const previousModule = await getPreviousModule(
-        await ethersSafe.getAddress(),
-        controller.address,
-        ethers.provider,
-      );
-      await expect(controller.connect(alice).ejectSafe(POD_ID, labelhash("test"), previousModule)).to.be.revertedWith(
-        "must be admin",
-      );
-    });
-
-    it("should throw if ejecting a non-existent pod", async () => {
-      const { ethersSafe } = await setup();
-
-      const previousModule = await getPreviousModule(
-        await ethersSafe.getAddress(),
-        controller.address,
-        ethers.provider,
-      );
-      await expect(
-        controller.connect(alice).ejectSafe(POD_ID + 1, labelhash("test"), previousModule),
-      ).to.be.revertedWith("pod not registered");
-    });
-  });
-  describe("when minting membership tokens without rules", () => {
-    it("should NOT allow a user to mint membership token", async () => {
-      const { memberToken } = await setup();
-      await expect(memberToken.connect(charlie).mint(charlie.address, POD_ID, HashZero, TX_OPTIONS)).to.be.revertedWith(
-        "No Rules Set",
-      );
-    });
-  });
-
-  describe("burning membership tokens without rules", () => {
-    it("should NOT allow a user to burn membership token with no rules", async () => {
-      const { memberToken } = await setup();
-      await expect(memberToken.connect(charlie).burn(bob.address, POD_ID, TX_OPTIONS)).to.be.revertedWith(
-        "No Rules Set",
-      );
-    });
-  });
-
-  describe("when toggling transfer lock without a pod admin", () => {
-    let { ethersSafe } = {};
-    beforeEach(async () => {
-      ({ ethersSafe } = await setup());
-    });
-
-    it("should allow safe to toggle transfer lock", async () => {
-      await safeExecutionHelper(ethersSafe, await controller.populateTransaction.setPodTransferLock(POD_ID, true));
-
-      expect(await controller.isTransferLocked(POD_ID)).to.equal(true);
-    });
-    it("should throw if user toggles transfer lock", async () => {
-      await expect(controller.connect(bob).setPodTransferLock(POD_ID, true)).to.be.revertedWith(
-        "Only safe can set transfer lock",
-      );
-    });
-  });
-
-  describe("when toggling transfer lock with a pod admin", () => {
-    beforeEach(async () => {
-      await setup({ hasAdmin: true });
-    });
-
-    it("should allow admin to toggle transfer lock", async () => {
-      await controller.connect(admin).setPodTransferLock(POD_ID, true);
-      expect(await controller.isTransferLocked(POD_ID)).to.equal(true);
-    });
-    it("should allow safe to toggle transfer lock", async () => {
-      await controller.connect(admin).setPodTransferLock(POD_ID, true);
-      expect(await controller.isTransferLocked(POD_ID)).to.equal(true);
-    });
-    it("should throw if user toggles transfer lock", async () => {
-      await expect(controller.connect(bob).setPodTransferLock(POD_ID, true)).to.be.revertedWith(
-        "Only admin or safe can set transfer lock",
-      );
-    });
-  });
-
-  describe("when transferring membership tokens with transfer lock", () => {
-    let { memberToken } = {};
-    beforeEach(async () => {
-      ({ memberToken } = await setup({ hasAdmin: true }));
-      await controller.connect(admin).setPodTransferLock(POD_ID, true);
-    });
-
-    it("should throw when user to transfer membership token", async () => {
-      await expect(
-        memberToken.connect(bob).safeTransferFrom(bob.address, charlie.address, POD_ID, 1, HashZero, TX_OPTIONS),
-      ).to.revertedWith("Pod Is Transfer Locked");
-    });
-  });
-
-  describe("recover safe", () => {
-    it("attempting to recover a safe twice should fail", async () => {
-      await controller.recoverSafe([alice.address, bob.address], 1, 2);
-      // This failure indicates that the first safe was created, and that a CREATE2 collision is occurring.
-      await expect(controller.recoverSafe([alice.address, bob.address], 1, 2)).to.be.revertedWith(
-        "Create Proxy With Data Failed",
-      );
-    });
   });
 });

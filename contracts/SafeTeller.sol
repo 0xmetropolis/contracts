@@ -3,9 +3,8 @@ pragma solidity ^0.8.7;
 import "openzeppelin-contracts/utils/Address.sol";
 import "./interfaces/IGnosisSafe.sol";
 import "./interfaces/IGnosisSafeProxyFactory.sol";
-import {BaseGuard, Enum} from "safe-contracts/base/GuardManager.sol";
 
-contract SafeTeller is BaseGuard {
+contract SafeTeller {
     using Address for address;
 
     // mainnet: 0x76E2cFc1F5Fa8F6a5b3fC4c8F4788F0116861F9B;
@@ -96,10 +95,10 @@ contract SafeTeller is BaseGuard {
      * @dev sets the safeteller as safe guard, called after migration
      * @param _safe The address of the safe
      */
-    function setSafeTellerAsGuard(address _safe) internal {
+    function setSafeGuard(address _safe, address guard) internal {
         bytes memory transferData = abi.encodeWithSignature(
             "setGuard(address)",
-            address(this)
+            guard
         );
 
         bool guardSuccess = IGnosisSafe(_safe).execTransactionFromModule(
@@ -108,7 +107,7 @@ contract SafeTeller is BaseGuard {
             transferData,
             IGnosisSafe.Operation.Call
         );
-        require(guardSuccess, "Could not enable guard");
+        require(guardSuccess, "Could not set guard");
     }
 
     function getSafeMembers(address safe)
@@ -167,9 +166,6 @@ contract SafeTeller is BaseGuard {
                 _salt
             )
         returns (address newSafeAddress) {
-            // add safe teller as guard
-            setSafeTellerAsGuard(newSafeAddress);
-
             return newSafeAddress;
         } catch (bytes memory) {
             revert("Create Proxy With Data Failed");
@@ -323,60 +319,16 @@ contract SafeTeller is BaseGuard {
         areModulesLocked[safe] = isLocked;
     }
 
-    /**
-     * @dev This will be called by the safe at execution time time
-     * @param to Destination address of Safe transaction.
-     * @param value Ether value of Safe transaction.
-     * @param data Data payload of Safe transaction.
-     * @param operation Operation type of Safe transaction.
-     * @param safeTxGas Gas that should be used for the Safe transaction.
-     * @param baseGas Gas costs that are independent of the transaction execution(e.g. base transaction fee, signature check, payment of the refund)
-     * @param gasPrice Gas price that should be used for the payment calculation.
-     * @param gasToken Token address (or 0 if ETH) that is used for the payment.
-     * @param refundReceiver Address of receiver of gas payment (or 0 if tx.origin).
-     * @param signatures Packed signature data ({bytes32 r}{bytes32 s}{uint8 v})
-     * @param msgSender Account executing safe transaction
-     */
-    function checkTransaction(
-        address to,
-        uint256 value,
-        bytes memory data,
-        Enum.Operation operation,
-        uint256 safeTxGas,
-        uint256 baseGas,
-        uint256 gasPrice,
-        address gasToken,
-        address payable refundReceiver,
-        bytes memory signatures,
-        address msgSender
-    ) external view override {
-        address safe = msg.sender;
-        // if safe isn't locked return
-        if (!areModulesLocked[safe]) {
-            return;
-        }
-        if (data.length >= 4) {
-            require(
-                bytes4(data) != ENCODED_SIG_ENABLE_MOD,
-                "Cannot Enable Modules"
-            );
-            require(
-                bytes4(data) != ENCODED_SIG_DISABLE_MOD,
-                "Cannot Disable Modules"
-            );
-            require(
-                bytes4(data) != ENCODED_SIG_SET_GUARD,
-                "Cannot Change Guard"
-            );
-        }
-    }
-
-    function checkAfterExecution(bytes32, bool) external view override {}
-
-    // TODO: move to library
-    // Used in a delegate call to enable module add on setup
-    function enableModule(address module) external {
-        require(module == address(0));
+    function safeTellerCheck(bytes memory data) internal pure {
+        require(
+            bytes4(data) != ENCODED_SIG_ENABLE_MOD,
+            "Cannot Enable Modules"
+        );
+        require(
+            bytes4(data) != ENCODED_SIG_DISABLE_MOD,
+            "Cannot Disable Modules"
+        );
+        require(bytes4(data) != ENCODED_SIG_SET_GUARD, "Cannot Change Guard");
     }
 
     /**
@@ -387,15 +339,9 @@ contract SafeTeller is BaseGuard {
     function disableModule(
         address safe,
         address reverseRegistrar,
-        address previousModule,
-        address module
-    ) external {
+        address previousModule
+    ) internal {
         IGnosisSafe safeContract = IGnosisSafe(safe);
-
-        if (!safeContract.isModuleEnabled(module)) {
-            // Module was already disabled.
-            return;
-        }
 
         // Note that you cannot clear the reverse registry entry of an already ejected safe.
         bytes memory nameData = abi.encodeWithSignature("setName(string)", "");
@@ -406,18 +352,38 @@ contract SafeTeller is BaseGuard {
             IGnosisSafe.Operation.Call
         );
 
-        bytes memory data = abi.encodeWithSignature(
-            "disableModule(address,address)",
-            previousModule,
-            module
+        // remove controller as guard
+        bytes memory guardData = abi.encodeWithSignature(
+            "setGuard(address)",
+            address(0)
         );
 
         safeContract.execTransactionFromModule(
             safe,
             0,
-            data,
+            guardData,
             IGnosisSafe.Operation.Call
         );
+
+        // disable module
+        bytes memory moduleData = abi.encodeWithSignature(
+            "disableModule(address,address)",
+            previousModule,
+            address(this)
+        );
+
+        safeContract.execTransactionFromModule(
+            safe,
+            0,
+            moduleData,
+            IGnosisSafe.Operation.Call
+        );
+    }
+
+    // TODO: move to library
+    // Used in a delegate call to enable module add on setup
+    function enableModule(address module) external {
+        require(module == address(0));
     }
 
     function delegateSetup(address _context) external {

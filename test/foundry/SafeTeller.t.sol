@@ -9,6 +9,7 @@ import "../../contracts/SafeTeller.sol";
 import "../../contracts/utils/SafeTxHelper.sol";
 import "safe-contracts/common/Enum.sol";
 import "../mocks/MockReverseRegistrar.sol";
+import "../mocks/MockController.sol";
 
 // Running tests in the context of SafeTeller to test internal functions
 contract SafeTellerInternalTest is Test, SafeTeller, SafeTxHelper {
@@ -18,6 +19,7 @@ contract SafeTellerInternalTest is Test, SafeTeller, SafeTxHelper {
         new GnosisSafeProxyFactory();
     CompatibilityFallbackHandler compatibilityFallbackHandler =
         new CompatibilityFallbackHandler();
+    MockController mockController = new MockController();
 
     bytes32 GUARD_STORAGE =
         0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8;
@@ -64,10 +66,16 @@ contract SafeTellerInternalTest is Test, SafeTeller, SafeTxHelper {
         assertEq(owners[1], BOB);
         // check module is enabled
         assertTrue(GnosisSafe(newSafe).isModuleEnabled(safeTeller));
+    }
+
+    function test_SetGaurd() public {
+        GnosisSafe safe = setupSafe();
+
+        super.setSafeGuard(address(safe), address(mockController));
         // check guard is set - need to use this lookup because its stored in an arbitrary storage slot
         assertEq(
-            bytes32(vm.load(newSafe, GUARD_STORAGE) << 96),
-            bytes32(abi.encodePacked(safeTeller))
+            bytes32(vm.load(address(safe), GUARD_STORAGE) << 96),
+            bytes32(abi.encodePacked(mockController))
         );
     }
 
@@ -106,15 +114,9 @@ contract SafeTellerInternalTest is Test, SafeTeller, SafeTxHelper {
         assertFalse(safe.isOwner(ALICE));
     }
 
-    // MODULE LOCK TESTS
-    // should lock module
-    function test_LockModule() public {
+    // SAFE TELLER CHECK TESTS
+    function test_safeTellerCheck() public {
         GnosisSafe safe = setupSafe();
-        // lock modules
-        super.setModuleLock(address(safe), true);
-        assertTrue(this.areModulesLocked(address(safe)));
-
-        vm.startPrank(ALICE);
         // brackets so i can reuse vars
         {
             // should prevent disable module
@@ -123,11 +125,9 @@ contract SafeTellerInternalTest is Test, SafeTeller, SafeTxHelper {
                 SENTINEL,
                 address(this)
             );
-            bytes32 txHash = getSafeTxHash(address(safe), txData, safe);
-            safe.approveHash(txHash);
 
             vm.expectRevert("Cannot Disable Modules");
-            executeSafeTxFrom(ALICE, txData, safe);
+            super.safeTellerCheck(txData);
         }
         {
             // should prevent enable module
@@ -135,11 +135,9 @@ contract SafeTellerInternalTest is Test, SafeTeller, SafeTxHelper {
                 safe.enableModule.selector,
                 address(0x1340)
             );
-            bytes32 txHash = getSafeTxHash(address(safe), txData, safe);
-            safe.approveHash(txHash);
 
             vm.expectRevert("Cannot Enable Modules");
-            executeSafeTxFrom(ALICE, txData, safe);
+            super.safeTellerCheck(txData);
         }
         {
             // should prevent removing guard
@@ -147,67 +145,10 @@ contract SafeTellerInternalTest is Test, SafeTeller, SafeTxHelper {
                 safe.setGuard.selector,
                 address(0)
             );
-            bytes32 txHash = getSafeTxHash(address(safe), txData, safe);
-            safe.approveHash(txHash);
 
             vm.expectRevert("Cannot Change Guard");
-            executeSafeTxFrom(ALICE, txData, safe);
+            super.safeTellerCheck(txData);
         }
-    }
-
-    function test_UnlockModule() public {
-        GnosisSafe safe = setupSafe();
-        // lock modules
-        super.setModuleLock(address(safe), true);
-        // unlock modules
-        super.setModuleLock(address(safe), false);
-        assertFalse(this.areModulesLocked(address(safe)));
-
-        vm.startPrank(ALICE);
-        // brackets so i can reuse vars
-        address mockModule = address(0x1340);
-        {
-            // should enable module
-            bytes memory txData = abi.encodeWithSelector(
-                safe.enableModule.selector,
-                mockModule
-            );
-            bytes32 txHash = getSafeTxHash(address(safe), txData, safe);
-            safe.approveHash(txHash);
-            executeSafeTxFrom(ALICE, txData, safe);
-            assertTrue(safe.isModuleEnabled(safeTeller));
-        }
-        {
-            // should  disable module
-            bytes memory txData = abi.encodeWithSelector(
-                safe.disableModule.selector,
-                SENTINEL,
-                mockModule
-            );
-            bytes32 txHash = getSafeTxHash(address(safe), txData, safe);
-            safe.approveHash(txHash);
-
-            executeSafeTxFrom(ALICE, txData, safe);
-            assertTrue(safe.isModuleEnabled(safeTeller));
-        }
-
-        {
-            // should remove guard
-            bytes memory txData = abi.encodeWithSelector(
-                safe.setGuard.selector,
-                address(0)
-            );
-            bytes32 txHash = getSafeTxHash(address(safe), txData, safe);
-            safe.approveHash(txHash);
-
-            executeSafeTxFrom(ALICE, txData, safe);
-            // check guard is set - need to use this lookup because its stored in an arbitrary storage slot
-            assertEq(
-                bytes32(vm.load(address(safe), GUARD_STORAGE) << 96),
-                bytes32(abi.encodePacked(address(0)))
-            );
-        }
-        vm.stopPrank();
     }
 
     function test_setupSafeReverseResolver() public {
