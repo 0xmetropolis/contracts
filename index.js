@@ -32,12 +32,13 @@ const contracts = {
     controllerv1_1: require("./deployments/mainnet/ControllerV1.1.json"),
     controllerv1_2: require("./deployments/mainnet/ControllerV1.2.json"),
     controllerv1_3: require("./deployments/mainnet/ControllerV1.3.json"),
+    controllerv1_4: require("./deployments/mainnet/ControllerV1.4.json"),
   },
 };
 
 const controllerLatest = {
   rinkeby: require("./deployments/rinkeby/ControllerV1.4.json"),
-  mainnet: require("./deployments/mainnet/ControllerV1.3.json"),
+  mainnet: require("./deployments/mainnet/ControllerV1.4.json"),
 };
 
 /**
