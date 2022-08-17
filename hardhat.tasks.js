@@ -257,25 +257,17 @@ task("add-permission-owner", "adds an address to be an owner of the Permissions 
     else console.log("Failed to grant permission");
   });
 
-task("migrate-contracts", "migrates contract owners to the Permissions contract").setAction(
-  async (args, { getNamedAccounts, ethers }) => {
+task("migrate-permissions", "migrates contract owners to the Permissions contract").setAction(
+  async (args, { getNamedAccounts, ethers, deployments }) => {
     const { deployer } = await getNamedAccounts();
     const deployerSigner = ethers.provider.getSigner(deployer);
 
-    const Permissions = await ethers.getContract("PermissionManager", deployer);
-    const { address: permissionsAddress } = await ethers.getContract("PermissionManager", deployer);
+    const { address: permissionsAddress } = await deployments.get("PermissionManager");
 
-    const adminRole = await Permissions.DEFAULT_ADMIN_ROLE();
-    const mintRole = (await ethers.getContract("InviteToken", deployer)).MINTER_ROLE();
-    await (await ethers.getContract("MemberToken", deployerSigner)).transferOwnership(permissionsAddress);
-    await (await ethers.getContract("InviteToken", deployerSigner)).grantRole(adminRole, permissionsAddress);
-    await (await ethers.getContract("InviteToken", deployerSigner)).grantRole(mintRole, permissionsAddress);
-    await (await ethers.getContract("ControllerRegistry", deployerSigner)).transferOwnership(permissionsAddress);
-    await (await ethers.getContract("Controller", deployerSigner)).transferOwnership(permissionsAddress);
-    await (await ethers.getContract("ControllerV1.1", deployerSigner)).transferOwnership(permissionsAddress);
-    await (await ethers.getContract("ControllerV1.2", deployerSigner)).transferOwnership(permissionsAddress);
-    await (await ethers.getContract("ControllerV1.3", deployerSigner)).transferOwnership(permissionsAddress);
-    await (await ethers.getContract("PodEnsRegistrar", deployerSigner)).transferOwnership(permissionsAddress);
+    const CONTRACT = "ControllerV1.4";
+
+    const contract = await ethers.getContractAt(CONTRACT, (await deployments.get(CONTRACT)).address, deployerSigner);
+    await contract.transferOwnership(permissionsAddress);
   },
 );
 
