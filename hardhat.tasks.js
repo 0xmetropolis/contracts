@@ -85,11 +85,28 @@ task("register-controller", "registers controller with controller registry")
   .addOptionalPositionalParam("controller")
   .setAction(async (args, { getNamedAccounts, ethers, deployments }) => {
     const { deployer } = await getNamedAccounts();
-    const controllerRegistry = await ethers.getContract("ControllerRegistry", deployer);
+    const deployerSigner = ethers.provider.getSigner(deployer);
 
-    const controller = args.controller || (await deployments.get("ControllerV1", deployer)).address;
+    const controllerRegistry = await ethers.getContractAt(
+      "ControllerRegistry",
+      (
+        await deployments.get("ControllerRegistry")
+      ).address,
+      deployerSigner,
+    );
 
-    await controllerRegistry.registerController(controller);
+    const controller = args.controller || (await deployments.get("ControllerV1", deployerSigner)).address;
+
+    const Permissions = await ethers.getContractAt(
+      "PermissionManager",
+      (
+        await deployments.get("PermissionManager")
+      ).address,
+      deployerSigner,
+    );
+    const { data } = await controllerRegistry.populateTransaction.registerController(controller);
+
+    await Permissions.callAsOwner(controllerRegistry.address, data);
     console.log(`Registered ${controller} with controller Registry`);
   });
 
@@ -266,7 +283,13 @@ task("migrate-permissions", "migrates contract owners to the Permissions contrac
 
     const CONTRACT = "ControllerV1.4";
 
-    const contract = await ethers.getContractAt(CONTRACT, (await deployments.get(CONTRACT)).address, deployerSigner);
+    const contract = await ethers.getContractAt(
+      "ControllerV1",
+      (
+        await deployments.get(CONTRACT)
+      ).address,
+      deployerSigner,
+    );
     await contract.transferOwnership(permissionsAddress);
   },
 );
