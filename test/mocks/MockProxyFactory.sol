@@ -7,4 +7,12 @@ contract MockProxyFactory {
     {
         return address(0x1337f);
     }
+
+    function createProxyWithNonce(
+        address,
+        bytes memory,
+        uint256
+    ) public returns (address) {
+        return address(0x1337f);
+    }
 }

@@ -44,7 +44,9 @@ contract ControllerV1Test is Test {
     function createPod(bool hasAdmin) public returns (uint256) {
         vm.mockCall(
             address(mockProxyFactory),
-            abi.encodeWithSelector(mockProxyFactory.createProxy.selector),
+            abi.encodeWithSelector(
+                mockProxyFactory.createProxyWithNonce.selector
+            ),
             abi.encode(mockSafeAddress)
         );
         uint256 podId = 0;
@@ -88,7 +90,8 @@ contract ControllerV1Test is Test {
 
     // we should be testing revert on each Dependency
     function test_Constructor() public {
-        address[6] memory mockDependencies = [
+        address[7] memory mockDependencies = [
+            mockDependency,
             mockDependency,
             mockDependency,
             mockDependency,
@@ -102,13 +105,13 @@ contract ControllerV1Test is Test {
             mockDependencies[i] = address(0);
             vm.expectRevert("Invalid address");
             new ControllerV1(
-                address(0x1738),
                 mockDependencies[0],
                 mockDependencies[1],
                 mockDependencies[2],
                 mockDependencies[3],
                 mockDependencies[4],
-                mockDependencies[5]
+                mockDependencies[5],
+                mockDependencies[6]
             );
             // reset
             mockDependencies[i] = address(0x1337);

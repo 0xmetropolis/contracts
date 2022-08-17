@@ -19,7 +19,7 @@ describe("manage members integration test", () => {
   const IMAGE_URL = "https://orcaprotocol-nft.vercel.app/assets/testnet/00000001";
 
   // current controller being tested
-  const CONTROLLER_LATEST = "ControllerV1.3";
+  const CONTROLLER_LATEST = "ControllerV1.4";
 
   const setup = async () => {
     const { chainId } = await ethers.provider.getNetwork();
