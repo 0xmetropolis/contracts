@@ -1,6 +1,6 @@
 /* eslint-disable camelcase */
 const { expect } = require("chai");
-const { getDeployment, getControllerByAddress } = require("..");
+const { getDeployment, getControllerByAddress, getControllerVersionByAddress } = require("..");
 const RinkebyController = require("../deployments/rinkeby/Controller.json");
 const RinkebyControllerV1_1 = require("../deployments/rinkeby/ControllerV1.1.json");
 const MainnetController = require("../deployments/mainnet/Controller.json");
@@ -59,5 +59,18 @@ describe("Get Deployment", () => {
     expect(getControllerByAddress("0x5bc9beb5b7e359ec95e001536d18f6c908570401", "rinkeby")).to.deep.equal(
       RinkebyControllerV1_1,
     );
+  });
+});
+
+describe("Get version from address", () => {
+  it("should be able to return a version given an address and a network", () => {
+    const version = getControllerVersionByAddress("0x4C98aF741e352C6551BfF9509b3f8ca9Dd4E6397", "mainnet");
+    expect(version).to.equal("v1.4");
+  });
+
+  it("should throw if given a non-controller address", () => {
+    expect(() => {
+      getControllerVersionByAddress("notanaddress", "mainnet");
+    }).to.throw("Provided address was not a controller");
   });
 });

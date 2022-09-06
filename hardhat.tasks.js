@@ -96,6 +96,11 @@ task("register-controller", "registers controller with controller registry")
     );
 
     const controller = args.controller || (await deployments.get("ControllerV1", deployerSigner)).address;
+    const isRegistered = await controllerRegistry.isRegistered(controller);
+    if (isRegistered) {
+      console.log(`${controller} was already registered`);
+      return;
+    }
 
     const Permissions = await ethers.getContractAt(
       "PermissionManager",

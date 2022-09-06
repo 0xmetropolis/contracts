@@ -36,10 +36,35 @@ const contracts = {
   },
 };
 
+const addressToVersion = {
+  rinkeby: {},
+  mainnet: {},
+};
+
+// Populate addressMaps
+Object.keys(addressToVersion).forEach(network => {
+  Object.keys(contracts[network]).forEach(contract => {
+    // Filter everything that's not a controller, and also controller registry.
+    if (!contract.startsWith("controllerv")) return;
+    // Grab only the version, replace the underscore with a dot.
+    const version = contract.replace(/controller/, "").replace("_", ".");
+    addressToVersion[network][contracts[network][contract].address] = version;
+  });
+});
+
 const controllerLatest = {
   rinkeby: require("./deployments/rinkeby/ControllerV1.4.json"),
   mainnet: require("./deployments/mainnet/ControllerV1.4.json"),
 };
+
+/**
+ * Accepts networks as either a number or a name and normalizes to a name.
+ * @param {*} network
+ * @returns string - network
+ */
+function getNetworkName(network) {
+  return typeof network === "number" ? networkMap[network] : network.toLowerCase();
+}
 
 /**
  * Gets the artifact of contract based on contract name string and network
@@ -49,7 +74,7 @@ const controllerLatest = {
 function getDeployment(contract, network) {
   // replace dots with underscores controllerV1.1 -> controllerV1_1
   const contractName = contract.toLowerCase().replace(".", "_");
-  const networkName = typeof network === "number" ? networkMap[network] : network.toLowerCase();
+  const networkName = getNetworkName(network);
 
   if (!Object.values(networkMap).includes(networkName)) throw new RangeError("Invalid network");
   // if contract name is controllerlatest return from latestController cache
@@ -67,7 +92,7 @@ function getDeployment(contract, network) {
  */
 function getControllerByAddress(address, network) {
   const checksumAddress = ethers.utils.getAddress(address);
-  const networkName = typeof network === "number" ? networkMap[network] : network.toLowerCase();
+  const networkName = getNetworkName(network);
 
   if (!Object.values(networkMap).includes(networkName)) throw new RangeError("Invalid network");
 
@@ -87,7 +112,15 @@ function getControllerByAddress(address, network) {
   return controller;
 }
 
+function getControllerVersionByAddress(address, network) {
+  const networkName = getNetworkName(network);
+  const version = addressToVersion[networkName][address];
+  if (!version) throw new Error(`Provided address was not a controller on ${networkName}`);
+  return version;
+}
+
 module.exports = {
   getDeployment,
   getControllerByAddress,
+  getControllerVersionByAddress,
 };
