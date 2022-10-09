@@ -1,11 +1,9 @@
 /* eslint-disable no-console */
-const { ENSRegistry, PublicResolver, ReverseRegistrar } = require("@ensdomains/ens-contracts");
-const { getEnsAddress, getResolverContract, getName } = require("@ensdomains/ensjs");
+const { ENSRegistry } = require("@ensdomains/ens-contracts");
+const { getEnsAddress } = require("@ensdomains/ensjs");
 const ENS = require("@ensdomains/ensjs").default;
 const namehash = require("@ensdomains/eth-ens-namehash");
-const { ethers: ethersLibrary } = require("ethers");
 const { task } = require("hardhat/config");
-const { utils } = require("web3");
 
 task("tenderly-verify", "verifies current deployment on tenderly").setAction(
   async (args, { tenderly, deployments }) => {
@@ -20,37 +18,20 @@ task("tenderly-verify", "verifies current deployment on tenderly").setAction(
   },
 );
 
-task("set-ship-state", "sets restrictions to closed, open, onlyShip or onlySafeWithShip")
-  .addPositionalParam("state")
-  .setAction(async (args, { getNamedAccounts, ethers }) => {
-    const { deployer } = await getNamedAccounts();
-    const podEnsRegistrar = await ethers.getContract("PodEnsRegistrar", deployer);
-
-    const stateEnum = {
-      onlySafeWithShip: 0,
-      onlyShip: 1,
-      open: 2,
-      closed: 3,
-    };
-
-    const { state } = args;
-
-    const currentState = await podEnsRegistrar.state();
-    if (currentState === stateEnum[state]) {
-      console.log("Contract was already set to that state");
-      return;
-    }
-    await podEnsRegistrar.setRestrictionState(stateEnum[state]);
-    console.log(`Successfully changed state to ${state}`);
-  });
-
 task("mint", "mints tokens to an address, with an optional amount")
   .addPositionalParam("recipient")
   .addOptionalPositionalParam("amount")
-  .setAction(async (args, { getNamedAccounts, ethers }) => {
+  .setAction(async (args, { getNamedAccounts, ethers, artifacts }) => {
     const { deployer } = await getNamedAccounts();
-    const inviteToken = await ethers.getContract("InviteToken", deployer);
-    const permissions = await ethers.getContract("PermissionManager", deployer);
+    const deployerSigner = ethers.provider.getSigner(deployer);
+    const inviteToken = await ethers.getContractAtFromArtifact(
+      await artifacts.readArtifact("InviteToken"),
+      deployerSigner,
+    );
+    const permissions = await ethers.getContractAtFromArtifact(
+      await artifacts.readArtifact("PermissionManager"),
+      deployerSigner,
+    );
 
     const minterRole = await inviteToken.MINTER_ROLE();
 
@@ -69,9 +50,13 @@ task("mint", "mints tokens to an address, with an optional amount")
   });
 
 task("set-burner", "registers contract as invite burner").setAction(
-  async (args, { getNamedAccounts, ethers, deployments }) => {
+  async (args, { getNamedAccounts, ethers, deployments, artifacts }) => {
     const { deployer } = await getNamedAccounts();
-    const inviteToken = await ethers.getContract("InviteToken", deployer);
+    const deployerSigner = ethers.provider.getSigner(deployer);
+    const inviteToken = await ethers.getContractAtFromArtifact(
+      await artifacts.readArtifact("InviteToken"),
+      deployerSigner,
+    );
 
     const contract = (await deployments.get("PodEnsRegistrar", deployer)).address;
     const tx = await inviteToken.grantRole(inviteToken.BURNER_ROLE(), contract);
@@ -83,15 +68,12 @@ task("set-burner", "registers contract as invite burner").setAction(
 
 task("register-controller", "registers controller with controller registry")
   .addOptionalPositionalParam("controller")
-  .setAction(async (args, { getNamedAccounts, ethers, deployments }) => {
+  .setAction(async (args, { getNamedAccounts, ethers, deployments, artifacts }) => {
     const { deployer } = await getNamedAccounts();
     const deployerSigner = ethers.provider.getSigner(deployer);
 
-    const controllerRegistry = await ethers.getContractAt(
-      "ControllerRegistry",
-      (
-        await deployments.get("ControllerRegistry")
-      ).address,
+    const controllerRegistry = await ethers.getContractAtFromArtifact(
+      await artifacts.readArtifact("ControllerRegistry"),
       deployerSigner,
     );
 
@@ -102,13 +84,11 @@ task("register-controller", "registers controller with controller registry")
       return;
     }
 
-    const Permissions = await ethers.getContractAt(
-      "PermissionManager",
-      (
-        await deployments.get("PermissionManager")
-      ).address,
+    const Permissions = await ethers.getContractAtFromArtifact(
+      await artifacts.readArtifact("PermissionManager"),
       deployerSigner,
     );
+
     const { data } = await controllerRegistry.populateTransaction.registerController(controller);
 
     await Permissions.callAsOwner(controllerRegistry.address, data);
@@ -117,42 +97,53 @@ task("register-controller", "registers controller with controller registry")
 
 task("ens-setApproval", "sets ens approval for podEnsRegistrar with ensHolder account")
   .addOptionalPositionalParam("controller")
-  .setAction(async (args, { getNamedAccounts, getChainId, ethers, deployments }) => {
+  .setAction(async (args, { getNamedAccounts, ethers, deployments, network }) => {
     const { ensHolder } = await getNamedAccounts();
     const ensHolderSigner = ethers.provider.getSigner(ensHolder);
 
-    const network = await getChainId();
     const ensRegistryAddress =
       network === "31337" ? (await deployments.get("ENSRegistry")).address : getEnsAddress(network);
 
+    const ensRegistry = new ethers.Contract(ensRegistryAddress, ENSRegistry, ensHolderSigner);
+
     const { address: podEnsRegistrarAddress } = await deployments.get("PodEnsRegistrar");
 
-    const ensRegistry = new ethers.Contract(ensRegistryAddress, ENSRegistry, ensHolderSigner);
     // approve podENSRegistry to make pod.eth changes on behalf of ensHolder
     await ensRegistry.setApprovalForAll(podEnsRegistrarAddress, true);
 
-    console.log(`Set ${ensHolder} approvalForAll for ${podEnsRegistrarAddress} with ens ${ensRegistryAddress}`);
+    console.log(`Set ${ensHolder} approvalForAll for ${podEnsRegistrarAddress} with ens ${ensRegistry.address}`);
   });
 
 task("update-registrar", "upgrade controller to new registrar").setAction(
-  async (args, { getNamedAccounts, ethers, deployments }) => {
+  async (args, { getNamedAccounts, ethers, artifacts }) => {
     const { deployer } = await getNamedAccounts();
     const deployerSigner = ethers.provider.getSigner(deployer);
-    const { address: podEnsRegistrarAddress } = await ethers.getContract("PodEnsRegistrar", deployer);
+    const { address: podEnsRegistrarAddress } = await ethers.getContractAt("PodEnsRegistrar", deployer);
 
-    await (await ethers.getContract("Controller", deployerSigner)).updatePodEnsRegistrar(podEnsRegistrarAddress);
-    await (await ethers.getContract("ControllerV1.1", deployerSigner)).updatePodEnsRegistrar(podEnsRegistrarAddress);
-    await (await ethers.getContract("ControllerV1.2", deployerSigner)).updatePodEnsRegistrar(podEnsRegistrarAddress);
-    await (await ethers.getContract("ControllerV1.3", deployerSigner)).updatePodEnsRegistrar(podEnsRegistrarAddress);
+    await (
+      await ethers.getContractAtFromArtifact(await artifacts.readArtifact("Controller"), deployerSigner)
+    ).updatePodEnsRegistrar(podEnsRegistrarAddress);
+    await (
+      await ethers.getContractAtFromArtifact(await artifacts.readArtifact("ControllerV1.1"), deployerSigner)
+    ).updatePodEnsRegistrar(podEnsRegistrarAddress);
+    await (
+      await ethers.getContractAtFromArtifact(await artifacts.readArtifact("ControllerV1.2"), deployerSigner)
+    ).updatePodEnsRegistrar(podEnsRegistrarAddress);
+    await (
+      await ethers.getContractAtFromArtifact(await artifacts.readArtifact("ControllerV1.3"), deployerSigner)
+    ).updatePodEnsRegistrar(podEnsRegistrarAddress);
   },
 );
 
 task("ens-approve-registrar", "upgrade controller to new registrar").setAction(
-  async (args, { getNamedAccounts, getChainId, ethers, deployments }) => {
+  async (args, { getNamedAccounts, getChainId, ethers, deployments, artifacts }) => {
     const { deployer } = await getNamedAccounts();
     const network = await getChainId();
     const deployerSigner = ethers.provider.getSigner(deployer);
-    const permissionManager = await ethers.getContract("PermissionManager", deployer);
+    const permissionManager = await ethers.getContractAtFromArtifact(
+      await artifacts.readArtifact("PermissionManager"),
+      deployerSigner,
+    );
 
     const { address: podEnsRegistrarAddress } = await ethers.getContract("PodEnsRegistrar", deployer);
 
@@ -170,15 +161,24 @@ task("ens-approve-registrar", "upgrade controller to new registrar").setAction(
 task("update-subnode-owner", "updates the ENS owner for a list of pod IDs")
   .addPositionalParam("startPod")
   .addOptionalPositionalParam("endPod")
-  .setAction(async (args, { getChainId, ethers }) => {
+  .setAction(async (args, { getChainId, ethers, artifacts, getNamedAccounts }) => {
+    const { deployer } = await getNamedAccounts();
+    const deployerSigner = ethers.provider.getSigner(deployer);
+
     const IController = require("./artifacts/contracts/interfaces/IControllerV1.sol/IControllerV1.json");
 
     const { startPod, endPod } = args;
     const network = await getChainId();
     const ens = new ENS({ provider: ethers.provider, ensAddress: getEnsAddress(network) });
 
-    const { address: newRegistrar } = await ethers.getContract("PodEnsRegistrar");
-    const memberToken = await ethers.getContract("MemberToken");
+    const { address: newRegistrar } = await ethers.getContractAtFromArtifact(
+      await artifacts.readArtifact("PodEnsRegistrar"),
+      deployerSigner,
+    );
+    const memberToken = await ethers.getContractAtFromArtifact(
+      await artifacts.readArtifact("MemberToken"),
+      deployerSigner,
+    );
     console.log("newRegistrar", newRegistrar);
     const ROOT = network === "1" ? "pod.xyz" : "pod.eth";
 
@@ -223,13 +223,12 @@ task("update-subnode-owner", "updates the ENS owner for a list of pod IDs")
 task("add-ens-podid", "updates the ENS owner for a list of pod IDs")
   .addPositionalParam("startPod")
   .addOptionalPositionalParam("endPod")
-  .setAction(async (args, { getChainId, ethers }) => {
+  .setAction(async (args, { getChainId, ethers, artifacts }) => {
     const { startPod, endPod } = args;
     const network = await getChainId();
     const ens = new ENS({ provider: ethers.provider, ensAddress: getEnsAddress(network) });
-    const controller = await ethers.getContract("Controller");
-    const ensRegistrar = await ethers.getContract("PodEnsRegistrar");
-    const ROOT = network === "1" ? "pod.xyz" : "pod.eth";
+    const controller = await ethers.getContractAtFromArtifact(await artifacts.readArtifact("Controller"));
+    const ensRegistrar = await ethers.getContractAtFromArtifact(await artifacts.readArtifact("PodEnsRegistrar"));
 
     // Generate an array of pod IDs.
     const podIds = [];
@@ -267,11 +266,15 @@ task("add-ens-podid", "updates the ENS owner for a list of pod IDs")
 
 task("add-permission-owner", "adds an address to be an owner of the Permissions contract")
   .addPositionalParam("newOwner")
-  .setAction(async (args, { getChainId, ethers }) => {
+  .setAction(async (args, { getNamedAccounts, ethers, artifacts }) => {
     const { newOwner } = args;
     const { deployer } = await getNamedAccounts();
+    const deployerSigner = ethers.provider.getSigner(deployer);
 
-    const Permissions = await ethers.getContract("PermissionManager", deployer);
+    const Permissions = await ethers.getContractAtFromArtifact(
+      await artifacts.readArtifact("PermissionManager"),
+      deployerSigner,
+    );
     const adminRole = await Permissions.DEFAULT_ADMIN_ROLE();
     // await Permissions.grantRole(adminRole, newOwner);
     const hasRole = await Permissions.hasRole(adminRole, newOwner);
@@ -280,19 +283,14 @@ task("add-permission-owner", "adds an address to be an owner of the Permissions 
   });
 
 task("migrate-permissions", "migrates contract owners to the Permissions contract").setAction(
-  async (args, { getNamedAccounts, ethers, deployments }) => {
+  async (args, { getNamedAccounts, ethers, deployments, artifacts }) => {
     const { deployer } = await getNamedAccounts();
     const deployerSigner = ethers.provider.getSigner(deployer);
 
     const { address: permissionsAddress } = await deployments.get("PermissionManager");
 
-    const CONTRACT = "ControllerV1.4";
-
-    const contract = await ethers.getContractAt(
-      "ControllerV1",
-      (
-        await deployments.get(CONTRACT)
-      ).address,
+    const contract = await ethers.getContractAtFromArtifact(
+      await artifacts.readArtifact("ControllerV1.4"),
       deployerSigner,
     );
     await contract.transferOwnership(permissionsAddress);
@@ -300,13 +298,15 @@ task("migrate-permissions", "migrates contract owners to the Permissions contrac
 );
 
 task("migrate-ens-owner", "change owner of the ENS TLD").setAction(
-  async (args, { getChainId, getNamedAccounts, ethers, deployments }) => {
+  async (args, { getChainId, getNamedAccounts, ethers, deployments, artifacts }) => {
     const { deployer } = await getNamedAccounts();
     const network = await getChainId();
     const deployerSigner = ethers.provider.getSigner(deployer);
 
-    const { address: permissionsAddress } = await ethers.getContract("PermissionManager", deployer);
-
+    const { address: permissionsAddress } = await ethers.getContractAtFromArtifact(
+      await artifacts.readArtifact("PermissionManager"),
+      deployerSigner,
+    );
     const ensRegistryAddress =
       network === "31337" ? (await deployments.get("ENSRegistry")).address : getEnsAddress(network);
 
@@ -317,13 +317,14 @@ task("migrate-ens-owner", "change owner of the ENS TLD").setAction(
 );
 
 task("test-ens", "tests to see if ENS works via our Permissions contract").setAction(
-  async (args, { getChainId, getNamedAccounts, ethers, deployments }) => {
+  async (args, { getNamedAccounts, ethers, artifacts }) => {
     const { deployer } = await getNamedAccounts();
     const deployerSigner = ethers.provider.getSigner(deployer);
-    const network = await getChainId();
 
-    const Permissions = await ethers.getContract("PermissionManager", deployer);
-    const { address: permissionsAddress } = await ethers.getContract("PermissionManager", deployer);
+    const Permissions = await ethers.getContractAtFromArtifact(
+      await artifacts.readArtifact("PermissionManager"),
+      deployerSigner,
+    );
 
     const PodEnsRegistrar = await ethers.getContract("PodEnsRegistrar", deployer);
     const { data } = await PodEnsRegistrar.populateTransaction.setText(
@@ -333,9 +334,5 @@ task("test-ens", "tests to see if ENS works via our Permissions contract").setAc
     );
 
     await Permissions.callAsOwner(PodEnsRegistrar.address, data);
-
-    // const ens = new ENS({ provider: ethers.provider, ensAddress: getEnsAddress(network) });
-    // const podEth = await ens.name("pod.eth");
-    // console.log("podEth", await podEth.getOwner());
   },
 );
