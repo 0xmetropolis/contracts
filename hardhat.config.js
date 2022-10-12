@@ -34,6 +34,11 @@ const networks = {
     accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     gasPrice: 10000000000,
   },
+  goerli: {
+    url: `https://goerli.infura.io/v3/${process.env.INFURA_API_KEY}`,
+    accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+    gasPrice: 10000000000,
+  },
   mainnet: {
     url: `https://mainnet.infura.io/v3/${process.env.INFURA_API_KEY}`,
     accounts: process.env.MAINNET_PRIVATE_KEY ? [process.env.MAINNET_PRIVATE_KEY] : [],

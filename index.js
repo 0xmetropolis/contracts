@@ -21,6 +21,14 @@ const contracts = {
     controllerv1_3: require("./deployments/rinkeby/ControllerV1.3.json"),
     controllerv1_4: require("./deployments/rinkeby/ControllerV1.4.json"),
   },
+  goerli: {
+    podensregistrar: require("./deployments/goerli/PodEnsRegistrar.json"),
+    controllerregistry: require("./deployments/goerli/ControllerRegistry.json"),
+    invitetoken: require("./deployments/goerli/InviteToken.json"),
+    membertoken: require("./deployments/goerli/MemberToken.json"),
+    multicreatev1: require("./deployments/goerli/MultiCreateV1.json"),
+    controllerv1_4: require("./deployments/goerli/ControllerV1.4.json"),
+  },
   mainnet: {
     podensregistrar: require("./deployments/mainnet/PodEnsRegistrar.json"),
     controllerregistry: require("./deployments/mainnet/ControllerRegistry.json"),
@@ -39,6 +47,7 @@ const contracts = {
 const addressToVersion = {
   rinkeby: {},
   mainnet: {},
+  goerli: {},
 };
 
 // Populate addressMaps
@@ -55,6 +64,7 @@ Object.keys(addressToVersion).forEach(network => {
 const controllerLatest = {
   rinkeby: require("./deployments/rinkeby/ControllerV1.4.json"),
   mainnet: require("./deployments/mainnet/ControllerV1.4.json"),
+  goerli: require("./deployments/mainnet/ControllerV1.4.json"),
 };
 
 /**

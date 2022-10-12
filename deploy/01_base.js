@@ -23,10 +23,16 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts }) => {
     skipIfAlreadyDeployed: true,
   });
 
-  const nftUrl =
-    network === 1
-      ? "https://orcaprotocol-nft.vercel.app/assets/{id}.json"
-      : "https://orcaprotocol-nft.vercel.app/assets/testnet/{id}.json";
+  let nftUrl;
+
+  if (network === 1) {
+    // mainnet
+    nftUrl = "https://orcaprotocol-nft.vercel.app/assets/{id}.json";
+  } else {
+    // rinkeby
+    nftUrl = "https://orcaprotocol-nft.vercel.app/assets/testnet/{id}.json";
+  }
+
   await deploy("MemberToken", {
     from: deployer,
     gasLimit: 8000000,

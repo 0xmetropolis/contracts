@@ -14,6 +14,7 @@ const getEnsAddresses = async (network, deployments) => {
   const reverseRegistrar = {
     1: "0x084b1c3C81545d370f3634392De611CaaBFf8148",
     4: "0x6F628b68b30Dc3c17f345c9dbBb1E483c2b7aE5c",
+    5: "0x6F628b68b30Dc3c17f345c9dbBb1E483c2b7aE5c",
     31337:
       Number(network) === 31337
         ? (await deployments.get("MockEnsReverseRegistrar")).address
@@ -22,12 +23,14 @@ const getEnsAddresses = async (network, deployments) => {
   const publicResolver = {
     1: "0x4976fb03C32e5B8cfe2b6cCB31c09Ba78EBaBa41",
     4: "0xf6305c19e814d2a75429Fd637d01F7ee0E77d615",
+    5: "0x4B1488B7a6B320d2D721406204aBc3eeAa9AD329",
     31337:
       Number(network) === 31337 ? (await deployments.get("MockEnsResolver")).address : ethers.constants.AddressZero,
   };
   const registry = {
     1: getEnsAddress(1),
     4: getEnsAddress(4),
+    5: getEnsAddress(5),
     31337: Number(network) === 31337 ? (await deployments.get("MockEns")).address : ethers.constants.AddressZero,
   };
   return {
@@ -43,6 +46,7 @@ const getGnosisAddresses = async (network, deployments) => {
   const proxyFactory = {
     1: getProxyFactoryDeployment({ network: 1 }).defaultAddress,
     4: getProxyFactoryDeployment({ network: 4 }).defaultAddress,
+    5: getProxyFactoryDeployment({ network: 5 }).defaultAddress,
     31337:
       Number(network) === 31337
         ? (await deployments.get("GnosisSafeProxyFactory")).address
@@ -52,12 +56,14 @@ const getGnosisAddresses = async (network, deployments) => {
   const gnosisSafe = {
     1: getSafeSingletonDeployment({ network: 1 }).defaultAddress,
     4: getSafeSingletonDeployment({ network: 4 }).defaultAddress,
+    5: getSafeSingletonDeployment({ network: 5 }).defaultAddress,
     31337: Number(network) === 31337 ? (await deployments.get("GnosisSafe")).address : ethers.constants.AddressZero,
   };
 
   const fallbackHandler = {
     1: getCompatibilityFallbackHandlerDeployment({ network: 1 }).defaultAddress,
     4: getCompatibilityFallbackHandlerDeployment({ network: 4 }).defaultAddress,
+    5: getCompatibilityFallbackHandlerDeployment({ network: 5 }).defaultAddress,
     31337:
       Number(network) === 31337
         ? (await deployments.get("CompatibilityFallbackHandler")).address
@@ -67,6 +73,7 @@ const getGnosisAddresses = async (network, deployments) => {
   const unSafeCallbackHandler = {
     1: getDefaultCallbackHandlerDeployment({ network: 1 }).defaultAddress,
     4: getDefaultCallbackHandlerDeployment({ network: 4 }).defaultAddress,
+    5: getDefaultCallbackHandlerDeployment({ network: 5 }).defaultAddress,
     31337:
       Number(network) === 31337
         ? (await deployments.get("DefaultCallbackHandler")).address
@@ -76,6 +83,7 @@ const getGnosisAddresses = async (network, deployments) => {
   const multiSend = {
     1: getMultiSendDeployment({ network: 1 }).defaultAddress,
     4: getMultiSendDeployment({ network: 4 }).defaultAddress,
+    5: getMultiSendDeployment({ network: 5 }).defaultAddress,
     31337: Number(network) === 31337 ? (await deployments.get("MultiSend")).address : ethers.constants.AddressZero,
   };
 

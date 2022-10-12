@@ -10,12 +10,12 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
   // Rinkeby network ID is 4
   // Localhost network ID is 31337
   const network = await getChainId();
-
-  const TLD = {
-    1: "pod.xyz",
-    4: "pod.eth",
-    31337: "pod.eth",
-  };
+  let TLD;
+  if (network === 1) {
+    TLD = "pod.xyz";
+  } else {
+    TLD = "pod.eth";
+  }
 
   // ENS contracts.
   const { reverseRegistrarAddress, publicResolverAddress, registryAddress } = await getEnsAddresses(
@@ -35,14 +35,14 @@ module.exports = async ({ deployments, getChainId, getNamedAccounts, ethers }) =
       publicResolverAddress,
       reverseRegistrarAddress,
       controllerRegistryAddress,
-      ethers.utils.namehash(TLD[network]),
+      ethers.utils.namehash(TLD),
       inviteToken,
     ],
     log: true,
     skipIfAlreadyDeployed: true,
   });
 
-  if (newlyDeployed) {
+  if (newlyDeployed && network === 31337) {
     const ensRegistry = new ethers.Contract(registryAddress, ENSRegistry, ensHolderSigner);
     // approve podENSRegistry to make pod.eth changes on behalf of ensHolder
     await ensRegistry.setApprovalForAll(podEnsRegistrarAddress, true);
