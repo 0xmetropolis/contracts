@@ -5,6 +5,7 @@ const { ethers } = require("ethers");
 const networkMap = {
   1: "mainnet",
   4: "rinkeby",
+  5: "goerli",
 };
 
 const contracts = {
@@ -64,7 +65,7 @@ Object.keys(addressToVersion).forEach(network => {
 const controllerLatest = {
   rinkeby: require("./deployments/rinkeby/ControllerV1.4.json"),
   mainnet: require("./deployments/mainnet/ControllerV1.4.json"),
-  goerli: require("./deployments/mainnet/ControllerV1.4.json"),
+  goerli: require("./deployments/goerli/ControllerV1.4.json"),
 };
 
 /**
