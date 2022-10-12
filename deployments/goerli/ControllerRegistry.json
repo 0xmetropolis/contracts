@@ -1,0 +1,261 @@
+{
+  "address": "0x27164d8F7c4cfBB428B08359fAfE0047c96AF984",
+  "abi": [
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "newController",
+          "type": "address"
+        }
+      ],
+      "name": "ControllerRegister",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "newController",
+          "type": "address"
+        }
+      ],
+      "name": "ControllerRemove",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previousOwner",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "OwnershipTransferred",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "controllerRegistry",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_controller",
+          "type": "address"
+        }
+      ],
+      "name": "isRegistered",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_controller",
+          "type": "address"
+        }
+      ],
+      "name": "registerController",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_controller",
+          "type": "address"
+        }
+      ],
+      "name": "removeController",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "renounceOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "newOwner",
+          "type": "address"
+        }
+      ],
+      "name": "transferOwnership",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0xb48fa219b3e44658a2e40461e391dcc268761c524a45fe131decaec5f558aa68",
+  "receipt": {
+    "to": null,
+    "from": "0x3f4e2cFE11Aa607570E0Aee7AC74fbff9633fa8E",
+    "contractAddress": "0x27164d8F7c4cfBB428B08359fAfE0047c96AF984",
+    "transactionIndex": 1,
+    "gasUsed": "330060",
+    "logsBloom": "0x00000000000000000000000001000000000000000000000000800400000040000000000000000000000000000000000000000000804000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000020000000000000000000800000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0x2539f02d25ab5c933e9284db0ab6be68d444bd91250fad46b45ee06480658345",
+    "transactionHash": "0xb48fa219b3e44658a2e40461e391dcc268761c524a45fe131decaec5f558aa68",
+    "logs": [
+      {
+        "transactionIndex": 1,
+        "blockNumber": 7757130,
+        "transactionHash": "0xb48fa219b3e44658a2e40461e391dcc268761c524a45fe131decaec5f558aa68",
+        "address": "0x27164d8F7c4cfBB428B08359fAfE0047c96AF984",
+        "topics": [
+          "0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0",
+          "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "0x0000000000000000000000003f4e2cfe11aa607570e0aee7ac74fbff9633fa8e"
+        ],
+        "data": "0x",
+        "logIndex": 1,
+        "blockHash": "0x2539f02d25ab5c933e9284db0ab6be68d444bd91250fad46b45ee06480658345"
+      }
+    ],
+    "blockNumber": 7757130,
+    "cumulativeGasUsed": "376752",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [],
+  "numDeployments": 1,
+  "solcInputHash": "e99b344e1ca44ea4c90da36abb4bee9c",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.7+commit.e28d00a7\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newController\",\"type\":\"address\"}],\"name\":\"ControllerRegister\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newController\",\"type\":\"address\"}],\"name\":\"ControllerRemove\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"controllerRegistry\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_controller\",\"type\":\"address\"}],\"name\":\"isRegistered\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_controller\",\"type\":\"address\"}],\"name\":\"registerController\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_controller\",\"type\":\"address\"}],\"name\":\"removeController\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{\"isRegistered(address)\":{\"params\":{\"_controller\":\"The address to check if registered as a controller\"},\"returns\":{\"_0\":\"Boolean representing if the address is a registered as a controller\"}},\"owner()\":{\"details\":\"Returns the address of the current owner.\"},\"registerController(address)\":{\"params\":{\"_controller\":\"The address to register as a controller\"}},\"removeController(address)\":{\"params\":{\"_controller\":\"The address to remove as a controller\"}},\"renounceOwnership()\":{\"details\":\"Leaves the contract without owner. It will not be possible to call `onlyOwner` functions anymore. Can only be called by the current owner. NOTE: Renouncing ownership will leave the contract without an owner, thereby removing any functionality that is only available to the owner.\"},\"transferOwnership(address)\":{\"details\":\"Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current owner.\"}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/ControllerRegistry.sol\":\"ControllerRegistry\"},\"evmVersion\":\"london\",\"libraries\":{\":__CACHE_BREAKER__\":\"0x0000000000000031363635353835393238383835\"},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":1000},\"remappings\":[]},\"sources\":{\"contracts/ControllerRegistry.sol\":{\"content\":\"pragma solidity ^0.8.7;\\n\\nimport \\\"lib/openzeppelin-contracts/contracts/access/Ownable.sol\\\";\\nimport \\\"./interfaces/IControllerRegistry.sol\\\";\\n\\ncontract ControllerRegistry is IControllerRegistry, Ownable {\\n    mapping(address => bool) public controllerRegistry;\\n\\n    event ControllerRegister(address newController);\\n    event ControllerRemove(address newController);\\n\\n    /**\\n     * @param _controller The address to register as a controller\\n     */\\n    function registerController(address _controller) external onlyOwner {\\n        require(_controller != address(0), \\\"Invalid address\\\");\\n        emit ControllerRegister(_controller);\\n        controllerRegistry[_controller] = true;\\n    }\\n\\n    /**\\n     * @param _controller The address to remove as a controller\\n     */\\n    function removeController(address _controller) external onlyOwner {\\n        require(_controller != address(0), \\\"Invalid address\\\");\\n        emit ControllerRemove(_controller);\\n        controllerRegistry[_controller] = false;\\n    }\\n\\n    /**\\n     * @param _controller The address to check if registered as a controller\\n     * @return Boolean representing if the address is a registered as a controller\\n     */\\n    function isRegistered(address _controller)\\n        external\\n        view\\n        override\\n        returns (bool)\\n    {\\n        return controllerRegistry[_controller];\\n    }\\n}\\n\",\"keccak256\":\"0x936679929e0a3b1fc3d5428e27eda128c85a97bc0517b47770c236b06802ff30\"},\"contracts/interfaces/IControllerRegistry.sol\":{\"content\":\"pragma solidity ^0.8.7;\\n\\n\\ninterface IControllerRegistry{\\n\\n    /**\\n     * @param _controller Address to check if registered as a controller\\n     * @return Boolean representing if the address is a registered as a controller\\n     */\\n    function isRegistered(address _controller) external view returns (bool);\\n\\n}\\n\",\"keccak256\":\"0x040c34638ad2095660cb546d9821c52ac020372fedc9067ffc59e47fc3523924\"},\"lib/openzeppelin-contracts/contracts/access/Ownable.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts v4.4.1 (access/Ownable.sol)\\n\\npragma solidity ^0.8.0;\\n\\nimport \\\"../utils/Context.sol\\\";\\n\\n/**\\n * @dev Contract module which provides a basic access control mechanism, where\\n * there is an account (an owner) that can be granted exclusive access to\\n * specific functions.\\n *\\n * By default, the owner account will be the one that deploys the contract. This\\n * can later be changed with {transferOwnership}.\\n *\\n * This module is used through inheritance. It will make available the modifier\\n * `onlyOwner`, which can be applied to your functions to restrict their use to\\n * the owner.\\n */\\nabstract contract Ownable is Context {\\n    address private _owner;\\n\\n    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);\\n\\n    /**\\n     * @dev Initializes the contract setting the deployer as the initial owner.\\n     */\\n    constructor() {\\n        _transferOwnership(_msgSender());\\n    }\\n\\n    /**\\n     * @dev Throws if called by any account other than the owner.\\n     */\\n    modifier onlyOwner() {\\n        _checkOwner();\\n        _;\\n    }\\n\\n    /**\\n     * @dev Returns the address of the current owner.\\n     */\\n    function owner() public view virtual returns (address) {\\n        return _owner;\\n    }\\n\\n    /**\\n     * @dev Throws if the sender is not the owner.\\n     */\\n    function _checkOwner() internal view virtual {\\n        require(owner() == _msgSender(), \\\"Ownable: caller is not the owner\\\");\\n    }\\n\\n    /**\\n     * @dev Leaves the contract without owner. It will not be possible to call\\n     * `onlyOwner` functions anymore. Can only be called by the current owner.\\n     *\\n     * NOTE: Renouncing ownership will leave the contract without an owner,\\n     * thereby removing any functionality that is only available to the owner.\\n     */\\n    function renounceOwnership() public virtual onlyOwner {\\n        _transferOwnership(address(0));\\n    }\\n\\n    /**\\n     * @dev Transfers ownership of the contract to a new account (`newOwner`).\\n     * Can only be called by the current owner.\\n     */\\n    function transferOwnership(address newOwner) public virtual onlyOwner {\\n        require(newOwner != address(0), \\\"Ownable: new owner is the zero address\\\");\\n        _transferOwnership(newOwner);\\n    }\\n\\n    /**\\n     * @dev Transfers ownership of the contract to a new account (`newOwner`).\\n     * Internal function without access restriction.\\n     */\\n    function _transferOwnership(address newOwner) internal virtual {\\n        address oldOwner = _owner;\\n        _owner = newOwner;\\n        emit OwnershipTransferred(oldOwner, newOwner);\\n    }\\n}\\n\",\"keccak256\":\"0x9ceac6c134cbbeac2d7c1e004f633bf1fefbb153038fe14528f333d0b274ec19\",\"license\":\"MIT\"},\"lib/openzeppelin-contracts/contracts/utils/Context.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts v4.4.1 (utils/Context.sol)\\n\\npragma solidity ^0.8.0;\\n\\n/**\\n * @dev Provides information about the current execution context, including the\\n * sender of the transaction and its data. While these are generally available\\n * via msg.sender and msg.data, they should not be accessed in such a direct\\n * manner, since when dealing with meta-transactions the account sending and\\n * paying for execution may not be the actual sender (as far as an application\\n * is concerned).\\n *\\n * This contract is only required for intermediate, library-like contracts.\\n */\\nabstract contract Context {\\n    function _msgSender() internal view virtual returns (address) {\\n        return msg.sender;\\n    }\\n\\n    function _msgData() internal view virtual returns (bytes calldata) {\\n        return msg.data;\\n    }\\n}\\n\",\"keccak256\":\"0xe2e337e6dde9ef6b680e07338c493ebea1b5fd09b43424112868e9cc1706bca7\",\"license\":\"MIT\"}},\"version\":1}",
+  "bytecode": "0x608060405234801561001057600080fd5b5061001a3361001f565b61006f565b600080546001600160a01b038381166001600160a01b0319831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b6104918061007e6000396000f3fe608060405234801561001057600080fd5b506004361061007d5760003560e01c8063c3c5a5471161005b578063c3c5a547146100df578063d91ae8c21461010b578063f2fde38b1461011e578063f6a74ed71461013157600080fd5b806301df60a414610082578063715018a6146100ba5780638da5cb5b146100c4575b600080fd5b6100a561009036600461042b565b60016020526000908152604090205460ff1681565b60405190151581526020015b60405180910390f35b6100c2610144565b005b6000546040516001600160a01b0390911681526020016100b1565b6100a56100ed36600461042b565b6001600160a01b031660009081526001602052604090205460ff1690565b6100c261011936600461042b565b610158565b6100c261012c36600461042b565b61021e565b6100c261013f36600461042b565b6102ae565b61014c610369565b61015660006103c3565b565b610160610369565b6001600160a01b0381166101bb5760405162461bcd60e51b815260206004820152600f60248201527f496e76616c69642061646472657373000000000000000000000000000000000060448201526064015b60405180910390fd5b6040516001600160a01b03821681527f9713ba9c15f2a00e5eec60574362fa39c45d80fc1e6a0d97b6b7593eed4b25ed9060200160405180910390a16001600160a01b03166000908152600160208190526040909120805460ff19169091179055565b610226610369565b6001600160a01b0381166102a25760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201527f646472657373000000000000000000000000000000000000000000000000000060648201526084016101b2565b6102ab816103c3565b50565b6102b6610369565b6001600160a01b03811661030c5760405162461bcd60e51b815260206004820152600f60248201527f496e76616c69642061646472657373000000000000000000000000000000000060448201526064016101b2565b6040516001600160a01b03821681527f6570671ae1af213b3b25d236e7cd633f016b2433e178e4e9b36a29906d6f7fb39060200160405180910390a16001600160a01b03166000908152600160205260409020805460ff19169055565b6000546001600160a01b031633146101565760405162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e657260448201526064016101b2565b600080546001600160a01b038381167fffffffffffffffffffffffff0000000000000000000000000000000000000000831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b60006020828403121561043d57600080fd5b81356001600160a01b038116811461045457600080fd5b939250505056fea264697066735822122078cd6f4de676515e8e13ea28433b4fea314955c067a1cfe72a0c0a708446a5fa64736f6c63430008070033",
+  "deployedBytecode": "0x608060405234801561001057600080fd5b506004361061007d5760003560e01c8063c3c5a5471161005b578063c3c5a547146100df578063d91ae8c21461010b578063f2fde38b1461011e578063f6a74ed71461013157600080fd5b806301df60a414610082578063715018a6146100ba5780638da5cb5b146100c4575b600080fd5b6100a561009036600461042b565b60016020526000908152604090205460ff1681565b60405190151581526020015b60405180910390f35b6100c2610144565b005b6000546040516001600160a01b0390911681526020016100b1565b6100a56100ed36600461042b565b6001600160a01b031660009081526001602052604090205460ff1690565b6100c261011936600461042b565b610158565b6100c261012c36600461042b565b61021e565b6100c261013f36600461042b565b6102ae565b61014c610369565b61015660006103c3565b565b610160610369565b6001600160a01b0381166101bb5760405162461bcd60e51b815260206004820152600f60248201527f496e76616c69642061646472657373000000000000000000000000000000000060448201526064015b60405180910390fd5b6040516001600160a01b03821681527f9713ba9c15f2a00e5eec60574362fa39c45d80fc1e6a0d97b6b7593eed4b25ed9060200160405180910390a16001600160a01b03166000908152600160208190526040909120805460ff19169091179055565b610226610369565b6001600160a01b0381166102a25760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201527f646472657373000000000000000000000000000000000000000000000000000060648201526084016101b2565b6102ab816103c3565b50565b6102b6610369565b6001600160a01b03811661030c5760405162461bcd60e51b815260206004820152600f60248201527f496e76616c69642061646472657373000000000000000000000000000000000060448201526064016101b2565b6040516001600160a01b03821681527f6570671ae1af213b3b25d236e7cd633f016b2433e178e4e9b36a29906d6f7fb39060200160405180910390a16001600160a01b03166000908152600160205260409020805460ff19169055565b6000546001600160a01b031633146101565760405162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e657260448201526064016101b2565b600080546001600160a01b038381167fffffffffffffffffffffffff0000000000000000000000000000000000000000831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b60006020828403121561043d57600080fd5b81356001600160a01b038116811461045457600080fd5b939250505056fea264697066735822122078cd6f4de676515e8e13ea28433b4fea314955c067a1cfe72a0c0a708446a5fa64736f6c63430008070033",
+  "devdoc": {
+    "kind": "dev",
+    "methods": {
+      "isRegistered(address)": {
+        "params": {
+          "_controller": "The address to check if registered as a controller"
+        },
+        "returns": {
+          "_0": "Boolean representing if the address is a registered as a controller"
+        }
+      },
+      "owner()": {
+        "details": "Returns the address of the current owner."
+      },
+      "registerController(address)": {
+        "params": {
+          "_controller": "The address to register as a controller"
+        }
+      },
+      "removeController(address)": {
+        "params": {
+          "_controller": "The address to remove as a controller"
+        }
+      },
+      "renounceOwnership()": {
+        "details": "Leaves the contract without owner. It will not be possible to call `onlyOwner` functions anymore. Can only be called by the current owner. NOTE: Renouncing ownership will leave the contract without an owner, thereby removing any functionality that is only available to the owner."
+      },
+      "transferOwnership(address)": {
+        "details": "Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current owner."
+      }
+    },
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {},
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 5752,
+        "contract": "contracts/ControllerRegistry.sol:ControllerRegistry",
+        "label": "_owner",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_address"
+      },
+      {
+        "astId": 11,
+        "contract": "contracts/ControllerRegistry.sol:ControllerRegistry",
+        "label": "controllerRegistry",
+        "offset": 0,
+        "slot": "1",
+        "type": "t_mapping(t_address,t_bool)"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_bool": {
+        "encoding": "inplace",
+        "label": "bool",
+        "numberOfBytes": "1"
+      },
+      "t_mapping(t_address,t_bool)": {
+        "encoding": "mapping",
+        "key": "t_address",
+        "label": "mapping(address => bool)",
+        "numberOfBytes": "32",
+        "value": "t_bool"
+      }
+    }
+  }
+}

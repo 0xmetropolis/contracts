@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 const { ENSRegistry } = require("@ensdomains/ens-contracts");
-const { getEnsAddress } = require("@ensdomains/ensjs");
+const { getEnsAddress, labelhash } = require("@ensdomains/ensjs");
 const ENS = require("@ensdomains/ensjs").default;
 const namehash = require("@ensdomains/eth-ens-namehash");
 const { task } = require("hardhat/config");
@@ -47,6 +47,35 @@ task("mint", "mints tokens to an address, with an optional amount")
     await res.wait(1);
     balance = await inviteToken.balanceOf(recipient);
     console.log("New balance", balance.toNumber());
+  });
+
+task("set-ship-state", "sets restrictions to closed, open, onlyShip or onlySafeWithShip")
+  .addPositionalParam("state")
+  .setAction(async (args, { getNamedAccounts, ethers, artifacts }) => {
+    const { deployer } = await getNamedAccounts();
+    const deployerSigner = ethers.provider.getSigner(deployer);
+
+    const podEnsRegistrar = await ethers.getContractAtFromArtifact(
+      await artifacts.readArtifact("PodEnsRegistrar"),
+      deployerSigner,
+    );
+
+    const stateEnum = {
+      onlySafeWithShip: 0,
+      onlyShip: 1,
+      open: 2,
+      closed: 3,
+    };
+
+    const { state } = args;
+
+    const currentState = await podEnsRegistrar.state();
+    if (currentState === stateEnum[state]) {
+      console.log("Contract was already set to that state");
+      return;
+    }
+    await podEnsRegistrar.setRestrictionState(stateEnum[state]);
+    console.log(`Successfully changed state to ${state}`);
   });
 
 task("set-burner", "registers contract as invite burner").setAction(
