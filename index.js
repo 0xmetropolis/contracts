@@ -5,6 +5,7 @@ const { ethers } = require("ethers");
 const networkMap = {
   1: "mainnet",
   4: "rinkeby",
+  5: "goerli",
 };
 
 const contracts = {
