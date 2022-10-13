@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 const { ENSRegistry } = require("@ensdomains/ens-contracts");
-const { getEnsAddress, labelhash } = require("@ensdomains/ensjs");
+const { getEnsAddress } = require("@ensdomains/ensjs");
 const ENS = require("@ensdomains/ensjs").default;
 const namehash = require("@ensdomains/eth-ens-namehash");
 const { task } = require("hardhat/config");
@@ -9,7 +9,7 @@ task("tenderly-verify", "verifies current deployment on tenderly").setAction(
   async (args, { tenderly, deployments }) => {
     const contracts = [
       // { name: "Controller", address: (await deployments.get("Controller")).address },
-      { name: "ControllerV1", address: (await deployments.get("ControllerV1")).address },
+      { name: "ControllerV1", address: (await deployments.get("ControllerV1.4")).address },
       { name: "MemberToken", address: (await deployments.get("MemberToken")).address },
       { name: "ControllerRegistry", address: (await deployments.get("ControllerRegistry")).address },
       { name: "PodEnsRegistrar", address: (await deployments.get("PodEnsRegistrar")).address },
@@ -51,12 +51,15 @@ task("mint", "mints tokens to an address, with an optional amount")
 
 task("set-ship-state", "sets restrictions to closed, open, onlyShip or onlySafeWithShip")
   .addPositionalParam("state")
-  .setAction(async (args, { getNamedAccounts, ethers, artifacts }) => {
+  .setAction(async (args, { getNamedAccounts, deployments, ethers, artifacts }) => {
     const { deployer } = await getNamedAccounts();
     const deployerSigner = ethers.provider.getSigner(deployer);
 
     const podEnsRegistrar = await ethers.getContractAtFromArtifact(
       await artifacts.readArtifact("PodEnsRegistrar"),
+      (
+        await deployments.get("PodEnsRegistrar")
+      ).address,
       deployerSigner,
     );
 
