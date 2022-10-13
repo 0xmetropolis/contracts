@@ -94,8 +94,8 @@ module.exports = {
     ],
   },
   tenderly: {
-    project: "orca",
-    username: "dev-sonar",
+    project: "sonar-labs/metropolis",
+    username: "orcanaut",
   },
   preprocess: {
     eachLine: hre => ({

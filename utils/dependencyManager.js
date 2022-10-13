@@ -14,7 +14,7 @@ const getEnsAddresses = async (network, deployments) => {
   const reverseRegistrar = {
     1: "0x084b1c3C81545d370f3634392De611CaaBFf8148",
     4: "0x6F628b68b30Dc3c17f345c9dbBb1E483c2b7aE5c",
-    5: "0x6F628b68b30Dc3c17f345c9dbBb1E483c2b7aE5c",
+    5: "0xD5610A08E370051a01fdfe4bB3ddf5270af1aA48",
     31337:
       Number(network) === 31337
         ? (await deployments.get("MockEnsReverseRegistrar")).address
