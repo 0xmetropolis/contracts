@@ -5,7 +5,7 @@ import "openzeppelin-contracts/access/AccessControl.sol";
 // This contract will be the owner of all other contracts in the ecosystem.
 contract PermissionManager is AccessControl {
     constructor() {
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
     // Checks roles, and then call
