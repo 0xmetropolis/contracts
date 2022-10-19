@@ -38,6 +38,10 @@ contract MemberToken is ERC1155Supply, Ownable {
 
     // Note that OpenSea does not currently update contract metadata when this value is changed. - Nov 2021
     function setContractURI(string memory newContractURI) public onlyOwner {
+        require(
+            bytes(newContractURI).length > 0,
+            "newContractURI cannot be empty"
+        );
         _contractURI = newContractURI;
     }
 

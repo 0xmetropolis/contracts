@@ -42,6 +42,9 @@ contract SafeTeller {
         address _gnosisMasterAddress,
         address _fallbackHanderAddress
     ) {
+        require(_proxyFactoryAddress != address(0), "Invalid address");
+        require(_gnosisMasterAddress != address(0), "Invalid address");
+        require(_fallbackHanderAddress != address(0), "Invalid address");
         proxyFactoryAddress = _proxyFactoryAddress;
         gnosisMasterAddress = _gnosisMasterAddress;
         fallbackHandlerAddress = _fallbackHanderAddress;
@@ -61,6 +64,8 @@ contract SafeTeller {
             "enableModule(address)",
             _newSafeTeller
         );
+
+        require(_newSafeTeller != address(0), "safe teller can't be 0 address");
 
         bool enableSuccess = IGnosisSafe(_safe).execTransactionFromModule(
             _safe,

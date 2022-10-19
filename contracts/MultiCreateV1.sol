@@ -8,6 +8,7 @@ contract MultiCreateV1 {
     IMemberToken immutable memberToken;
 
     constructor(address _memberToken) {
+        require(_memberToken != address(0), "member token can't be 0 address");
         memberToken = IMemberToken(_memberToken);
     }
 
@@ -26,7 +27,9 @@ contract MultiCreateV1 {
         string[] memory _imageUrls
     ) public returns (address[] memory) {
         uint256 numPods = _thresholds.length;
+        require(numPods > 0, "can't call with 0 pods");
         require(_members.length == numPods, "incorrect members array");
+        require(_admins.length == numPods, "incorrect admins array");
         require(_labels.length == numPods, "incorrect labels array");
         require(_ensStrings.length == numPods, "incorrect ensStrings array");
         require(_imageUrls.length == numPods, "incorrect imageUrls array");
