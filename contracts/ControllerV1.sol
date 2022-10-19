@@ -1,4 +1,4 @@
-pragma solidity ^0.8.7;
+pragma solidity 0.8.7;
 
 import "ens-contracts/registry/ENS.sol";
 import "ens-contracts/registry/ReverseRegistrar.sol";
