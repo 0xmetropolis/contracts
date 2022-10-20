@@ -4,11 +4,6 @@ import "openzeppelin-contracts/token/ERC1155/IERC1155.sol";
 
 interface IMemberToken is IERC1155 {
     /**
-     * @dev Total amount of tokens in with a given id.
-     */
-    function totalSupply(uint256 id) external view returns (uint256);
-
-    /**
      * @dev Indicates weither any token exist with a given id, or not.
      */
     function exists(uint256 id) external view returns (bool);
@@ -55,4 +50,10 @@ interface IMemberToken is IERC1155 {
     function createPod(address[] memory _accounts, bytes memory data)
         external
         returns (uint256);
+
+    function getSyncData() external pure returns (bytes memory);
+
+    function setBurnSyncFlag(bool flag) external;
+
+    function memberTellerCheck(uint256 podId, bytes memory data) external;
 }

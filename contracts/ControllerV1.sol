@@ -410,7 +410,7 @@ contract ControllerV1 is
             // remove module and handle reverse registration clearing.
             disableModule(
                 safe,
-                podEnsRegistrar.reverseRegistrar(),
+                address(podEnsRegistrar.reverseRegistrar()),
                 previousModule
             );
         }
