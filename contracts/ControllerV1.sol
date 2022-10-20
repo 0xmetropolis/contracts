@@ -407,8 +407,6 @@ contract ControllerV1 is
 
         // if module is already disabled, the safe must unset these manually
         if (isSafeModuleEnabled(safe)) {
-            // remove controller as guard
-            setSafeGuard(safe, address(0));
             // remove module and handle reverse registration clearing.
             disableModule(
                 safe,
