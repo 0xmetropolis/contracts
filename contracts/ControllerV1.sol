@@ -99,6 +99,10 @@ contract ControllerV1 is
         uint256 expectedPodId,
         string memory _imageUrl
     ) external override {
+        require(_members.length > 0, "cannot have 0 members");
+        require(threshold > 0, "threshold must be more than 0");
+        require(_label != bytes32(0), "label cannot be blank");
+        require(bytes(_ensString).length > 0, "ensString cannot be empty");
         address safe = createSafe(_members, threshold, expectedPodId);
 
         _createPod(

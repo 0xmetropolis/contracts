@@ -17,8 +17,6 @@ interface IPodEnsRegistrar {
 
     function register(bytes32 label, address owner) external;
 
-    function deregister(address safe, bytes32 label) external;
-
     function setText(
         bytes32 node,
         string calldata key,

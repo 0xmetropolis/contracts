@@ -33,6 +33,8 @@ contract MemberTeller {
 
     function memberTellerCheck(uint256 podId, bytes memory data) internal {
         if (bytes4(data) == ENCODED_SIG_ADD_OWNER) {
+            // Ensure data is at minimum, the length required for the below logic.
+            require(data.length >= 24, "incorrect data length");
             address mintMember;
             assembly {
                 // shift 0x4 for the sig + 0x20 padding
@@ -41,6 +43,8 @@ contract MemberTeller {
             memberToken.mint(mintMember, podId, getSyncData());
         }
         if (bytes4(data) == ENCODED_SIG_REMOVE_OWNER) {
+            // Ensure data is at minimum, the length required for the below logic.
+            require(data.length >= 44, "incorrect data length");
             address burnMember;
             assembly {
                 // note: consecutive addresses are packed into a single memory slot
@@ -51,6 +55,8 @@ contract MemberTeller {
             memberToken.burn(burnMember, podId);
         }
         if (bytes4(data) == ENCODED_SIG_SWAP_OWNER) {
+            // Ensure data is at minimum, the length required for the below logic.
+            require(data.length >= 64, "incorrect data length");
             address burnMember;
             address mintMember;
             assembly {
