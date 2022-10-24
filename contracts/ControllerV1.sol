@@ -525,7 +525,7 @@ contract ControllerV1 is
      * _param msgSender Account executing safe transaction
      */
     function checkTransaction(
-        address,
+        address to,
         uint256,
         bytes memory data,
         Enum.Operation,
@@ -538,9 +538,9 @@ contract ControllerV1 is
         address
     ) external override {
         uint256 podId = safeToPodId[msg.sender];
+        address safe = podIdToSafe[podId];
 
         if (podId == 0) {
-            address safe = podIdToSafe[podId];
             // if safe is 0 its deregistered and we can skip check to allow cleanup
             if (safe == address(0)) return;
             // else require podId zero is calling from safe
@@ -552,7 +552,7 @@ contract ControllerV1 is
             if (areModulesLocked[msg.sender]) {
                 safeTellerCheck(data);
             }
-            memberTellerCheck(podId, data);
+            memberTellerCheck(podId, safe, to, data);
         }
     }
 

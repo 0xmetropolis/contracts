@@ -31,8 +31,13 @@ contract MemberTeller {
         BURN_SYNC_FLAG = flag;
     }
 
-    function memberTellerCheck(uint256 podId, bytes memory data) internal {
-        if (bytes4(data) == ENCODED_SIG_ADD_OWNER) {
+    function memberTellerCheck(
+        uint256 podId,
+        address safe,
+        address to,
+        bytes memory data
+    ) internal {
+        if (bytes4(data) == ENCODED_SIG_ADD_OWNER && safe == to) {
             // Ensure data is at minimum, the length required for the below logic.
             require(data.length >= 24, "incorrect data length");
             address mintMember;
@@ -42,7 +47,7 @@ contract MemberTeller {
             }
             memberToken.mint(mintMember, podId, getSyncData());
         }
-        if (bytes4(data) == ENCODED_SIG_REMOVE_OWNER) {
+        if (bytes4(data) == ENCODED_SIG_REMOVE_OWNER && safe == to) {
             // Ensure data is at minimum, the length required for the below logic.
             require(data.length >= 44, "incorrect data length");
             address burnMember;
@@ -54,7 +59,7 @@ contract MemberTeller {
             setBurnSyncFlag(true);
             memberToken.burn(burnMember, podId);
         }
-        if (bytes4(data) == ENCODED_SIG_SWAP_OWNER) {
+        if (bytes4(data) == ENCODED_SIG_SWAP_OWNER && safe == to) {
             // Ensure data is at minimum, the length required for the below logic.
             require(data.length >= 64, "incorrect data length");
             address burnMember;
