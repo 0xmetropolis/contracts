@@ -84,6 +84,9 @@ contract ControllerV1 is
     }
 
     /**
+     * Creates a Gnosis Safe and podifies it.
+     * Note that podifiying a safe carries some risks - more info in the below link:
+     * https://docs.metropolis.space/docs/getting-started-pods/podify-your-safe
      * @param _members The addresses of the members of the pod
      * @param threshold The number of members that are required to sign a transaction
      * @param _admin The address of the pod admin
@@ -117,6 +120,9 @@ contract ControllerV1 is
     }
 
     /**
+     * Podifies an existing safe.
+     * Note that podifiying a safe carries some risks - more info in the below link:
+     * https://docs.metropolis.space/docs/getting-started-pods/podify-your-safe
      * @dev Used to create a pod with an existing safe
      * @dev Will automatically distribute membership NFTs to current safe members
      * @param _admin The address of the pod admin
@@ -228,6 +234,8 @@ contract ControllerV1 is
     }
 
     /**
+     * Updates the pod admin. Note that only the current pod admin can update the pod admin.
+     * In other words, safe owners/pod members cannot update the pod admin if there is one in place.
      * @param _podId The id number of the pod
      * @param _newAdmin The address of the new pod admin
      */
