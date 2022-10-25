@@ -1,10 +1,11 @@
 pragma solidity ^0.8.7;
 
+import "./utils/DelegateSetupHelper.sol";
 import "openzeppelin-contracts/utils/Address.sol";
 import "./interfaces/IGnosisSafe.sol";
 import "./interfaces/IGnosisSafeProxyFactory.sol";
 
-contract SafeTeller {
+contract SafeTeller is DelegateSetupHelper {
     using Address for address;
 
     // mainnet: 0x76E2cFc1F5Fa8F6a5b3fC4c8F4788F0116861F9B;
@@ -383,15 +384,5 @@ contract SafeTeller {
             moduleData,
             IGnosisSafe.Operation.Call
         );
-    }
-
-    // TODO: move to library
-    // Used in a delegate call to enable module add on setup
-    function enableModule(address module) external {
-        require(module == address(0));
-    }
-
-    function delegateSetup(address _context) external {
-        this.enableModule(_context);
     }
 }
