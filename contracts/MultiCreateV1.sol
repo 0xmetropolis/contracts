@@ -1,4 +1,4 @@
-pragma solidity ^0.8.7;
+pragma solidity 0.8.7;
 import "./interfaces/IControllerV1.sol";
 import "./interfaces/IMemberToken.sol";
 

@@ -1,4 +1,4 @@
-pragma solidity ^0.8.7;
+pragma solidity 0.8.7;
 
 import "openzeppelin-contracts/access/Ownable.sol";
 import "./interfaces/IControllerRegistry.sol";
