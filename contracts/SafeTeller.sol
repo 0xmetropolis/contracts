@@ -359,17 +359,7 @@ contract SafeTeller is DelegateSetupHelper {
         );
 
         // remove controller as guard
-        bytes memory guardData = abi.encodeWithSignature(
-            "setGuard(address)",
-            address(0)
-        );
-
-        safeContract.execTransactionFromModule(
-            safe,
-            0,
-            guardData,
-            IGnosisSafe.Operation.Call
-        );
+        setSafeGuard(safe, address(0));
 
         // disable module
         bytes memory moduleData = abi.encodeWithSignature(

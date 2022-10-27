@@ -407,12 +407,10 @@ contract ControllerV1 is
 
         // if module is already disabled, the safe must unset these manually
         if (isSafeModuleEnabled(safe)) {
-            // remove controller as guard
-            setSafeGuard(safe, address(0));
             // remove module and handle reverse registration clearing.
             disableModule(
                 safe,
-                podEnsRegistrar.reverseRegistrar(),
+                address(podEnsRegistrar.reverseRegistrar()),
                 previousModule
             );
         }
@@ -425,6 +423,8 @@ contract ControllerV1 is
         // Burn member tokens
         address[] memory members = this.getSafeMembers(safe);
         memberToken.burnSingleBatch(members, podId);
+
+        isTransferLocked[podId] == false;
 
         emit DeregisterPod(podId);
     }

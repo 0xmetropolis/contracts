@@ -5,12 +5,13 @@ import "ens-contracts/registry/ReverseRegistrar.sol";
 import "ens-contracts/resolvers/Resolver.sol";
 import "../interfaces/IControllerRegistry.sol";
 import "../interfaces/IInviteToken.sol";
+import "./IPodEnsRegistrar.sol";
 import "openzeppelin-contracts/access/Ownable.sol";
 
 /**
  * A registrar that allocates subdomains to the first person to claim them.
  */
-contract PodEnsRegistrar is Ownable {
+contract PodEnsRegistrar is Ownable, IPodEnsRegistrar {
     modifier onlyControllerOrOwner() {
         require(
             controllerRegistry.isRegistered(msg.sender) ||
@@ -27,9 +28,9 @@ contract PodEnsRegistrar is Ownable {
         closed // Nobody can enroll, just in case
     }
 
-    ENS public ens;
-    Resolver public resolver;
-    ReverseRegistrar public reverseRegistrar;
+    ENS public override ens;
+    Resolver public override resolver;
+    ReverseRegistrar public override reverseRegistrar;
     IControllerRegistry controllerRegistry;
     bytes32 rootNode;
     IInviteToken inviteToken;
@@ -70,7 +71,7 @@ contract PodEnsRegistrar is Ownable {
         bytes32 label,
         address podSafe,
         address podCreator
-    ) public returns (address) {
+    ) public override returns (address) {
         if (state == State.closed) {
             revert("registrations are closed");
         }
@@ -111,7 +112,7 @@ contract PodEnsRegistrar is Ownable {
         return address(reverseRegistrar);
     }
 
-    function getRootNode() public view returns (bytes32) {
+    function getRootNode() public view override returns (bytes32) {
         return rootNode;
     }
 
@@ -119,7 +120,7 @@ contract PodEnsRegistrar is Ownable {
      * Generates a node hash from the Registrar's root node + the label hash.
      * @param label - label hash of pod name (i.e., labelhash('mypod'))
      */
-    function getEnsNode(bytes32 label) public view returns (bytes32) {
+    function getEnsNode(bytes32 label) public view override returns (bytes32) {
         return keccak256(abi.encodePacked(getRootNode(), label));
     }
 
@@ -128,7 +129,7 @@ contract PodEnsRegistrar is Ownable {
      * e.g., the node of mypod.addr.reverse.
      * @param input - an ENS registered address
      */
-    function addressToNode(address input) public returns (bytes32) {
+    function addressToNode(address input) public override returns (bytes32) {
         return reverseRegistrar.node(input);
     }
 
@@ -138,6 +139,7 @@ contract PodEnsRegistrar is Ownable {
      */
     function register(bytes32 label, address owner)
         public
+        override
         onlyControllerOrOwner
     {
         _register(label, owner);
@@ -158,12 +160,13 @@ contract PodEnsRegistrar is Ownable {
         bytes32 node,
         string memory key,
         string memory value
-    ) public onlyControllerOrOwner {
+    ) public override onlyControllerOrOwner {
         resolver.setText(node, key, value);
     }
 
     function setAddr(bytes32 node, address newAddress)
         public
+        override
         onlyControllerOrOwner
     {
         resolver.setAddr(node, newAddress);
