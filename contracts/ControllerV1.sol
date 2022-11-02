@@ -424,7 +424,7 @@ contract ControllerV1 is
         address[] memory members = this.getSafeMembers(safe);
         memberToken.burnSingleBatch(members, podId);
 
-        isTransferLocked[podId] == false;
+        isTransferLocked[podId] = false;
 
         emit DeregisterPod(podId);
     }
