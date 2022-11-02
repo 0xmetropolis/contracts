@@ -298,7 +298,7 @@ contract ControllerV1Test is Test {
 
     function test_cantSetTransferLockByNonSafe() public {
         uint256 podId = createPod(false);
-        vm.expectRevert("Only safe can set transfer lock");
+        vm.expectRevert("Only admin or safe can set transfer lock");
         controller.setPodTransferLock(podId, true);
     }
 

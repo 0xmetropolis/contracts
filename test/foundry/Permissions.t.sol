@@ -24,9 +24,12 @@ contract PermissionsTest is Test {
 
         permissions.callAsOwner(
             address(registry),
-            abi.encodeWithSignature("registerController(address)", testAddress)
+            abi.encodeWithSignature(
+                "registerController(address)",
+                address(permissions)
+            )
         );
-        assertEq(registry.isRegistered(testAddress), true);
+        assertEq(registry.isRegistered(address(permissions)), true);
     }
 
     // Attempt to make a call when Permission is not owner of Registry should fail.
@@ -66,9 +69,13 @@ contract PermissionsTest is Test {
         vm.prank(address(0x1338));
         permissions.callAsOwner(
             address(registry),
-            abi.encodeWithSignature("registerController(address)", testAddress)
+            // Registering permissions contract because we need to register a contract
+            abi.encodeWithSignature(
+                "registerController(address)",
+                address(permissions)
+            )
         );
-        assertEq(registry.isRegistered(testAddress), true);
+        assertEq(registry.isRegistered(address(permissions)), true);
     }
 
     /**
@@ -89,7 +96,10 @@ contract PermissionsTest is Test {
 
         permissions.callAsOwner(
             address(registry),
-            abi.encodeWithSignature("registerController(address)", testAddress)
+            abi.encodeWithSignature(
+                "registerController(address)",
+                address(permissions)
+            )
         );
         permissions.grantRole(bytes32(0), testAddress);
         PermissionManager permissions2 = new PermissionManager();

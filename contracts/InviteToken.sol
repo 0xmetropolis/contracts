@@ -13,11 +13,11 @@ contract InviteToken is ERC20, AccessControl {
         _setupRole(BURNER_ROLE, msg.sender);
     }
 
-    function decimals() public view override returns (uint8) {
+    function decimals() public pure override returns (uint8) {
         return 0;
     }
 
-    function batchMint(address[] calldata accounts, uint256 amount) public {
+    function batchMint(address[] calldata accounts, uint256 amount) external {
         for (uint256 i = 0; i < accounts.length; i++) {
             mint(accounts[i], amount);
         }
@@ -28,7 +28,7 @@ contract InviteToken is ERC20, AccessControl {
         _mint(account, amount);
     }
 
-    function burn(address account, uint256 amount) public {
+    function burn(address account, uint256 amount) external {
         require(hasRole(BURNER_ROLE, msg.sender), "Only burners can burn");
         _burn(account, amount);
     }
