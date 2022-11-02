@@ -14,6 +14,7 @@ contract MemberTeller {
     uint8 internal constant SYNC_EVENT = 0x02;
 
     constructor(address _memberToken) {
+        require(_memberToken != address(0), "Invalid address");
         memberToken = IMemberToken(_memberToken);
     }
 

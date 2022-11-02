@@ -72,6 +72,8 @@ contract PodEnsRegistrar is Ownable, IPodEnsRegistrar {
         address podSafe,
         address podCreator
     ) public override returns (address) {
+        require(label != bytes32(0), "label cannot be blank");
+
         if (state == State.closed) {
             revert("registrations are closed");
         }
