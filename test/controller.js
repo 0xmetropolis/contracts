@@ -330,7 +330,7 @@ describe("Controller safe integration test", () => {
     });
     it("should throw if user toggles transfer lock", async () => {
       await expect(controller.connect(bob).setPodTransferLock(POD_ID, true)).to.be.revertedWith(
-        "Only safe can set transfer lock",
+        "Only admin or safe can set transfer lock",
       );
     });
   });

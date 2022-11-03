@@ -17,8 +17,6 @@ contract SafeTeller is DelegateSetupHelper {
 
     string public constant FUNCTION_SIG_SETUP =
         "setup(address[],uint256,address,bytes,address,address,uint256,address)";
-    string public constant FUNCTION_SIG_EXEC =
-        "execTransaction(address,uint256,bytes,uint8,uint256,uint256,uint256,address,address,bytes)";
 
     string public constant FUNCTION_SIG_ENABLE = "delegateSetup(address)";
 
