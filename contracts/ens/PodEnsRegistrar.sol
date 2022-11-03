@@ -31,9 +31,9 @@ contract PodEnsRegistrar is Ownable, IPodEnsRegistrar {
     ENS public override ens;
     Resolver public override resolver;
     ReverseRegistrar public override reverseRegistrar;
-    IControllerRegistry controllerRegistry;
-    bytes32 rootNode;
-    IInviteToken inviteToken;
+    IControllerRegistry public controllerRegistry;
+    bytes32 public rootNode;
+    IInviteToken public inviteToken;
     State public state = State.onlySafeWithShip;
 
     /**
@@ -72,11 +72,11 @@ contract PodEnsRegistrar is Ownable, IPodEnsRegistrar {
         address podSafe,
         address podCreator
     ) public override returns (address) {
+        require(label != bytes32(0), "label cannot be blank");
+
         if (state == State.closed) {
             revert("registrations are closed");
-        }
-
-        if (state == State.onlySafeWithShip) {
+        } else if (state == State.onlySafeWithShip) {
             // This implicitly prevents safes that were created in this transaction
             // from registering, as they cannot have a SHIP token balance.
             require(
@@ -84,8 +84,7 @@ contract PodEnsRegistrar is Ownable, IPodEnsRegistrar {
                 "safe must have SHIP token"
             );
             inviteToken.burn(podSafe, 1);
-        }
-        if (state == State.onlyShip) {
+        } else if (state == State.onlyShip) {
             // Prefer the safe's token over the user's
             if (inviteToken.balanceOf(podSafe) > 0) {
                 inviteToken.burn(podSafe, 1);
@@ -96,7 +95,7 @@ contract PodEnsRegistrar is Ownable, IPodEnsRegistrar {
             }
         }
 
-        bytes32 node = keccak256(abi.encodePacked(rootNode, label));
+        bytes32 node = getEnsNode(label);
 
         require(
             controllerRegistry.isRegistered(msg.sender),
@@ -129,7 +128,12 @@ contract PodEnsRegistrar is Ownable, IPodEnsRegistrar {
      * e.g., the node of mypod.addr.reverse.
      * @param input - an ENS registered address
      */
-    function addressToNode(address input) public override returns (bytes32) {
+    function addressToNode(address input)
+        public
+        view
+        override
+        returns (bytes32)
+    {
         return reverseRegistrar.node(input);
     }
 

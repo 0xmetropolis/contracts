@@ -264,7 +264,7 @@ contract ControllerV1 is
 
     /**
      * @param _podId The id number of the pod
-     * @param _isTransferLocked The address of the new pod admin
+     * @param _isTransferLocked - bool to set to
      */
     function setPodTransferLock(uint256 _podId, bool _isTransferLocked)
         external
@@ -273,16 +273,10 @@ contract ControllerV1 is
         address admin = podAdmin[_podId];
         address safe = podIdToSafe[_podId];
 
-        // if no pod admin it can only be set by safe
-        if (admin == address(0)) {
-            require(msg.sender == safe, "Only safe can set transfer lock");
-        } else {
-            // if admin then it can be set by admin or safe
-            require(
-                msg.sender == admin || msg.sender == safe,
-                "Only admin or safe can set transfer lock"
-            );
-        }
+        require(
+            msg.sender == admin || msg.sender == safe,
+            "Only admin or safe can set transfer lock"
+        );
 
         // set podid to transfer lock bool
         isTransferLocked[_podId] = _isTransferLocked;
@@ -424,7 +418,7 @@ contract ControllerV1 is
         address[] memory members = this.getSafeMembers(safe);
         memberToken.burnSingleBatch(members, podId);
 
-        isTransferLocked[podId] == false;
+        isTransferLocked[podId] = false;
 
         emit DeregisterPod(podId);
     }
@@ -439,7 +433,7 @@ contract ControllerV1 is
             msg.sender == safe || msg.sender == podAdmin[_podId],
             "not authorized"
         );
-        memberToken.mintSingleBatch(_mintMembers, _podId, bytes(" "));
+        memberToken.mintSingleBatch(_mintMembers, _podId, bytes(""));
         memberToken.burnSingleBatch(_burnMembers, _podId);
     }
 

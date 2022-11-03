@@ -14,6 +14,7 @@ contract MemberTeller {
     uint8 internal constant SYNC_EVENT = 0x02;
 
     constructor(address _memberToken) {
+        require(_memberToken != address(0), "Invalid address");
         memberToken = IMemberToken(_memberToken);
     }
 
@@ -39,7 +40,7 @@ contract MemberTeller {
     ) internal {
         if (bytes4(data) == ENCODED_SIG_ADD_OWNER && safe == to) {
             // Ensure data is at minimum, the length required for the below logic.
-            require(data.length >= 24, "incorrect data length");
+            require(data.length == 68, "incorrect data length");
             address mintMember;
             assembly {
                 // shift 0x4 for the sig + 0x20 padding
@@ -49,7 +50,7 @@ contract MemberTeller {
         }
         if (bytes4(data) == ENCODED_SIG_REMOVE_OWNER && safe == to) {
             // Ensure data is at minimum, the length required for the below logic.
-            require(data.length >= 44, "incorrect data length");
+            require(data.length == 100, "incorrect data length");
             address burnMember;
             assembly {
                 // note: consecutive addresses are packed into a single memory slot
@@ -61,7 +62,7 @@ contract MemberTeller {
         }
         if (bytes4(data) == ENCODED_SIG_SWAP_OWNER && safe == to) {
             // Ensure data is at minimum, the length required for the below logic.
-            require(data.length >= 64, "incorrect data length");
+            require(data.length == 100, "incorrect data length");
             address burnMember;
             address mintMember;
             assembly {

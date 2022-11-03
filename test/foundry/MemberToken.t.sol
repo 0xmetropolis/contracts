@@ -248,8 +248,9 @@ contract MemberTokenTest is Test {
     // CONTROLLER MIGRATE TESTS
     // should migrate to new controller version
     function test_MigrateMemberController() public {
-        address newController = address(0x1337);
-        controllerRegistry.registerController(newController);
+        MockController newController = new MockController();
+
+        controllerRegistry.registerController(address(newController));
 
         address[] memory addresses = new address[](1);
         addresses[0] = ALICE;
@@ -257,8 +258,8 @@ contract MemberTokenTest is Test {
         vm.startPrank(address(mockController));
         uint256 podId = memberToken.createPod(addresses, "1337");
 
-        memberToken.migrateMemberController(podId, newController);
-        assertEq(memberToken.memberController(podId), newController);
+        memberToken.migrateMemberController(podId, address(newController));
+        assertEq(memberToken.memberController(podId), address(newController));
     }
 
     // should revert if called with zero address
