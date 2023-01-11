@@ -1,8 +1,8 @@
 const GnosisSafe = require("@gnosis.pm/safe-contracts/build/artifacts/contracts/GnosisSafe.sol/GnosisSafe.json");
-const Safe = require("@gnosis.pm/safe-core-sdk").default;
-const { SafeFactory } = require("@gnosis.pm/safe-core-sdk");
+const Safe = require("@safe-global/safe-core-sdk").default;
+const { SafeFactory } = require("@safe-global/safe-core-sdk");
 const { deployments, ethers } = require("hardhat");
-const { default: EthersAdapter } = require("@gnosis.pm/safe-ethers-lib");
+const { default: EthersAdapter } = require("@safe-global/safe-ethers-lib");
 const { labelhash } = require("@ensdomains/ensjs");
 const { getGnosisAddresses } = require("../../utils/dependencyManager");
 
