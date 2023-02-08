@@ -11,6 +11,7 @@ require("hardhat-deploy");
 require("@nomiclabs/hardhat-ethers");
 require("@nomicfoundation/hardhat-chai-matchers");
 require("@tenderly/hardhat-tenderly");
+require("@nomiclabs/hardhat-etherscan");
 require("dotenv").config();
 require("./hardhat.tasks");
 
@@ -23,6 +24,10 @@ function getRemappings() {
 }
 
 const networks = {
+  localhost: {
+    url: "http://127.0.0.1:8545/",
+    accounts: process.env.MAINNET_PRIVATE_KEY ? [process.env.MAINNET_PRIVATE_KEY] : [],
+  },
   hardhat: {
     gas: 12000000,
     blockGasLimit: 0xbebc20,
@@ -96,6 +101,9 @@ module.exports = {
   tenderly: {
     project: "sonar-labs/metropolis",
     username: "orcanaut",
+  },
+  etherscan: {
+    apiKey: "",
   },
   preprocess: {
     eachLine: hre => ({

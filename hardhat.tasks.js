@@ -297,7 +297,7 @@ task("add-ens-podid", "updates the ENS owner for a list of pod IDs")
   });
 
 task("add-permission-owner", "adds an address to be an owner of the Permissions contract")
-  .addPositionalParam("newOwner")
+  .addParam("newOwner")
   .setAction(async (args, { getNamedAccounts, ethers, artifacts }) => {
     const { newOwner } = args;
     const { deployer } = await getNamedAccounts();
@@ -368,3 +368,50 @@ task("test-ens", "tests to see if ENS works via our Permissions contract").setAc
     await Permissions.callAsOwner(PodEnsRegistrar.address, data);
   },
 );
+
+task("permissions-transfer-owner-out", "transfers owner role out of permissions contract")
+  .addParam("contractAddress", "address of ownable contract")
+  .addParam("toAddress", "address sending owner role to")
+  .setAction(async (args, { getNamedAccounts, ethers, artifacts }) => {
+    const { deployer } = await getNamedAccounts();
+    const deployerSigner = ethers.provider.getSigner(deployer);
+
+    if (args.toAddress === ethers.constants.AddressZero || !args.toAddress) {
+      console.log("toAddress cannot be zero");
+      return;
+    }
+
+    const ownableContract = new ethers.Contract(
+      args.contractAddress,
+      ["function transferOwnership(address newOwner) public", "function owner() public view returns (address)"],
+      deployerSigner,
+    );
+
+    const Permissions = await ethers.getContractAtFromArtifact(
+      await artifacts.readArtifact("PermissionManager"),
+      "0x922A37bb4B8A155a916c15c69345731613381870",
+      deployerSigner,
+    );
+
+    const { data } = await ownableContract.populateTransaction.transferOwnership(args.toAddress);
+
+    await Permissions.callAsOwner(args.contractAddress, data);
+
+    const newOwner = await ownableContract.owner();
+    console.log(`Transferred ownership of ${args.contractAddress} to ${newOwner}`);
+  });
+
+task("get-owner", "gets owner of contract")
+  .addParam("contractAddress", "address of ownable contract")
+  .setAction(async (args, { getNamedAccounts, ethers }) => {
+    const { deployer } = await getNamedAccounts();
+    const deployerSigner = ethers.provider.getSigner(deployer);
+
+    const ownableContract = new ethers.Contract(
+      args.contractAddress,
+      ["function owner() public view returns (address)"],
+      deployerSigner,
+    );
+    const owner = await ownableContract.owner();
+    console.log(`Owner: ${owner}`);
+  });
